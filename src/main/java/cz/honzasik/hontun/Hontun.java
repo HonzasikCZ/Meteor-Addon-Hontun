@@ -32,9 +32,11 @@ public class Hontun extends MeteorAddon {
     public static final Category CATEGORY = new Category("Hontun");
 
     public static HontunGuiTheme THEME;
+    public static Hontun ADDON;
 
     @Override
     public void onInitialize() {
+        ADDON = this;
         addCommands();
         addModules();
 
@@ -59,6 +61,11 @@ public class Hontun extends MeteorAddon {
         } catch (Throwable t) {
             LOG.warn("[Hontun] Could not select the Hontun GUI theme automatically: {}", t.toString());
         }
+    }
+
+    @Override
+    public String getWebsite() {
+        return "https://github.com/HonzasikCZ/Meteor-Addon-Hontun";
     }
 
     private void addCommands() {

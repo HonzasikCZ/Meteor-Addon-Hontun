@@ -39,6 +39,7 @@
     "meteor.servercommand.ServerCommandMixin",
     "meteor.gui.WidgetScreenBackgroundMixin",
     "meteor.chat.ChatUtilsPrefixMixin",
+    "meteor.titlescreen.AddonCreditLinkMixin",
     "util.meteor_string_identifiable_support.WDropdownMixin",
     "util.meteor_string_identifiable_support.WMeteorDropdown$WValueMixin",
     "util.meteor_string_identifiable_support.WMeteorDropdownMixin"
