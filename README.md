@@ -73,6 +73,11 @@ Four looks, switchable in `ClickGUI -> Config -> GUI -> ui-mode`:
   (`menu-background`).
 - `Chat` `[Hontun]` prefix in the accent color.
 
+<img width="2559" height="1363" alt="obrazek" src="https://github.com/user-attachments/assets/5ad12503-3af1-4ab3-a05a-0b9107cdeaff" />
+<img width="2559" height="1360" alt="obrazek" src="https://github.com/user-attachments/assets/6e69d76e-751c-4eda-b26e-8f26b6365862" />
+<img width="2559" height="1362" alt="obrazek" src="https://github.com/user-attachments/assets/35a6967d-8d5e-4af9-89cd-1ef2f35851bc" />
+<img width="2560" height="1361" alt="obrazek" src="https://github.com/user-attachments/assets/bf1c6a42-02de-40dd-abc1-ab4218b53d4b" />
+
 ## BUILDING
 
 Needs JDK 25.
