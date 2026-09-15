@@ -1,0 +1,77 @@
+package cz.honzasik.hontun.mixin.client.multiplayer;
+
+import cz.honzasik.hontun.gui.screen.HontunVersionScreen;
+import cz.honzasik.hontun.utils.HontunTheme;
+import cz.honzasik.hontun.utils.VfpBridge;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.ManageServerScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.Component;
+import org.spongepowered.asm.mixin.Final;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.ArrayList;
+import java.util.List;
+
+@Mixin(ManageServerScreen.class)
+public abstract class ServerVersionButtonMixin {
+    @Shadow @Final private ServerData serverData;
+    @Shadow private EditBox nameEdit;
+    @Shadow private EditBox ipEdit;
+
+    @Unique private String hontun$savedName;
+    @Unique private String hontun$savedIp;
+
+    @Inject(method = "init", at = @At("TAIL"))
+    private void hontun$replaceVersionButton(CallbackInfo ci) {
+        Screen self = (Screen) (Object) this;
+
+        if (hontun$savedName != null && nameEdit != null) { nameEdit.setValue(hontun$savedName); hontun$savedName = null; }
+        if (hontun$savedIp != null && ipEdit != null) { ipEdit.setValue(hontun$savedIp); hontun$savedIp = null; }
+
+        if (!HontunTheme.restyleEnabled() || !VfpBridge.available()) return;
+
+        hontun$removeVfpButton(self);
+        if (serverData == null || !VfpBridge.perServerAvailable(serverData)) return;
+
+        Button b = Button.builder(Component.literal(hontun$label()), btn -> {
+            if (nameEdit != null) hontun$savedName = nameEdit.getValue();
+            if (ipEdit != null) hontun$savedIp = ipEdit.getValue();
+            Minecraft.getInstance().gui.setScreen(new HontunVersionScreen(self,
+                    serverData.name == null || serverData.name.isEmpty() ? "server" : serverData.name,
+                    () -> VfpBridge.forcedVersion(serverData),
+                    handle -> VfpBridge.setForcedVersion(serverData, handle)));
+        }).bounds(self.width / 2 - 100, self.height / 4 + 24, 200, 20).build();
+
+        ((ScreenInvoker) self).hontun$addRenderableWidget(b);
+    }
+
+    @Unique
+    private String hontun$label() {
+        Object forced = VfpBridge.forcedVersion(serverData);
+        return forced == null ? "Version: global" : "Version: " + VfpBridge.nameOf(forced);
+    }
+
+    @Unique
+    private void hontun$removeVfpButton(Screen self) {
+        List<GuiEventListener> doomed = new ArrayList<>();
+        for (GuiEventListener child : self.children()) {
+            if (!(child instanceof AbstractWidget w)) continue;
+            if (w.getWidth() != 98 || w.getHeight() != 20) continue;
+            int x = w.getX(), y = w.getY();
+            boolean corner = (x == 5 || x == self.width - 103) && (y == 5 || y == self.height - 25);
+            if (corner) doomed.add(child);
+        }
+        for (GuiEventListener d : doomed) ((ScreenInvoker) self).hontun$removeWidget(d);
+    }
+}

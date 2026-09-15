@@ -1,0 +1,46 @@
+{
+  "required": true,
+  "package": "cz.honzasik.hontun.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "module.free_interact.ClientPlayerEntityMixin",
+    "module.free_interact.MinecraftClientMixin",
+    "client.titlescreen.TitleScreenBackgroundMixin",
+    "client.titlescreen.HontunLogoMixin",
+    "client.titlescreen.SplashTextMixin",
+    "client.titlescreen.PauseScreenBackgroundMixin",
+    "client.titlescreen.MenuScreenBackgroundMixin",
+    "client.titlescreen.LevelLoadingBackgroundMixin",
+    "client.button.ButtonStyleMixin",
+    "client.hotbar.HotbarStyleMixin",
+    "client.container.ContainerScreenBackgroundMixin",
+    "client.connect.ConnectScreenInfoMixin",
+    "client.multiplayer.JoinMultiplayerVersionButtonMixin",
+    "client.multiplayer.ScreenInvoker",
+    "client.multiplayer.ServerCardMixin",
+    "client.multiplayer.SelectionOutlineMixin",
+    "client.multiplayer.ScrollbarStyleMixin",
+    "client.multiplayer.ServerVersionButtonMixin",
+    "client.multiplayer.DirectJoinVersionButtonMixin",
+    "module.noworldborder.WorldBorderRendererMixin",
+    "module.noworldborder.WorldBorderMixin"
+  ],
+  "mixins": [
+    "network.custompayload.CustomPayloadEncoderMixin",
+    "network.custompayload.IdDispatchCodecAccessor",
+    "network.custompayload.ConnectionChannelAccessor",
+    "network.custompayload.ClientListenerConnectionAccessor",
+    "network.channels.CustomPayloadCodecMixin",
+    "network.version.ClientConfigMixin",
+    "network.worldinfo.ClientLoginMixin",
+    "meteor.servercommand.ServerCommandMixin",
+    "meteor.gui.WidgetScreenBackgroundMixin",
+    "meteor.chat.ChatUtilsPrefixMixin",
+    "util.meteor_string_identifiable_support.WDropdownMixin",
+    "util.meteor_string_identifiable_support.WMeteorDropdown$WValueMixin",
+    "util.meteor_string_identifiable_support.WMeteorDropdownMixin"
+  ]
+}

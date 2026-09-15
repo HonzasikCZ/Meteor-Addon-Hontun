@@ -1,0 +1,12 @@
+accessWidener v2 official
+# official (26.2) názvy, ověřeno proti client jaru (yarn doAttack->startAttack, uptimeInTicks->clientTickCount)
+accessible method net/minecraft/client/Minecraft startAttack ()Z
+accessible field net/minecraft/client/Minecraft clientTickCount J
+
+# potreba pro SelectionOutlineMixin: extractSelection bere protected AbstractSelectionList$Entry
+accessible class net/minecraft/client/gui/components/AbstractSelectionList$Entry
+
+# ScrollbarStyleMixin potrebuje geometrii scrollbaru zvenku
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarX ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollerHeight ()I
+accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollable ()Z

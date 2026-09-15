@@ -1,0 +1,195 @@
+package cz.honzasik.hontun.gui.theme.widgets.input;
+
+import cz.honzasik.hontun.gui.api.render.Corners;
+import cz.honzasik.hontun.gui.api.text.RichText;
+import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.HontunWidget;
+import cz.honzasik.hontun.gui.theme.widgets.WHontunLabel;
+import cz.honzasik.hontun.gui.util.ColorUtils;
+import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
+import meteordevelopment.meteorclient.gui.utils.CharFilter;
+import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
+import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
+import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
+import meteordevelopment.meteorclient.utils.render.color.Color;
+
+public class WHontunTextBox extends WTextBox implements HontunWidget {
+    private final String title;
+    private final double padding;
+    private java.util.function.Supplier<Color> customColor;
+
+    private boolean cursorVisible;
+    private double cursorTimer;
+
+    private double animProgress;
+    private boolean renderBackground;
+
+    public WHontunTextBox(String text, String placeholder, String title, double padding, CharFilter filter, Class<? extends Renderer> renderer) {
+        super(text, placeholder, filter, renderer);
+        this.title = title;
+        this.padding = padding;
+        this.renderBackground = true;
+    }
+
+    @Override
+    protected void onCalculateSize() {
+        super.onCalculateSize();
+        double s = theme.textHeight();
+
+        width = padding + s + padding;
+        height = padding + s + padding;
+    }
+
+    @Override
+    protected WContainer createCompletionsRootWidget() {
+        return new WVerticalList() {
+            @Override
+            protected void onRender(GuiRenderer renderer1, double mouseX, double mouseY, double delta) {
+                HontunGuiTheme theme = theme();
+                double s = theme.scale(2);
+                Color c = theme.outlineColor.get();
+
+                Color col = theme.backgroundColor.get().copy();
+                col.a += col.a / 2;
+                col.validate();
+                renderer1.quad(this, col);
+
+                renderer1.quad(x, y + height - s, width, s, c);
+                renderer1.quad(x, y, s, height - s, c);
+                renderer1.quad(x + width - s, y, s, height - s, c);
+            }
+        };
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected <T extends WWidget & ICompletionItem> T createCompletionsValueWidth(String completion, boolean selected) {
+        return (T) new CompletionItem(completion, false, selected);
+    }
+
+    private static class CompletionItem extends WHontunLabel implements ICompletionItem {
+        private static final Color SELECTED_COLOR = new Color(255, 255, 255, 15);
+
+        private boolean selected;
+
+        public CompletionItem(String text, boolean title, boolean selected) {
+            super(RichText.of(text).boldIf(title));
+            this.selected = selected;
+        }
+
+        @Override
+        protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
+            super.onRender(renderer, mouseX, mouseY, delta);
+
+            if (selected) renderer.quad(this, SELECTED_COLOR);
+        }
+
+        @Override
+        public boolean isSelected() {
+            return selected;
+        }
+
+        @Override
+        public void setSelected(boolean selected) {
+            this.selected = selected;
+        }
+
+        @Override
+        public String getCompletion() {
+            return text;
+        }
+    }
+
+    @Override
+    protected void onCursorChanged() {
+        cursorVisible = true;
+        cursorTimer = 0;
+    }
+
+    @Override
+    protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
+        HontunGuiTheme theme = theme();
+        int HORIZONTAL_LIST_SPACING = 3;
+        double titleWidth = (hasTitle() ? pad() + theme.textWidth(title) + HORIZONTAL_LIST_SPACING : 0);
+
+        if (cursorTimer >= 1) {
+            cursorVisible = !cursorVisible;
+            cursorTimer = 0;
+        }
+        else {
+            cursorTimer += delta * 1.75;
+        }
+
+        if (renderBackground) {
+            if (hasTitle()) {
+                roundedRect().pos(x - titleWidth, y)
+                             .size(titleWidth, height)
+                             .radius(smallRadius(), Corners.LEFT)
+                             .color(theme.surface0Color())
+                             .render();
+            }
+
+            background(theme.baseColor(), theme.surface0Color()).render();
+        }
+
+        double overflowWidth = getOverflowWidthForRender();
+
+        renderer.scissorStart(x + padding, y, width - padding * 2, height);
+
+        if (!text.isEmpty()) {
+            Color custom = customColor != null ? customColor.get() : null;
+            Color textColor = custom != null
+                    ? custom
+                    : (focused ? theme.textColor() : ColorUtils.darker(theme.textSecondaryColor()));
+
+            this.renderer.render(renderer, x + padding - overflowWidth, y + padding, text, textColor);
+        }
+        else if (placeholder != null) {
+            this.renderer.render(renderer, x + padding - overflowWidth, y + padding, placeholder, theme.textSecondaryColor());
+        }
+
+        if (focused && (cursor != selectionStart || cursor != selectionEnd)) {
+            double selStart = x + padding + getTextWidth(selectionStart) - overflowWidth;
+            double selEnd = x + padding + getTextWidth(selectionEnd) - overflowWidth;
+
+            renderer.quad(selStart, y + padding, selEnd - selStart, theme.textHeight(), theme.textHighlightColor().copy().a(120));
+        }
+
+        animProgress += delta * 10 * (focused && cursorVisible ? 1 : -1);
+        animProgress = Math.clamp(animProgress, 0, 1);
+
+        if ((focused && cursorVisible) || animProgress > 0) {
+            renderer.setAlpha(animProgress);
+            renderer.quad(x + padding + getTextWidth(cursor) - overflowWidth, y + padding, theme.scale(1), theme.textHeight(), theme.textColor());
+            renderer.setAlpha(1);
+        }
+
+        renderer.scissorEnd();
+    }
+
+    @Override
+    public Corners corners() {
+        return hasTitle() ? Corners.RIGHT : Corners.ALL;
+    }
+
+    private boolean hasTitle() {
+        return title != null && !title.isEmpty();
+    }
+
+    public int getCursor() {
+        return cursor;
+    }
+
+    public void shouldRenderBackground(boolean renderBackground) {
+        this.renderBackground = renderBackground;
+    }
+
+    public void color(java.util.function.Supplier<Color> color) {
+        this.customColor = color;
+    }
+
+    public void color(Color color) {
+        this.customColor = color == null ? null : () -> color;
+    }
+}

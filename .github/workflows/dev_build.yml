@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write   # only used to delete the leftover 'snapshot' release/tag below
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # One-off: remove the old auto-created 'snapshot' release + tag. Creates nothing.
+      - name: Remove stale snapshot release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release delete snapshot --yes --cleanup-tag --repo "$GITHUB_REPOSITORY" || true
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: |
+          chmod +x ./gradlew
+          ./gradlew build --stacktrace
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: hontun-jar
+          path: build/libs/*.jar
+          if-no-files-found: error

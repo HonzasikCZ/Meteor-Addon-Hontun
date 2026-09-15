@@ -1,0 +1,16 @@
+package cz.honzasik.hontun.gui.mixin.meteorclient;
+
+import cz.honzasik.hontun.gui.util.SettingWatcher;
+import meteordevelopment.meteorclient.settings.Setting;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+@Mixin(Setting.class)
+public class SettingMixin {
+    @Inject(method = "get", at = @At("HEAD"))
+    private void onGet(CallbackInfoReturnable<Object> cir) {
+        SettingWatcher.touch((Setting<?>) (Object) this);
+    }
+}

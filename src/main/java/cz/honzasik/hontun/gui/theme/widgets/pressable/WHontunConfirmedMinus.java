@@ -1,0 +1,23 @@
+package cz.honzasik.hontun.gui.theme.widgets.pressable;
+
+import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.HontunWidget;
+import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
+import meteordevelopment.meteorclient.gui.widgets.pressable.WConfirmedMinus;
+import meteordevelopment.meteorclient.utils.render.color.Color;
+
+public class WHontunConfirmedMinus extends WConfirmedMinus implements HontunWidget {
+    @Override
+    protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
+        HontunGuiTheme theme = theme();
+        double pad = pad();
+        double s = theme.scale(3);
+
+        Color outline = theme.outlineColor.get(pressed, mouseOver);
+        Color fg = pressedOnce ? theme.backgroundColor.get(pressed, mouseOver) : theme.redColor();
+        Color bg = pressedOnce ? theme.redColor() : theme.backgroundColor.get(pressed, mouseOver);
+
+        background(bg, outline).render();
+        renderer.quad(x + pad, y + height / 2 - s / 2, width - pad * 2, s, fg);
+    }
+}

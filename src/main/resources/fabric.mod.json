@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "hontun",
+  "version": "${version}",
+  "name": "Hontun",
+  "description": "Client-side anti-exploit, plugin/channel recon and a blue GUI theme for Meteor Client.",
+  "authors": [
+    "HonzasikCZ"
+  ],
+  "contact": {
+    "repo": "https://github.com/HonzasikCZ/Meteor-Addon-Hontun"
+  },
+  "icon": "assets/hontun/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "meteor": [
+      "cz.honzasik.hontun.Hontun"
+    ]
+  },
+  "mixins": [
+    "hontun.mixins.json",
+    "hontun-gui.mixins.json"
+  ],
+  "custom": {
+    "meteor-client:color": "62,140,255"
+  },
+  "depends": {
+    "java": ">=25",
+    "minecraft": "~${mc_version}",
+    "fabric-api": "*",
+    "meteor-client": "*"
+  },
+  "accessWidener": "hontun.accesswidener"
+}
