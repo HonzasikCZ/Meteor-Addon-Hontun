@@ -96,3 +96,4 @@ The jar lands in `build/libs/`.
 - [DupersUnited](https://github.com/DupersUnited/dupersunited-mod)
 - [Meteor Rejects](https://github.com/AntiCope/meteor-rejects)
 - [Gurken's Gadgetry](https://github.com/stefexec/gurkens-gadgetry-public)
+- [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon)
