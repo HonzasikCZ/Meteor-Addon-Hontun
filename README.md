@@ -32,8 +32,10 @@ picker is simply hidden and everything else works unchanged.
   clean direction.
 - `.foreach` Runs a command per player or iteration, with optional delays.
 - `.reconnect` Rejoins the current server (alias `.rejoin`).
-- `.server` Adds real backend version, world info, plugin channels and a plugin scan to Meteor's
-  server info. `.server channels` lists captured channels, `.server plugins` scans plugins.
+- `.server` Adds real backend version, world info, plugin channels, the pushed resource-pack
+  (clickable URL + SHA-1) and a plugin scan to Meteor's server info. `.server channels` lists
+  captured channels, `.server plugins` scans plugins, `.server players` probes the real online
+  roster and flags players hidden from the tab list.
 
 ## THEMES
 
@@ -71,6 +73,9 @@ Four looks, switchable in `ClickGUI -> Config -> GUI -> ui-mode`:
 - `Containers` Configurable backdrop behind inventories and chests (`container-background`).
 - `Menu background` Animated gradient with accent particles instead of the panorama
   (`menu-background`).
+- `Lag Notifier` Meteor's own lag-notifier element is restyled in the active theme (themed panel and
+  accent), and shows how long the server has gone without responding in both seconds and
+  milliseconds.
 - `Chat` `[Hontun]` prefix in the accent color.
 
 <img width="2559" height="1363" alt="obrazek" src="https://github.com/user-attachments/assets/5ad12503-3af1-4ab3-a05a-0b9107cdeaff" />

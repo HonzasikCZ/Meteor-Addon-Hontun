@@ -33,7 +33,8 @@ public class PluginScanner {
 
     private static final String[] VERSION_PROBES = {
         "/version ", "/ver ", "/about ", "/icanhasbukkit ",
-        "/bukkit:version ", "/bukkit:ver ", "/bukkit:about ", "/paper:version "
+        "/bukkit:version ", "/bukkit:ver ", "/bukkit:about ", "/paper:version ",
+        "/plugins ", "/pl ", "/bukkit:plugins ", "/bukkit:pl "
     };
 
     private static final Set<String> ANTICHEAT = Set.of(

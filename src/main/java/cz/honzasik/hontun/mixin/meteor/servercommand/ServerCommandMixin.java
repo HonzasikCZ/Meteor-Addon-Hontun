@@ -2,7 +2,11 @@ package cz.honzasik.hontun.mixin.meteor.servercommand;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import cz.honzasik.hontun.commands.PluginScanner;
+import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.modules.ChannelFetcher;
+import cz.honzasik.hontun.utils.HontunChat;
+import cz.honzasik.hontun.utils.HontunTheme;
+import cz.honzasik.hontun.utils.ResourcePackInfo;
 import cz.honzasik.hontun.utils.VersionKeeper;
 import cz.honzasik.hontun.utils.WorldInfo;
 import meteordevelopment.meteorclient.commands.Command;
@@ -11,6 +15,10 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientSuggestionProvider;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -19,6 +27,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.net.InetAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -111,6 +120,33 @@ public abstract class ServerCommandMixin {
                 self.info(" - %s", ch);
             }
         }
+
+        if (ResourcePackInfo.present) {
+            self.info("Resource pack: %s", ResourcePackInfo.required ? "required" : "optional");
+            if (ResourcePackInfo.url.isEmpty()) {
+                self.info(" - URL: unknown");
+            } else {
+                self.info(HontunChat.light(" - URL: ").append(hontun$link(ResourcePackInfo.url)));
+            }
+            if (!ResourcePackInfo.hash.isEmpty()) self.info(" - SHA-1: %s", ResourcePackInfo.hash);
+            if (!ResourcePackInfo.prompt.isEmpty()) self.info(" - Prompt: %s", ResourcePackInfo.prompt);
+        } else {
+            self.info("Resource pack: none pushed.");
+        }
+    }
+
+    private MutableComponent hontun$link(String url) {
+        MutableComponent text = Component.literal(url);
+        try {
+            URI uri = URI.create(url);
+            return text.withStyle(style -> style
+                .withColor(HontunTheme.argb(0xFF, HontunTheme.accentHi()))
+                .withUnderlined(true)
+                .withClickEvent(new ClickEvent.OpenUrl(uri))
+                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Open in browser"))));
+        } catch (Throwable t) {
+            return text;
+        }
     }
 
     @Inject(method = "printPlugins", at = @At("HEAD"), cancellable = true)
@@ -137,6 +173,9 @@ public abstract class ServerCommandMixin {
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("channels")
             .executes(c -> { hontun$printChannels(); return 1; }));
+
+        builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("players")
+            .executes(c -> { PlayerRoster.INSTANCE.run(); return 1; }));
     }
 
     private void hontun$printChannels() {

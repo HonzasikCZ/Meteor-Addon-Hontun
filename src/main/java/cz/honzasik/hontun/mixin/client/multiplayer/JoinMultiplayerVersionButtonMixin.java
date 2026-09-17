@@ -6,7 +6,6 @@ import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.gui.screen.HontunProxiesScreen;
 import cz.honzasik.hontun.gui.screen.HontunVersionScreen;
 import cz.honzasik.hontun.utils.VfpBridge;
-import meteordevelopment.meteorclient.systems.config.Config;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.Button;
@@ -54,7 +53,6 @@ public abstract class JoinMultiplayerVersionButtonMixin {
         hontun$header = new HontunSessionHeader();
         ((ScreenInvoker) self).hontun$addRenderableWidget(hontun$header);
 
-        hontun$syncMeteorStatusText();
         hontun$layout();
         hontun$removeForeignButtons();
         Minecraft.getInstance().execute(this::hontun$removeForeignButtons);
@@ -134,17 +132,6 @@ public abstract class JoinMultiplayerVersionButtonMixin {
             hontun$header.setY(6);
             hontun$header.setWidth(Math.max(26, avail));
             hontun$header.visible = HontunTheme.restyleEnabled() && avail >= 60;
-        }
-    }
-
-    @Unique
-    private void hontun$syncMeteorStatusText() {
-        try {
-            boolean vanilla = !HontunTheme.restyleEnabled();
-            Config c = Config.get();
-            c.showAccountStatus.set(vanilla);
-            c.showProxiesStatus.set(vanilla);
-        } catch (Throwable ignored) {
         }
     }
 

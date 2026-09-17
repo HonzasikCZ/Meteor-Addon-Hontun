@@ -14,6 +14,7 @@ public final class HontunIcons {
     public static final int REFRESH = 8;
     public static final int CHEVRON = 9;
     public static final int GLOBE = 10;
+    public static final int WARNING = 11;
 
     public static final int SIZE = 8;
 
@@ -84,6 +85,10 @@ public final class HontunIcons {
                 g.fill(x, y + 4, x + 7, y + 5, argb);
                 g.fill(x + 1, y + 1, x + 2, y + 6, argb);
                 g.fill(x + 5, y + 1, x + 6, y + 6, argb);
+            }
+            case WARNING -> {
+                g.fill(x + 3, y, x + 5, y + 5, argb);
+                g.fill(x + 3, y + 6, x + 5, y + 8, argb);
             }
             default -> { }
         }

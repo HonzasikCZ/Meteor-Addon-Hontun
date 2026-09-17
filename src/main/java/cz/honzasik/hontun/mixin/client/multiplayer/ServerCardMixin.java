@@ -31,7 +31,8 @@ public abstract class ServerCardMixin {
     @Shadow @Final private FaviconTexture icon;
     @Shadow private Identifier statusIcon;
 
-    @Unique private static final int FLAG_H = 9, FLAG_MAX_W = 16;
+    @Unique private static final int FLAG_W = HontunFlags.W;
+    @Unique private static final int ROW_BOTTOM = 8;
 
     @Unique private boolean hontun$clipped;
 
@@ -77,13 +78,13 @@ public abstract class ServerCardMixin {
         int statusX = statusIconX - (status == null ? 0 : f.width(status)) - 5;
 
         int right = statusX - 6;
-        int y = self.getContentY() + 1;
+        int y = self.getContentY() + ROW_BOTTOM - HontunFlags.H;
         int nameEnd = self.getContentX() + 32 + 3 + f.width(serverData.name);
-        if (right - FLAG_MAX_W < nameEnd + 4) return;
+        if (right - FLAG_W < nameEnd + 4) return;
 
         if (cc == null) {
-            HontunFlags.placeholder(g, right, y, 12, FLAG_H);
-        } else if (HontunFlags.drawRightFramed(g, cc, right, y, FLAG_H) == 0) {
+            HontunFlags.placeholder(g, right, y);
+        } else if (!HontunFlags.drawRight(g, cc, right, y)) {
             String up = cc.toUpperCase(Locale.ROOT);
             g.text(f, Component.literal(up), right - f.width(up), y,
                     HontunTheme.argb(0xFF, HontunTheme.textDim()), false);

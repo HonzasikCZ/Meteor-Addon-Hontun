@@ -25,6 +25,8 @@
     "client.multiplayer.ScrollbarStyleMixin",
     "client.multiplayer.ServerVersionButtonMixin",
     "client.multiplayer.DirectJoinVersionButtonMixin",
+    "meteor.multiplayer.MeteorStatusTextMixin",
+    "meteor.hud.LagNotifierStyleMixin",
     "module.noworldborder.WorldBorderRendererMixin",
     "module.noworldborder.WorldBorderMixin"
   ],
@@ -36,6 +38,7 @@
     "network.channels.CustomPayloadCodecMixin",
     "network.version.ClientConfigMixin",
     "network.worldinfo.ClientLoginMixin",
+    "network.resourcepack.ResourcePackPushMixin",
     "meteor.servercommand.ServerCommandMixin",
     "meteor.gui.WidgetScreenBackgroundMixin",
     "meteor.chat.ChatUtilsPrefixMixin",

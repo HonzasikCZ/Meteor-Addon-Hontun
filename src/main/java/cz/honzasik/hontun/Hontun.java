@@ -4,6 +4,7 @@ import cz.honzasik.hontun.commands.CommandExample;
 import cz.honzasik.hontun.commands.CenterCommand;
 import cz.honzasik.hontun.commands.CwProbe;
 import cz.honzasik.hontun.commands.ForEach;
+import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.Reconnect;
 import cz.honzasik.hontun.modules.AntiExploit;
@@ -43,6 +44,7 @@ public class Hontun extends MeteorAddon {
         MeteorClient.EVENT_BUS.subscribe(new ChannelFetcher.Cleaner());
 
         MeteorClient.EVENT_BUS.subscribe(PluginScanner.INSTANCE);
+        MeteorClient.EVENT_BUS.subscribe(PlayerRoster.INSTANCE);
 
         THEME = new HontunGuiTheme();
         GuiThemes.add(THEME);

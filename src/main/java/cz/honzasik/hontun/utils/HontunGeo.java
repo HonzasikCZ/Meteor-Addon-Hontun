@@ -2,6 +2,9 @@ package cz.honzasik.hontun.utils;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.client.multiplayer.resolver.ResolvedServerAddress;
+import net.minecraft.client.multiplayer.resolver.ServerAddress;
+import net.minecraft.client.multiplayer.resolver.ServerNameResolver;
 
 import java.net.InetAddress;
 import java.net.URI;
@@ -11,6 +14,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -67,10 +71,27 @@ public final class HontunGeo {
         return s.toLowerCase(Locale.ROOT);
     }
 
+    private static String resolve(String address) {
+        try {
+            Optional<ResolvedServerAddress> resolved =
+                    ServerNameResolver.DEFAULT.resolveAddress(ServerAddress.parseString(address));
+            if (resolved.isPresent()) {
+                String ip = resolved.get().getHostIp();
+                if (ip != null && !ip.isEmpty()) return ip;
+            }
+        } catch (Throwable ignored) {
+        }
+        try {
+            return InetAddress.getByName(host(address)).getHostAddress();
+        } catch (Throwable ignored) {
+            return null;
+        }
+    }
+
     private static void lookup(String key) {
         String result = "";
-        try {
-            String ip = InetAddress.getByName(host(key)).getHostAddress();
+        String ip = resolve(key);
+        if (ip != null) try {
             HttpRequest req = HttpRequest.newBuilder(
                     URI.create("https://ipwho.is/" + ip + "?fields=country_code,success"))
                     .timeout(Duration.ofSeconds(8))
@@ -86,6 +107,10 @@ public final class HontunGeo {
             }
         } catch (Throwable ignored) {
         }
+        finish(key, result);
+    }
+
+    private static void finish(String key, String result) {
         if (result.isEmpty()) FAILED.put(key, System.currentTimeMillis());
         else { CACHE.put(key, result); FAILED.remove(key); }
         INFLIGHT.remove(key);

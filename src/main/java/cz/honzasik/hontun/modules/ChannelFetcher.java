@@ -85,6 +85,9 @@ public class ChannelFetcher extends Module {
 
         if (channel.equals("minecraft:brand")) return;
 
+        ChannelFetcher self = Modules.get().get(ChannelFetcher.class);
+        if (self == null || !self.isActive()) return;
+
         if (channel.equals("minecraft:register")) {
             for (String ch : new String(data, StandardCharsets.UTF_8).split("\0")) {
                 if (ch.isEmpty()) continue;
@@ -167,6 +170,7 @@ public class ChannelFetcher extends Module {
             PENDING.clear();
             cz.honzasik.hontun.utils.VersionKeeper.clear();
             cz.honzasik.hontun.utils.WorldInfo.clear();
+            cz.honzasik.hontun.utils.ResourcePackInfo.clear();
         }
     }
 }

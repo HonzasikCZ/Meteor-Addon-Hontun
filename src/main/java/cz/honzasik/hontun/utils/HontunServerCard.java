@@ -25,7 +25,8 @@ public final class HontunServerCard {
     private static final Identifier MOVE_DOWN_HI = Identifier.withDefaultNamespace("server_list/move_down_highlighted");
 
     private static final int CUT = 5;
-    private static final int FLAG_H = 9, FLAG_MAX_W = 16;
+    private static final int FLAG_W = HontunFlags.W;
+    private static final int ROW_BOTTOM = 8;
 
     private HontunServerCard() {}
 
@@ -107,13 +108,13 @@ public final class HontunServerCard {
         String cc = HontunGeo.country(data.ip);
 
         int right = statusX - 6;
-        int y = contentY + 1;
+        int y = contentY + ROW_BOTTOM - HontunFlags.H;
         int nameEnd = contentX + 35 + f.width(data.name);
-        if (right - FLAG_MAX_W < nameEnd + 4) return;
+        if (right - FLAG_W < nameEnd + 4) return;
 
         if (cc == null) {
-            HontunFlags.placeholder(g, right, y, 12, FLAG_H);
-        } else if (HontunFlags.drawRightFramed(g, cc, right, y, FLAG_H) == 0) {
+            HontunFlags.placeholder(g, right, y);
+        } else if (!HontunFlags.drawRight(g, cc, right, y)) {
             String up = cc.toUpperCase(Locale.ROOT);
             g.text(f, Component.literal(up), right - f.width(up), y,
                     HontunTheme.argb(0xFF, HontunTheme.textDim()), false);
