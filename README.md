@@ -151,6 +151,5 @@ The jar lands in `build/libs/`.
 - [ViaFabricPlus](https://github.com/ViaVersion/ViaFabricPlus)
 - [DupersUnited](https://github.com/DupersUnited/dupersunited-mod)
 - [Meteor Rejects](https://github.com/AntiCope/meteor-rejects)
-- [Gurken's Gadgetry](https://github.com/stefexec/gurkens-gadgetry-public)
 - [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon)
 - [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X)
