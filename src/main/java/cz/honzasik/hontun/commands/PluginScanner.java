@@ -44,7 +44,8 @@ public class PluginScanner {
         "lightanticheat", "anarchyexploitfixes", "polar", "intave",
 
         "antispoof", "lpx", "exploitfixer", "coffeeprotect", "pl-hide-pro", "plhidepro",
-        "antihealthindicator", "sonar", "foxgate", "foxgateplus");
+        "antihealthindicator", "sonar", "foxgate", "foxgateplus",
+        "polarloader", "fairplay", "cultac", "cult", "angleguard");
 
     private static final int SENDS_PER_TICK = 3;
     private static final int TIMEOUT_TICKS = 120;

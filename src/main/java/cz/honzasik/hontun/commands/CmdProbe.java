@@ -26,7 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import static com.mojang.brigadier.arguments.StringArgumentType.greedyString;
 
-public class CwProbe extends Command {
+public class CmdProbe extends Command {
     private static final Set<String> CORE_NS = Set.of("minecraft", "bukkit", "spigot", "paper");
     private static final int SENDS_PER_TICK = 3;
     private static final int IDLE_TIMEOUT_TICKS = 40;
@@ -41,7 +41,7 @@ public class CwProbe extends Command {
     private volatile boolean enumActive = false;
     private volatile long lastActivityTick = 0;
 
-    public CwProbe() {
+    public CmdProbe() {
         super("cmdprobe", "Probes/enumerates CommandWhitelist tab-completion (issue #113).");
         MeteorClient.EVENT_BUS.subscribe(this);
     }

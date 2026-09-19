@@ -15,7 +15,7 @@ public class CenterCommand extends Command {
     };
 
     public CenterCommand() {
-        super("center", "Snaps you to the middle of your block, or snaps your look to a clean direction.");
+        super("center", "Snaps you to the middle of your block, snaps your look to a clean direction, or both.");
     }
 
     @Override
@@ -23,6 +23,7 @@ public class CenterCommand extends Command {
         builder.executes(ctx -> { position(); return SINGLE_SUCCESS; });
         builder.then(literal("position").executes(ctx -> { position(); return SINGLE_SUCCESS; }));
         builder.then(literal("look").executes(ctx -> { look(); return SINGLE_SUCCESS; }));
+        builder.then(literal("both").executes(ctx -> { position(); look(); return SINGLE_SUCCESS; }));
     }
 
     private void position() {

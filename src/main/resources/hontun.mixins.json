@@ -16,9 +16,11 @@
     "client.titlescreen.LevelLoadingBackgroundMixin",
     "client.button.ButtonStyleMixin",
     "client.hotbar.HotbarStyleMixin",
+    "client.hud.TabListToggleMixin",
     "client.container.ContainerScreenBackgroundMixin",
     "client.connect.ConnectScreenInfoMixin",
     "client.multiplayer.JoinMultiplayerVersionButtonMixin",
+    "client.multiplayer.JoinMultiplayerScreenAccessor",
     "client.multiplayer.ScreenInvoker",
     "client.multiplayer.ServerCardMixin",
     "client.multiplayer.SelectionOutlineMixin",
@@ -26,9 +28,7 @@
     "client.multiplayer.ServerVersionButtonMixin",
     "client.multiplayer.DirectJoinVersionButtonMixin",
     "meteor.multiplayer.MeteorStatusTextMixin",
-    "meteor.hud.LagNotifierStyleMixin",
-    "module.noworldborder.WorldBorderRendererMixin",
-    "module.noworldborder.WorldBorderMixin"
+    "meteor.hud.LagNotifierStyleMixin"
   ],
   "mixins": [
     "network.custompayload.CustomPayloadEncoderMixin",

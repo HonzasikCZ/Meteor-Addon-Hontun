@@ -17,13 +17,6 @@ import java.util.List;
 import java.util.Locale;
 
 public final class HontunServerCard {
-    private static final Identifier JOIN = Identifier.withDefaultNamespace("server_list/join");
-    private static final Identifier JOIN_HI = Identifier.withDefaultNamespace("server_list/join_highlighted");
-    private static final Identifier MOVE_UP = Identifier.withDefaultNamespace("server_list/move_up");
-    private static final Identifier MOVE_UP_HI = Identifier.withDefaultNamespace("server_list/move_up_highlighted");
-    private static final Identifier MOVE_DOWN = Identifier.withDefaultNamespace("server_list/move_down");
-    private static final Identifier MOVE_DOWN_HI = Identifier.withDefaultNamespace("server_list/move_down_highlighted");
-
     private static final int CUT = 5;
     private static final int FLAG_W = HontunFlags.W;
     private static final int ROW_BOTTOM = 8;
@@ -83,18 +76,88 @@ public final class HontunServerCard {
         drawFlag(g, f, data, contentX, contentY, statusX);
 
         if (hovered) {
-            g.fill(contentX, contentY, contentX + 32, contentY + 32, HontunTheme.argb(0xA0, HontunTheme.crust()));
-            int relX = mouseX - contentX, relY = mouseY - contentY;
-            boolean right = relX >= 16 && relX < 32 && relY >= 0 && relY < 32;
-            g.blitSprite(RenderPipelines.GUI_TEXTURED, right ? JOIN_HI : JOIN, contentX, contentY, 32, 32);
-            if (index > 0) {
-                boolean topLeft = relX >= 0 && relX < 16 && relY >= 0 && relY < 16;
-                g.blitSprite(RenderPipelines.GUI_TEXTURED, topLeft ? MOVE_UP_HI : MOVE_UP, contentX, contentY, 32, 32);
+            arrows(g, contentX, contentY, index, serverCount, mouseX, mouseY);
+        }
+    }
+
+    public static void selection(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e, boolean selected) {
+        if (!selected) return;
+        int x = e.getX(), y = e.getY() + 1, w = e.getWidth(), h = e.getHeight() - 2;
+
+        if (HontunTheme.modern2()) {
+            HontunShapes.glow(g, x, y, w, h, CUT, HontunTheme.accentHi(), 3, 0x90);
+            HontunShapes.outlineClipped(g, x, y, w, h, CUT, CUT, HontunTheme.argb(0xFF, HontunTheme.accentHi()));
+        } else if (HontunTheme.modern1()) {
+            int c = HontunTheme.argb(0xFF, HontunTheme.accent());
+            g.fill(x, y, x + w, y + 1, c);
+            g.fill(x, y + h - 1, x + w, y + h, c);
+            g.fill(x, y, x + 3, y + h, HontunTheme.argb(0xFF, HontunTheme.accentHi()));
+        } else {
+            int rgb = HontunTheme.vanilla() ? 0xFFFFFF : HontunTheme.accent();
+            int c = HontunTheme.argb(0xFF, rgb);
+            g.fill(x, y, x + w, y + 1, c);
+            g.fill(x, y + h - 1, x + w, y + h, c);
+            g.fill(x, y, x + 1, y + h, c);
+            g.fill(x + w - 1, y, x + w, y + h, c);
+        }
+    }
+
+    public static void arrows(GuiGraphicsExtractor g, int contentX, int contentY, int index, int count,
+                              int mouseX, int mouseY) {
+        int relX = mouseX - contentX, relY = mouseY - contentY;
+        boolean upZone = index > 0;
+        boolean downZone = index >= 0 && index < count - 1;
+        boolean joinH = relX >= 16 && relX < 32 && relY >= 0 && relY < 32;
+        boolean upH = upZone && relX >= 0 && relX < 16 && relY >= 0 && relY < 16;
+        boolean downH = downZone && relX >= 0 && relX < 16 && relY >= 16 && relY < 32;
+
+        zone(g, contentX + 16, contentY, 16, 32, joinH);
+        if (upZone) zone(g, contentX, contentY, 16, 16, upH);
+        if (downZone) zone(g, contentX, contentY + 16, 16, 16, downH);
+
+        arrowRight(g, contentX + 19, contentY + 16, 6, HontunTheme.argb(0xFF, joinH ? HontunTheme.accentHi() : HontunTheme.accent()));
+        if (upZone) arrowUp(g, contentX + 8, contentY + 5, 4, HontunTheme.argb(0xFF, upH ? HontunTheme.accentHi() : HontunTheme.accent()));
+        if (downZone) arrowDown(g, contentX + 8, contentY + 24, 4, HontunTheme.argb(0xFF, downH ? HontunTheme.accentHi() : HontunTheme.accent()));
+    }
+
+    private static void zone(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered) {
+        if (HontunTheme.modern2()) {
+            int cut = 2;
+            HontunShapes.fillClipped(g, x, y, w, h, cut, cut,
+                    HontunTheme.argb(hovered ? 0xE8 : 0xB8, hovered ? HontunTheme.surface1() : HontunTheme.crust()));
+            if (hovered) HontunShapes.outlineClipped(g, x, y, w, h, cut, cut, HontunTheme.argb(0xFF, HontunTheme.accentHi()));
+        } else if (HontunTheme.modern1()) {
+            g.fill(x, y, x + w, y + h, HontunTheme.argb(hovered ? 0xE8 : 0xB8, hovered ? HontunTheme.surface1() : HontunTheme.crust()));
+            if (hovered) g.fill(x, y + h - 1, x + w, y + h, HontunTheme.argb(0xFF, HontunTheme.accent()));
+        } else {
+            g.fill(x, y, x + w, y + h, HontunTheme.argb(hovered ? 0xCC : 0x99, hovered ? HontunTheme.surface1() : HontunTheme.crust()));
+            if (hovered) {
+                int b = HontunTheme.argb(0xFF, HontunTheme.accent());
+                g.fill(x, y, x + w, y + 1, b);
+                g.fill(x, y + h - 1, x + w, y + h, b);
+                g.fill(x, y, x + 1, y + h, b);
+                g.fill(x + w - 1, y, x + w, y + h, b);
             }
-            if (index >= 0 && index < serverCount - 1) {
-                boolean botLeft = relX >= 0 && relX < 16 && relY >= 16 && relY < 32;
-                g.blitSprite(RenderPipelines.GUI_TEXTURED, botLeft ? MOVE_DOWN_HI : MOVE_DOWN, contentX, contentY, 32, 32);
-            }
+        }
+    }
+
+    private static void arrowRight(GuiGraphicsExtractor g, int cx, int cy, int size, int argb) {
+        for (int i = 0; i < size; i++) {
+            int half = size - 1 - i;
+            g.fill(cx + i, cy - half, cx + i + 1, cy + half + 1, argb);
+        }
+    }
+
+    private static void arrowUp(GuiGraphicsExtractor g, int cx, int cy, int size, int argb) {
+        for (int i = 0; i < size; i++) {
+            g.fill(cx - i, cy + i, cx + i + 1, cy + i + 1, argb);
+        }
+    }
+
+    private static void arrowDown(GuiGraphicsExtractor g, int cx, int cy, int size, int argb) {
+        for (int i = 0; i < size; i++) {
+            int half = size - 1 - i;
+            g.fill(cx - half, cy + i, cx + half + 1, cy + i + 1, argb);
         }
     }
 

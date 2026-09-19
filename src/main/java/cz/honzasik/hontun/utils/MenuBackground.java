@@ -5,6 +5,14 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import java.util.Random;
 
 public class MenuBackground {
+    /**
+     * Normally the menu background only replaces the panorama at the main menu ({@code level == null}).
+     * The local screenshot tool sets this while it captures so the menu background is drawn over a
+     * live server too, giving clean shots instead of the game world behind each screen. It stays
+     * {@code false} in the released addon.
+     */
+    public static volatile boolean forceOnServer = false;
+
     private static final Random RANDOM = new Random();
     private static final Particle[] PARTICLES = new Particle[120];
 

@@ -1,19 +1,17 @@
 package cz.honzasik.hontun;
 
-import cz.honzasik.hontun.commands.CommandExample;
 import cz.honzasik.hontun.commands.CenterCommand;
-import cz.honzasik.hontun.commands.CwProbe;
+import cz.honzasik.hontun.commands.CmdProbe;
 import cz.honzasik.hontun.commands.ForEach;
 import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.Reconnect;
+import cz.honzasik.hontun.commands.ToggleTab;
 import cz.honzasik.hontun.modules.AntiExploit;
 import cz.honzasik.hontun.modules.ChannelFetcher;
 import cz.honzasik.hontun.modules.ChannelSender;
 import cz.honzasik.hontun.modules.FreeInteract;
 import cz.honzasik.hontun.modules.GamemodeNotify;
-import cz.honzasik.hontun.modules.NoWorldBorder;
-import cz.honzasik.hontun.modules.WorldGuardBypass;
 import cz.honzasik.hontun.gui.api.render.RoundedRect;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.render.HontunRenderer;
@@ -71,11 +69,11 @@ public class Hontun extends MeteorAddon {
     }
 
     private void addCommands() {
-        Commands.add(new CommandExample());
         Commands.add(new ForEach());
         Commands.add(new Reconnect());
-        Commands.add(new CwProbe());
+        Commands.add(new CmdProbe());
         Commands.add(new CenterCommand());
+        Commands.add(new ToggleTab());
     }
 
     private void addModules() {
@@ -86,8 +84,6 @@ public class Hontun extends MeteorAddon {
         modules.add(new AntiExploit());
         modules.add(new FreeInteract());
         modules.add(new GamemodeNotify());
-        modules.add(new NoWorldBorder());
-        modules.add(new WorldGuardBypass());
     }
 
     @Override

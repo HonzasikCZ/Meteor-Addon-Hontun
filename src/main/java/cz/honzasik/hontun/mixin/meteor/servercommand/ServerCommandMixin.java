@@ -3,7 +3,9 @@ package cz.honzasik.hontun.mixin.meteor.servercommand;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.PlayerRoster;
+import cz.honzasik.hontun.mixin.network.custompayload.ClientListenerConnectionAccessor;
 import cz.honzasik.hontun.modules.ChannelFetcher;
+import net.minecraft.network.Connection;
 import cz.honzasik.hontun.utils.HontunChat;
 import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.utils.ResourcePackInfo;
@@ -27,6 +29,8 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -61,6 +65,16 @@ public abstract class ServerCommandMixin {
             self.info("Port: %d", ServerAddress.parseString(server.ip).getPort());
         } catch (Throwable ignored) {
         }
+        try {
+            Connection c = mc.getConnection() != null
+                    ? ((ClientListenerConnectionAccessor) (Object) mc.getConnection()).hontun$getConnection() : null;
+            SocketAddress addr = c != null ? c.getRemoteAddress() : null;
+            if (addr instanceof InetSocketAddress isa) {
+                String host = isa.getAddress() != null ? isa.getAddress().getHostAddress() : isa.getHostString();
+                self.info("Connected to: %s:%d", host, isa.getPort());
+            }
+        } catch (Throwable ignored) {
+        }
 
         String brand = mc.getConnection() != null ? mc.getConnection().serverBrand() : null;
         self.info("Type: %s", brand != null ? brand : "unknown");
@@ -70,6 +84,17 @@ public abstract class ServerCommandMixin {
             self.info("Real version: %s", VersionKeeper.version);
         }
         self.info("Protocol version: %d", server.protocol);
+
+        List<String> packs = new ArrayList<>();
+        synchronized (VersionKeeper.knownPacks) {
+            packs.addAll(VersionKeeper.knownPacks);
+        }
+        if (!packs.isEmpty()) {
+            self.info("Data packs (%d):", packs.size());
+            for (String pack : packs) {
+                self.info(" - %s", pack);
+            }
+        }
 
         if (mc.level != null) {
             self.info("Difficulty: %s", mc.level.getDifficulty().getDisplayName().getString());

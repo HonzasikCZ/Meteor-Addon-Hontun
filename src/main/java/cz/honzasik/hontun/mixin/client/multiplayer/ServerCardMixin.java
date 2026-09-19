@@ -55,16 +55,27 @@ public abstract class ServerCardMixin {
     private void hontun$cardForeground(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean hovered,
                                        float pt, CallbackInfo ci) {
         ServerSelectionList.OnlineServerEntry self = (ServerSelectionList.OnlineServerEntry) (Object) this;
+        boolean selected = hontun$selected(self);
 
         if (hontun$clipped) {
             hontun$clipped = false;
             g.disableScissor();
             HontunServerCard.foreground(g, self, serverData, icon, statusIcon,
                     hontun$index(), hontun$serverCount(), hovered, mouseX, mouseY);
+            HontunServerCard.selection(g, self, selected);
             return;
         }
 
-        if (!HontunGeo.enabled() || !HontunTheme.restyleEnabled()) return;
+        HontunServerCard.selection(g, self, selected);
+
+        if (!HontunTheme.restyleEnabled()) return;
+
+        if (hovered) {
+            HontunServerCard.arrows(g, self.getContentX(), self.getContentY(),
+                    hontun$index(), hontun$serverCount(), mouseX, mouseY);
+        }
+
+        if (!HontunGeo.enabled()) return;
         if (serverData == null || serverData.type() != ServerData.Type.OTHER) return;
 
         if (!hontun$pinged()) return;
@@ -88,6 +99,16 @@ public abstract class ServerCardMixin {
             String up = cc.toUpperCase(Locale.ROOT);
             g.text(f, Component.literal(up), right - f.width(up), y,
                     HontunTheme.argb(0xFF, HontunTheme.textDim()), false);
+        }
+    }
+
+    @Unique
+    private boolean hontun$selected(ServerSelectionList.OnlineServerEntry self) {
+        try {
+            ServerSelectionList list = ((JoinMultiplayerScreenAccessor) (Object) screen).hontun$serverList();
+            return list != null && list.getSelected() == self;
+        } catch (Throwable ignored) {
+            return false;
         }
     }
 

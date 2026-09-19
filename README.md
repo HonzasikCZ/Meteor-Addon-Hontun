@@ -21,17 +21,16 @@ picker is simply hidden and everything else works unchanged.
 - `Channel Sender` Sends a custom payload on any channel, even unregistered ones.
 - `Free Interact` Removes a couple of client-side interaction limits.
 - `Gamemode Notify` Alerts you when someone changes their gamemode.
-- `No World Border` Hides the world border on the client (visual and local collision).
-- `World Guard Bypass` Position-spoof test for whether a server validates movement against region
-  protection. Intended for testing your own server.
 
 ## COMMANDS
 
 - `.cmdprobe` Enumerates commands a CommandWhitelist tries to hide.
 - `.center` `position` snaps you to the middle of your block, `look` snaps your view to the nearest
   clean direction.
-- `.foreach` Runs a command per player or iteration, with optional delays.
+- `.foreach` Runs a command per player or iteration, with optional delays. Use `%player%` as the
+  placeholder for each player's name.
 - `.reconnect` Rejoins the current server (alias `.rejoin`).
+- `.toggletab` Locks the player list (tab) visible so you do not have to hold the key.
 - `.server` Adds real backend version, world info, plugin channels, the pushed resource-pack
   (clickable URL + SHA-1) and a plugin scan to Meteor's server info. `.server channels` lists
   captured channels, `.server plugins` scans plugins, `.server players` probes the real online
@@ -78,10 +77,62 @@ Four looks, switchable in `ClickGUI -> Config -> GUI -> ui-mode`:
   milliseconds.
 - `Chat` `[Hontun]` prefix in the accent color.
 
-<img width="2559" height="1363" alt="obrazek" src="https://github.com/user-attachments/assets/5ad12503-3af1-4ab3-a05a-0b9107cdeaff" />
-<img width="2559" height="1360" alt="obrazek" src="https://github.com/user-attachments/assets/6e69d76e-751c-4eda-b26e-8f26b6365862" />
-<img width="2559" height="1362" alt="obrazek" src="https://github.com/user-attachments/assets/35a6967d-8d5e-4af9-89cd-1ef2f35851bc" />
-<img width="2560" height="1361" alt="obrazek" src="https://github.com/user-attachments/assets/bf1c6a42-02de-40dd-abc1-ab4218b53d4b" />
+Every screen is themed live by the palette colour. Pick the mode in
+`ClickGUI -> Config -> GUI -> ui-mode`, then click a theme below to expand its screenshots.
+
+<details open>
+<summary><b>HModern2</b> — chamfered corners, accent glow, corner brackets (default)</summary>
+<table>
+<tr>
+<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern2_main.png" alt="HModern2 title screen"></td>
+<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HModern2_multiplayer.png" alt="HModern2 server list"></td>
+</tr>
+<tr>
+<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HModern2_multiplayer_drag.png" alt="HModern2 drag to reorder"></td>
+<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HModern2_accounts.png" alt="HModern2 accounts"></td>
+</tr>
+<tr>
+<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern2_versions.png" alt="HModern2 versions"></td>
+<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern2_proxies.png" alt="HModern2 proxies"></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><b>HModern1</b> — flat panels, soft gradients, rounded corners</summary>
+<table>
+<tr>
+<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern1_main.png" alt="HModern1 title screen"></td>
+<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HModern1_multiplayer.png" alt="HModern1 server list"></td>
+</tr>
+<tr>
+<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HModern1_multiplayer_drag.png" alt="HModern1 drag to reorder"></td>
+<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HModern1_accounts.png" alt="HModern1 accounts"></td>
+</tr>
+<tr>
+<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern1_versions.png" alt="HModern1 versions"></td>
+<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern1_proxies.png" alt="HModern1 proxies"></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><b>HVanilla</b> — Minecraft's square shapes as translucent panels with a thin accent outline</summary>
+<table>
+<tr>
+<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HVanilla_main.png" alt="HVanilla title screen"></td>
+<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HVanilla_multiplayer.png" alt="HVanilla server list"></td>
+</tr>
+<tr>
+<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HVanilla_multiplayer_drag.png" alt="HVanilla drag to reorder"></td>
+<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HVanilla_accounts.png" alt="HVanilla accounts"></td>
+</tr>
+<tr>
+<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HVanilla_versions.png" alt="HVanilla versions"></td>
+<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HVanilla_proxies.png" alt="HVanilla proxies"></td>
+</tr>
+</table>
+</details>
 
 ## BUILDING
 
@@ -102,3 +153,4 @@ The jar lands in `build/libs/`.
 - [Meteor Rejects](https://github.com/AntiCope/meteor-rejects)
 - [Gurken's Gadgetry](https://github.com/stefexec/gurkens-gadgetry-public)
 - [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon)
+- [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X)
