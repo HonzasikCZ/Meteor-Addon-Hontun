@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.gui.widget;
 
+import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.systems.proxies.Proxies;
 import meteordevelopment.meteorclient.systems.proxies.Proxy;
@@ -58,11 +59,11 @@ public class HontunSessionHeader extends AbstractWidget {
         int maxW = Math.max(0, getWidth() - TEXT_X);
 
         String l1 = "Logged in as " + name;
-        g.text(f, Component.literal(clip(f, l1, maxW)), tx, y,
+        g.text(f, HontunFont.text(clip(f, l1, maxW)), tx, y,
                 HontunTheme.argb(0xFF, HontunTheme.textLight()), true);
 
         String l2 = "Not using a proxy";
-        int l2rgb = HontunTheme.textDim();
+        int l2rgb = HontunTheme.smog() ? HontunTheme.subtext1() : HontunTheme.textDim();
         try {
             Proxy p = Proxies.get() != null ? Proxies.get().getEnabled() : null;
             if (p != null) {
@@ -74,11 +75,17 @@ public class HontunSessionHeader extends AbstractWidget {
             }
         } catch (Throwable ignored) {
         }
-        g.text(f, Component.literal(clip(f, l2, maxW)), tx, y + f.lineHeight + 2,
+        g.text(f, HontunFont.text(clip(f, l2, maxW)), tx, y + f.lineHeight + 2,
                 HontunTheme.argb(0xFF, l2rgb), true);
     }
 
     private void hontun$frame(GuiGraphicsExtractor g, int x, int y) {
+        if (HontunTheme.smog()) {
+            HontunRound.card(g, x, y, BOX, BOX, 4,
+                    HontunTheme.argb(0xFF, HontunTheme.base()),
+                    HontunTheme.argb(0xFF, HontunTheme.overlay2()));
+            return;
+        }
         if (HontunTheme.modern2()) {
             HontunShapes.fillClipped(g, x, y, BOX, BOX, 4, 4, HontunTheme.argb(0xF0, HontunTheme.crust()));
             HontunShapes.glow(g, x, y, BOX, BOX, 4, HontunTheme.accent(), 1, 0x50);

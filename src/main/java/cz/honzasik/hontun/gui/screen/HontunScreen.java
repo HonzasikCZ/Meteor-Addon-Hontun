@@ -1,7 +1,9 @@
 package cz.honzasik.hontun.gui.screen;
 
 import cz.honzasik.hontun.gui.widget.HontunCards;
+import cz.honzasik.hontun.gui.widget.HontunRound;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
+import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.utils.MenuBackground;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -71,6 +73,20 @@ public abstract class HontunScreen extends Screen {
             MenuBackground.render(g, width, height, true);
             HontunShapes.panel(g, px, py, pw, ph, 12);
             HontunShapes.titleChip(g, font, px + pw / 2, py, getTitle());
+            return;
+        }
+
+        if (HontunTheme.smog()) {
+            MenuBackground.render(g, width, height, true);
+            HontunRound.card(g, px, py, pw, ph, 5,
+                    HontunTheme.argb(0xF2, HontunTheme.surface0()),
+                    HontunTheme.argb(0xFF, HontunTheme.overlay2()));
+
+            Component title = HontunFont.apply(getTitle());
+            int tw = font.width(title);
+            int tx = px + pw / 2 - tw / 2;
+            g.text(font, title, tx, py + 7, HontunTheme.argb(0xFF, HontunTheme.textLight()), true);
+            g.fill(tx, py + 18, tx + tw, py + 19, HontunTheme.argb(0xC0, HontunTheme.accent()));
             return;
         }
 

@@ -15,11 +15,15 @@
   "entrypoints": {
     "meteor": [
       "cz.honzasik.hontun.Hontun"
+    ],
+    "client": [
+      "com.mrmelon54.DraggableLists.DraggableLists"
     ]
   },
   "mixins": [
     "hontun.mixins.json",
-    "hontun-gui.mixins.json"
+    "hontun-gui.mixins.json",
+    "draggable_lists.mixins.json"
   ],
   "custom": {
     "meteor-client:color": "62,140,255"

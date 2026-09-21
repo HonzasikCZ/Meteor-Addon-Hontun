@@ -4,7 +4,7 @@ import cz.honzasik.hontun.gui.screen.HontunVersionScreen;
 import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.utils.VfpBridge;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screens.ManageServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -21,7 +22,6 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
-import java.util.List;
 
 @Mixin(ManageServerScreen.class)
 public abstract class ServerVersionButtonMixin {
@@ -39,10 +39,8 @@ public abstract class ServerVersionButtonMixin {
         if (hontun$savedName != null && nameEdit != null) { nameEdit.setValue(hontun$savedName); hontun$savedName = null; }
         if (hontun$savedIp != null && ipEdit != null) { ipEdit.setValue(hontun$savedIp); hontun$savedIp = null; }
 
-        if (!HontunTheme.restyleEnabled() || !VfpBridge.available()) return;
-
-        hontun$removeVfpButton(self);
-        if (serverData == null || !VfpBridge.perServerAvailable(serverData)) return;
+        if (!HontunTheme.restyleEnabled()) return;
+        if (!VfpBridge.available() || serverData == null || !VfpBridge.perServerAvailable(serverData)) return;
 
         Button b = Button.builder(Component.literal(hontun$label()), btn -> {
             if (nameEdit != null) hontun$savedName = nameEdit.getValue();
@@ -56,22 +54,23 @@ public abstract class ServerVersionButtonMixin {
         ((ScreenInvoker) self).hontun$addRenderableWidget(b);
     }
 
+    @Inject(method = "extractRenderState", at = @At("HEAD"))
+    private void hontun$stripVfpButton(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (!HontunTheme.restyleEnabled()) return;
+        Screen self = (Screen) (Object) this;
+        for (GuiEventListener child : new ArrayList<>(self.children())) {
+            if (!(child instanceof Button b)) continue;
+            boolean vfpBySize = b.getWidth() == 98 && b.getHeight() == 20;
+            boolean vfpByKey = b.getMessage() != null
+                    && b.getMessage().getContents() instanceof TranslatableContents tc
+                    && "base.viafabricplus.set_version".equals(tc.getKey());
+            if (vfpBySize || vfpByKey) ((ScreenInvoker) self).hontun$removeWidget(b);
+        }
+    }
+
     @Unique
     private String hontun$label() {
         Object forced = VfpBridge.forcedVersion(serverData);
         return forced == null ? "Version: global" : "Version: " + VfpBridge.nameOf(forced);
-    }
-
-    @Unique
-    private void hontun$removeVfpButton(Screen self) {
-        List<GuiEventListener> doomed = new ArrayList<>();
-        for (GuiEventListener child : self.children()) {
-            if (!(child instanceof AbstractWidget w)) continue;
-            if (w.getWidth() != 98 || w.getHeight() != 20) continue;
-            int x = w.getX(), y = w.getY();
-            boolean corner = (x == 5 || x == self.width - 103) && (y == 5 || y == self.height - 25);
-            if (corner) doomed.add(child);
-        }
-        for (GuiEventListener d : doomed) ((ScreenInvoker) self).hontun$removeWidget(d);
     }
 }

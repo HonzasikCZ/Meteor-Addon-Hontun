@@ -16,6 +16,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class HontunLogoMixin {
     private static final Identifier HONTUN_LOGO =
             Identifier.fromNamespaceAndPath("hontun", "textures/gui/icon_logo.png");
+    private static final Identifier SMOG_LOGO =
+            Identifier.fromNamespaceAndPath("hontun", "textures/gui/smog/logo.png");
+    private static final int SMOG_TW = 367, SMOG_TH = 328;
     private static final int TEX = 256;
 
     @Inject(method = "extractRenderState(Lnet/minecraft/client/gui/GuiGraphicsExtractor;IFI)V",
@@ -38,6 +41,23 @@ public abstract class HontunLogoMixin {
             y = heightOffset + 25 - size / 2;
         }
         x = width / 2 - size / 2;
+
+        if (HontunTheme.smog()) {
+            int lw = Math.round(size * 1.7f);
+            int lh = Math.round(lw * (float) SMOG_TH / SMOG_TW);
+            int lx = width / 2 - lw / 2;
+            int ly = y - (lh - size) / 2;
+            int sA = Math.round(a * 70f);
+            if (sA > 0) {
+                g.blit(RenderPipelines.GUI_TEXTURED, SMOG_LOGO, lx + 2, ly + 3, 0.0f, 0.0f,
+                        lw, lh, SMOG_TW, SMOG_TH, SMOG_TW, SMOG_TH, HontunTheme.argb(sA, 0x000000));
+            }
+            g.blit(RenderPipelines.GUI_TEXTURED, SMOG_LOGO, lx, ly, 0.0f, 0.0f,
+                    lw, lh, SMOG_TW, SMOG_TH, SMOG_TW, SMOG_TH,
+                    HontunTheme.argb(Math.round(a * 255f), 0xFFFFFF));
+            ci.cancel();
+            return;
+        }
 
         int shadowA = Math.round(a * 90f);
         if (shadowA > 0) {

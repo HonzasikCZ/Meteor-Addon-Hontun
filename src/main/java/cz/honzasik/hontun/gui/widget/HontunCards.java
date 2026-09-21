@@ -44,6 +44,12 @@ public final class HontunCards {
     }
 
     public static void surface(GuiGraphicsExtractor g, int x, int y, int w, int h, int bgRgb, int alpha) {
+        if (HontunTheme.smog()) {
+            HontunRound.card(g, x, y, w, h, 5,
+                    HontunTheme.argb(alpha, bgRgb),
+                    HontunTheme.argb(0x60, HontunTheme.overlay2()));
+            return;
+        }
         card(g, x, y, w, h, HontunTheme.argb(alpha, bgRgb));
         if (HontunTheme.modern()) {
             border(g, x, y, w, h, HontunTheme.argb(0x40, HontunTheme.overlay0()));
@@ -67,6 +73,16 @@ public final class HontunCards {
     public static boolean deleteButton(GuiGraphicsExtractor g, net.minecraft.client.gui.Font f,
                                        int boxX, int boxY, int boxSize, int mouseX, int mouseY) {
         boolean over = mouseX >= boxX && mouseX < boxX + boxSize && mouseY >= boxY && mouseY < boxY + boxSize;
+        if (HontunTheme.smog()) {
+            if (over) HontunRound.fill(g, boxX, boxY, boxSize, boxSize, 5,
+                    HontunTheme.argb(0x66, HontunTheme.red()));
+            float cx = boxX + boxSize / 2f, cy = boxY + boxSize / 2f;
+            float arm = Math.min(boxSize / 2f - 2f, 4.5f);
+            int col = HontunTheme.argb(0xFF, over ? 0xFFFFFF : HontunTheme.textDim());
+            HontunRound.stroke(g, cx - arm, cy - arm, cx + arm, cy + arm, 1.25f, col);
+            HontunRound.stroke(g, cx - arm, cy + arm, cx + arm, cy - arm, 1.25f, col);
+            return over;
+        }
         if (over) {
             card(g, boxX, boxY, boxSize, boxSize, HontunTheme.argb(0x55, HontunTheme.red()));
         }
@@ -112,6 +128,24 @@ public final class HontunCards {
 
     public static void row(GuiGraphicsExtractor g, int x, int y, int w, int h,
                            boolean active, boolean hovered, int accentTint) {
+        if (HontunTheme.smog()) {
+            int fill, border;
+            if (active) {
+                fill = HontunTheme.argb(0xFF, HontunTheme.surface1());
+                border = HontunTheme.argb(0xFF, HontunTheme.accent());
+            } else if (hovered) {
+                fill = HontunTheme.argb(0xFF, HontunTheme.surface2());
+                border = HontunTheme.argb(0xFF, HontunTheme.accent());
+            } else {
+                fill = HontunTheme.argb(0xF0, HontunTheme.base());
+                border = HontunTheme.argb(0x60, HontunTheme.overlay2());
+            }
+            HontunRound.card(g, x, y, w, h, 4, fill, border);
+            if (active) {
+                HontunRound.fill(g, x + 2, y + 4, 2, h - 8, 1, HontunTheme.argb(0xFF, HontunTheme.accent()));
+            }
+            return;
+        }
         if (HontunTheme.modern2()) {
             HontunShapes.row(g, x, y, w, h, active, hovered);
             return;
@@ -143,6 +177,7 @@ public final class HontunCards {
     }
 
     public static int rowTextInset(boolean active) {
+        if (HontunTheme.smog()) return 6;
         return HontunTheme.modern() && active ? 3 : 0;
     }
 }

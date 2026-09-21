@@ -5,9 +5,13 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class HontunTheme {
-    public enum UiMode { Vanilla, HVanilla, HModern1, HModern2 }
+    public enum UiMode { Vanilla, HVanilla, HModern1, HModern2, SmogClient }
 
     private static volatile UiMode mode = UiMode.HModern2;
+
+    private static final int SMOG_ACCENT    = 0xE6E9EC;
+    private static final int SMOG_ACCENT_HI = 0xFFFFFF;
+    private static final int SMOG_ACCENT_LO = 0x8A9196;
 
     private static volatile int accent   = 0x3E8CFF;
     private static volatile int accentHi = 0x5AC8FF;
@@ -25,19 +29,20 @@ public final class HontunTheme {
     public static UiMode mode()            { return mode; }
     public static boolean vanilla()        { return mode == UiMode.Vanilla; }
 
-    public static boolean modern()         { return mode == UiMode.HModern1 || mode == UiMode.HModern2; }
+    public static boolean modern()         { return mode == UiMode.HModern1 || mode == UiMode.HModern2 || mode == UiMode.SmogClient; }
     public static boolean hvanilla()       { return mode == UiMode.HVanilla; }
     public static boolean modern1()        { return mode == UiMode.HModern1; }
     public static boolean modern2()        { return mode == UiMode.HModern2; }
+    public static boolean smog()           { return mode == UiMode.SmogClient; }
     public static boolean restyleEnabled() { return mode != UiMode.Vanilla; }
 
     public static void setMode(UiMode m) {
         if (m != null && m != mode) { mode = m; bump(); }
     }
 
-    public static int accent()   { return accent; }
-    public static int accentHi() { return accentHi; }
-    public static int accentLo() { return accentLo; }
+    public static int accent()   { return smog() ? SMOG_ACCENT   : accent; }
+    public static int accentHi() { return smog() ? SMOG_ACCENT_HI : accentHi; }
+    public static int accentLo() { return smog() ? SMOG_ACCENT_LO : accentLo; }
 
     public static void setAccent(int rgb) {
         rgb &= 0xFFFFFF;
@@ -75,18 +80,20 @@ public final class HontunTheme {
 
     private static int g(int minecraft, int modern) { return modern() ? modern : minecraft; }
 
-    public static int crust()    { return g(0x0C0D0F, 0x08090B); }
-    public static int mantle()   { return g(0x101114, 0x0C0D10); }
-    public static int base()     { return g(0x141519, 0x101114); }
-    public static int surface0() { return g(0x1C1D22, 0x16181C); }
-    public static int surface1() { return g(0x26272D, 0x1E2024); }
-    public static int surface2() { return g(0x32343A, 0x282A30); }
-    public static int overlay0() { return g(0x44464E, 0x3A3C42); }
-    public static int overlay1() { return g(0x5A5C66, 0x4E5058); }
-    public static int overlay2() { return g(0x74767F, 0x646670); }
-    public static int textLight(){ return g(0xE6E8EC, 0xF0F2F5); }
-    public static int subtext1() { return g(0xC2C5CC, 0xCACDD4); }
-    public static int textDim()  { return g(0xA0A3AB, 0x9CA0A8); }
+    private static int gs(int minecraft, int modern, int smog) { return smog() ? smog : g(minecraft, modern); }
+
+    public static int crust()    { return gs(0x0C0D0F, 0x08090B, 0x000000); }
+    public static int mantle()   { return gs(0x101114, 0x0C0D10, 0x050506); }
+    public static int base()     { return gs(0x141519, 0x101114, 0x0A0A0C); }
+    public static int surface0() { return gs(0x1C1D22, 0x16181C, 0x0E0E10); }
+    public static int surface1() { return gs(0x26272D, 0x1E2024, 0x151517); }
+    public static int surface2() { return gs(0x32343A, 0x282A30, 0x1E1E20); }
+    public static int overlay0() { return gs(0x44464E, 0x3A3C42, 0x2A2A2C); }
+    public static int overlay1() { return gs(0x5A5C66, 0x4E5058, 0x3C3C3E); }
+    public static int overlay2() { return gs(0x74767F, 0x646670, 0x555558); }
+    public static int textLight(){ return gs(0xE6E8EC, 0xF0F2F5, 0xFFFFFF); }
+    public static int subtext1() { return gs(0xC2C5CC, 0xCACDD4, 0xC8CDD2); }
+    public static int textDim()  { return gs(0xA0A3AB, 0x9CA0A8, 0x9096A0); }
 
     public static int green()  { return 0x5EE0A0; }
     public static int yellow() { return 0xF5D28A; }

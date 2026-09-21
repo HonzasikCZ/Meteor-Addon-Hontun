@@ -10,3 +10,8 @@ accessible class net/minecraft/client/gui/components/AbstractSelectionList$Entry
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollBarX ()I
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollerHeight ()I
 accessible method net/minecraft/client/gui/components/AbstractScrollArea scrollable ()Z
+
+# RoundedGui: submit custom SDF rounded-rect GuiElementRenderStates in z-order + honour the active scissor
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor guiRenderState Lnet/minecraft/client/renderer/state/gui/GuiRenderState;
+accessible field net/minecraft/client/gui/GuiGraphicsExtractor scissorStack Lnet/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack;
+accessible class net/minecraft/client/gui/GuiGraphicsExtractor$ScissorStack

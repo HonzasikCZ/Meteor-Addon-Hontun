@@ -39,14 +39,14 @@ public abstract class ServerCardMixin {
     @Inject(method = "extractContent", at = @At("HEAD"))
     private void hontun$cardBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean hovered,
                                        float pt, CallbackInfo ci) {
-        if (!HontunTheme.modern2()) return;
+        if (!HontunTheme.modern2() && !HontunTheme.smog()) return;
 
         if (hontun$clipped) {
             hontun$clipped = false;
             try { g.disableScissor(); } catch (Throwable ignored) {}
         }
         ServerSelectionList.OnlineServerEntry self = (ServerSelectionList.OnlineServerEntry) (Object) this;
-        HontunServerCard.background(g, self, hovered);
+        HontunServerCard.background(g, self, hovered, hontun$selected(self));
         g.enableScissor(0, 0, 0, 0);
         hontun$clipped = true;
     }

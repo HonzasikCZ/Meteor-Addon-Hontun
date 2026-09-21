@@ -133,6 +133,16 @@ public final class HontunShapes {
                                  int thumbTop, int thumbH) {
         if (w <= 0 || bot <= top) return;
 
+        if (HontunTheme.smog()) {
+            int tr = Math.max(1, w / 2);
+            HontunRound.fill(g, x, top, w, bot - top, tr, HontunTheme.argb(0x33, HontunTheme.crust()));
+            int pr = Math.max(1, w / 2);
+            HontunRound.fill(g, x, thumbTop, w, thumbH, pr, HontunTheme.argb(0xB0, HontunTheme.overlay2()));
+            HontunRound.fill(g, x, thumbTop, w, Math.max(2, thumbH / 2), pr,
+                    HontunTheme.argb(0x22, HontunTheme.textLight()));
+            return;
+        }
+
         g.fill(x, top, x + w, bot, HontunTheme.argb(0x60, HontunTheme.crust()));
 
         if (HontunTheme.modern2()) {

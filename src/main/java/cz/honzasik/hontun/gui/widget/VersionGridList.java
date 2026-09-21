@@ -104,10 +104,11 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
                 }
 
                 g.textRenderer().acceptScrollingWithDefaultCenter(
-                        colored((cur ? "● " : "") + v.name(), nameCol), left, right, cy + 3, cy + 3 + f.lineHeight);
+                        cz.honzasik.hontun.utils.HontunFont.apply(colored((cur ? "● " : "") + v.name(), nameCol)),
+                        left, right, cy + 3, cy + 3 + f.lineHeight);
 
                 g.textRenderer().acceptScrollingWithDefaultCenter(
-                        colored("protocol " + v.id(), HontunTheme.textDim()),
+                        cz.honzasik.hontun.utils.HontunFont.apply(colored("protocol " + v.id(), HontunTheme.textDim())),
                         left, right, cy + ch - 3 - f.lineHeight, cy + ch - 3);
             }
         }

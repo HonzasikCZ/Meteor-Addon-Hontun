@@ -152,14 +152,26 @@ public class HontunAccountsScreen extends HontunScreen {
 
         if (!status.isEmpty()) {
             boolean good = status.startsWith("Add") || status.startsWith("Logged");
-            addCentered(status, contentLeft(), contentWidth(), statusY(),
-                    good ? HontunTheme.green() : HontunTheme.textDim());
+            int rgb = good ? HontunTheme.green() : HontunTheme.textDim();
+            if (HontunTheme.smog()) {
+                addCentered(status, px, pw, statusY(), rgb);
+            } else {
+                addCentered(status, contentLeft(), contentWidth(), statusY(), rgb);
+            }
         }
     }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         super.extractBackground(g, mouseX, mouseY, delta);
+
+        if (HontunTheme.smog()) {
+            cz.honzasik.hontun.gui.widget.HontunRound.card(g, modelCardX, modelCardY, modelCardW, modelCardH, 5,
+                    HontunTheme.argb(0xB0, HontunTheme.base()), HontunTheme.argb(0xFF, HontunTheme.overlay2()));
+            cz.honzasik.hontun.gui.widget.HontunRound.card(g, addBoxX, addBoxY, addBoxW, addBoxH, 5,
+                    HontunTheme.argb(0x66, 0x000000), HontunTheme.argb(0x55, HontunTheme.overlay2()));
+            return;
+        }
         if (!HontunTheme.modern2()) return;
 
         HontunShapes.fillClipped(g, modelCardX, modelCardY, modelCardW, modelCardH, 6, 6,
@@ -211,9 +223,10 @@ public class HontunAccountsScreen extends HontunScreen {
         int cap = Math.max(8, boxW - 12);
         Component c = HontunCards.clip(font, text, cap).copy()
                 .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(rgb)));
-        int tw = font.width(c);
+        Component draw = cz.honzasik.hontun.utils.HontunFont.apply(c);
+        int tw = font.width(draw);
 
-        addRenderableWidget(new StringWidget(boxX + (boxW - tw) / 2, y, tw, font.lineHeight, c, font));
+        addRenderableWidget(new StringWidget(boxX + (boxW - tw) / 2, y, tw, font.lineHeight, draw, font));
     }
 
     private String value() { return valueField == null ? "" : valueField.getValue().trim(); }

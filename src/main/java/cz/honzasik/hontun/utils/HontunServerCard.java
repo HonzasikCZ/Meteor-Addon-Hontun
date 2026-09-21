@@ -1,11 +1,15 @@
 package cz.honzasik.hontun.utils;
 
+import cz.honzasik.hontun.gui.widget.HontunRound;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
+import cz.honzasik.hontun.mixin.client.multiplayer.JoinMultiplayerScreenAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.FaviconTexture;
+import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.client.gui.screens.multiplayer.ServerSelectionList;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -24,7 +28,28 @@ public final class HontunServerCard {
     private HontunServerCard() {}
 
     public static void background(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e, boolean hovered) {
+        background(g, e, hovered, false);
+    }
+
+    public static void background(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e,
+                                  boolean hovered, boolean selected) {
         int x = e.getX(), y = e.getY() + 1, w = e.getWidth(), h = e.getHeight() - 2;
+
+        if (HontunTheme.smog()) {
+            int fill, border;
+            if (selected) {
+                fill = HontunTheme.argb(0xFF, HontunTheme.surface1());
+                border = HontunTheme.argb(0xFF, HontunTheme.accent());
+            } else if (hovered) {
+                fill = HontunTheme.argb(0xFF, HontunTheme.surface2());
+                border = HontunTheme.argb(0xFF, HontunTheme.accent());
+            } else {
+                fill = HontunTheme.argb(0xF0, HontunTheme.base());
+                border = HontunTheme.argb(0x60, HontunTheme.overlay2());
+            }
+            HontunRound.card(g, x, y, w, h, 4, fill, border);
+            return;
+        }
 
         if (hovered) HontunShapes.glow(g, x, y, w, h, CUT, HontunTheme.accent(), 2, 0x50);
         HontunShapes.fillClipped(g, x, y, w, h, CUT, CUT,
@@ -50,19 +75,26 @@ public final class HontunServerCard {
             g.blitSprite(RenderPipelines.GUI_TEXTURED, statusIcon, statusIconX, contentY, 10, 8);
         }
 
+        boolean smog = HontunTheme.smog();
+
         Component status = data.state() == ServerData.State.INCOMPATIBLE
                 ? data.version.copy().withStyle(ChatFormatting.RED)
                 : data.status;
         int statusX = statusIconX;
         if (status != null) {
-            statusX = statusIconX - f.width(status) - 5;
-            g.text(f, status, statusX, contentY + 1, HontunTheme.argb(0xFF, HontunTheme.subtext1()), true);
+            Component statusText = smog ? HontunFont.apply(status) : status;
+            statusX = statusIconX - f.width(statusText) - 5;
+            g.text(f, statusText, statusX, contentY + 1, HontunTheme.argb(0xFF, HontunTheme.subtext1()), true);
         }
 
         int tx = contentX + 35;
         boolean bad = data.state() == ServerData.State.UNREACHABLE;
-        g.text(f, data.name, tx, contentY + 1,
-                HontunTheme.argb(0xFF, bad ? HontunTheme.red() : HontunTheme.textLight()), true);
+        int nameColor = HontunTheme.argb(0xFF, bad ? HontunTheme.red() : HontunTheme.textLight());
+        if (smog) {
+            g.text(f, HontunFont.text(data.name), tx, contentY + 1, nameColor, true);
+        } else {
+            g.text(f, data.name, tx, contentY + 1, nameColor, true);
+        }
 
         if (data.motd != null) {
             int motdW = Math.max(40, contentRight - 12 - tx);
@@ -83,6 +115,8 @@ public final class HontunServerCard {
     public static void selection(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e, boolean selected) {
         if (!selected) return;
         int x = e.getX(), y = e.getY() + 1, w = e.getWidth(), h = e.getHeight() - 2;
+
+        if (HontunTheme.smog()) return;
 
         if (HontunTheme.modern2()) {
             HontunShapes.glow(g, x, y, w, h, CUT, HontunTheme.accentHi(), 3, 0x90);
@@ -115,12 +149,38 @@ public final class HontunServerCard {
         if (upZone) zone(g, contentX, contentY, 16, 16, upH);
         if (downZone) zone(g, contentX, contentY + 16, 16, 16, downH);
 
+        if (HontunTheme.smog()) {
+            smogChevron(g, contentX + 16, contentY, 16, 32, '>', joinH);
+            if (upZone) smogChevron(g, contentX, contentY, 16, 16, '^', upH);
+            if (downZone) smogChevron(g, contentX, contentY + 16, 16, 16, 'v', downH);
+            return;
+        }
         arrowRight(g, contentX + 19, contentY + 16, 6, HontunTheme.argb(0xFF, joinH ? HontunTheme.accentHi() : HontunTheme.accent()));
         if (upZone) arrowUp(g, contentX + 8, contentY + 5, 4, HontunTheme.argb(0xFF, upH ? HontunTheme.accentHi() : HontunTheme.accent()));
         if (downZone) arrowDown(g, contentX + 8, contentY + 24, 4, HontunTheme.argb(0xFF, downH ? HontunTheme.accentHi() : HontunTheme.accent()));
     }
 
+    private static void smogChevron(GuiGraphicsExtractor g, int zx, int zy, int zw, int zh,
+                                    char dir, boolean hovered) {
+        float cx = zx + zw / 2f, cy = zy + zh / 2f;
+        float s = 3.3f;
+        float th = 1.35f;
+        float ax, ay, mx, my, bx, by;
+        switch (dir) {
+            case '>' -> { mx = cx + s * 0.72f; my = cy;              ax = cx - s * 0.5f; ay = cy - s;        bx = cx - s * 0.5f; by = cy + s; }
+            case '^' -> { mx = cx;              my = cy - s * 0.72f;  ax = cx - s;        ay = cy + s * 0.5f; bx = cx + s;        by = cy + s * 0.5f; }
+            default  -> { mx = cx;              my = cy + s * 0.72f;  ax = cx - s;        ay = cy - s * 0.5f; bx = cx + s;        by = cy - s * 0.5f; }
+        }
+        int col = HontunTheme.argb(0xFF, hovered ? HontunTheme.textLight() : HontunTheme.subtext1());
+        HontunRound.stroke(g, ax, ay, mx, my, th, col);
+        HontunRound.stroke(g, mx, my, bx, by, th, col);
+    }
+
     private static void zone(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered) {
+        if (HontunTheme.smog()) {
+            HontunRound.fill(g, x, y, w, h, 4, HontunTheme.argb(hovered ? 0xB4 : 0x66, 0x000000));
+            return;
+        }
         if (HontunTheme.modern2()) {
             int cut = 2;
             HontunShapes.fillClipped(g, x, y, w, h, cut, cut,

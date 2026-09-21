@@ -15,6 +15,7 @@
     "client.titlescreen.MenuScreenBackgroundMixin",
     "client.titlescreen.LevelLoadingBackgroundMixin",
     "client.button.ButtonStyleMixin",
+    "client.button.AbstractWidgetLabelMixin",
     "client.hotbar.HotbarStyleMixin",
     "client.hud.TabListToggleMixin",
     "client.container.ContainerScreenBackgroundMixin",

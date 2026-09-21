@@ -1,0 +1,17 @@
+{
+  "required": true,
+  "package": "com.mrmelon54.DraggableLists.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "client": [
+    "hontun.HontunServerCardMixin",
+    "packs.PackEntryBaseMixin",
+    "packs.PackEntryMixin",
+    "packs.TransferableSelectionListMixin",
+    "server.OnlineServerEntryMixin",
+    "server.ServerListMixin",
+    "server.ServerSelectionListMixin"
+  ]
+}

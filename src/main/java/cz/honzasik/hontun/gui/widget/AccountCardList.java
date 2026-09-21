@@ -93,11 +93,11 @@ public class AccountCardList extends ObjectSelectionList<AccountCardList.Account
             int room = Math.max(0, delX() - 4 - tx);
 
             int nameCol = active ? HontunTheme.textLight() : HontunTheme.subtext1();
-            g.text(f, HontunCards.clip(f, account.getUsername(), room), tx, nameY,
+            g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, account.getUsername(), room)), tx, nameY,
                     HontunTheme.argb(0xFF, nameCol), true);
             String type = active ? account.getType().name() + "  • Logged in" : account.getType().name();
             int typeCol = active ? HontunTheme.green() : HontunTheme.textDim();
-            g.text(f, HontunCards.clip(f, type, room), tx, subY, HontunTheme.argb(0xFF, typeCol), true);
+            g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, type, room)), tx, subY, HontunTheme.argb(0xFF, typeCol), true);
 
             if (hovered) HontunCards.deleteButton(g, f, delX(), delY(), DEL, mouseX, mouseY);
         }

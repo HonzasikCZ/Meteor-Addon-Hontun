@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.gui.widget;
 
+import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.systems.proxies.Proxy;
 import net.minecraft.client.Minecraft;
@@ -91,7 +92,7 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
 
             String st = proxy.status != null ? proxy.status.name() : "UNCHECKED";
             String lat = proxy.latency > 0 ? " " + proxy.latency + "ms" : "";
-            Component stc = Component.literal(st + lat);
+            Component stc = HontunFont.apply(Component.literal(st + lat));
             int statusW = f.width(stc);
             int statusX = x + w - DEL - (modern ? 12 : 8) - statusW;
 
@@ -100,10 +101,10 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
             int textRight = showStatus ? statusX - 6 : delX() - 6;
             int room = Math.max(0, textRight - tx);
 
-            g.text(f, HontunCards.clip(f, String.valueOf(proxy.name.get()), room), tx, nameY,
+            g.text(f, HontunFont.apply(HontunCards.clip(f, String.valueOf(proxy.name.get()), room)), tx, nameY,
                     HontunTheme.argb(0xFF, on ? HontunTheme.textLight() : HontunTheme.subtext1()), true);
             String sub = proxy.address.get() + ":" + proxy.port.get() + "   [" + proxy.type.get() + "]";
-            g.text(f, HontunCards.clip(f, sub, room), tx, subY,
+            g.text(f, HontunFont.apply(HontunCards.clip(f, sub, room)), tx, subY,
                     HontunTheme.argb(0xFF, HontunTheme.textDim()), true);
 
             if (showStatus) {

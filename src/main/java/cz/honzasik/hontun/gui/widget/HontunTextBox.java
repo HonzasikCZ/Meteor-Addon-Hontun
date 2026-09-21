@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.gui.widget;
 
+import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -13,6 +14,7 @@ import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Util;
 
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;
@@ -35,6 +37,9 @@ public class HontunTextBox extends EditBox {
     private int hintVersion = -1;
     private int lastMouseX = Integer.MIN_VALUE, lastMouseY = Integer.MIN_VALUE;
 
+    private long smogFocusMs;
+    private boolean suppressCursor;
+
     public HontunTextBox(Font font, int x, int y, int w, int h, Kind kind, Component narration) {
         super(font,
                 x + leftPad(kind),
@@ -51,6 +56,9 @@ public class HontunTextBox extends EditBox {
         this.boxH = h;
         setBordered(false);
         setMaxLength(128);
+        addFormatter((s, off) -> (HontunTheme.smog() && !masked)
+                ? HontunFont.apply(Component.literal(s)).getVisualOrderText()
+                : null);
     }
 
     private static int leftPad(Kind kind) {
@@ -84,6 +92,17 @@ public class HontunTextBox extends EditBox {
         masked = true;
         addFormatter((s, off) -> FormattedCharSequence.forward("*".repeat(s.length()), Style.EMPTY));
         return this;
+    }
+
+    @Override
+    public boolean isFocused() {
+        return !suppressCursor && super.isFocused();
+    }
+
+    @Override
+    public void setFocused(boolean focused) {
+        super.setFocused(focused);
+        if (focused) smogFocusMs = Util.getMillis();
     }
 
     @Override
@@ -159,7 +178,10 @@ public class HontunTextBox extends EditBox {
         lastMouseY = mouseY;
         refreshPalette();
 
-        if (HontunTheme.modern2()) {
+        boolean smog = HontunTheme.smog();
+        if (smog) {
+            drawSmog(g, mouseX, mouseY);
+        } else if (HontunTheme.modern2()) {
             drawModern2(g, mouseX, mouseY);
         } else if (HontunTheme.modern()) {
             drawModern(g, mouseX, mouseY);
@@ -172,8 +194,35 @@ public class HontunTextBox extends EditBox {
             }
         }
 
-        super.extractWidgetRenderState(g, mouseX, mouseY, pt);
+        if (smog) {
+            boolean caretOn = isFocused() && smogBlinkOn();
+            suppressCursor = true;
+            try {
+                super.extractWidgetRenderState(g, mouseX, mouseY, pt);
+            } finally {
+                suppressCursor = false;
+            }
+            if (caretOn) drawSmogCaret(g);
+        } else {
+            super.extractWidgetRenderState(g, mouseX, mouseY, pt);
+        }
         drawClear(g, mouseX, mouseY);
+    }
+
+    private boolean smogBlinkOn() {
+        return ((Util.getMillis() - smogFocusMs) / 300L) % 2L == 0L;
+    }
+
+    private void drawSmogCaret(GuiGraphicsExtractor g) {
+        String v = getValue();
+        int pos = Math.min(getCursorPosition(), v.length());
+        String head = v.substring(0, pos);
+        int w = masked
+                ? font.width("*".repeat(head.length()))
+                : font.width(HontunFont.apply(Component.literal(head)));
+        int caretX = Math.min(getX() + w + 1, getX() + getInnerWidth());
+        HontunRound.fill(g, caretX, boxY() + 4, 1, Math.max(1, boxH - 8), 1,
+                HontunTheme.argb(0xFF, HontunTheme.textLight()));
     }
 
     private void refreshPalette() {
@@ -185,10 +234,36 @@ public class HontunTextBox extends EditBox {
         if (v != hintVersion) {
             hintVersion = v;
             if (!hintText.isEmpty()) {
-                setHint(Component.literal(hintText).setStyle(modern
-                        ? Style.EMPTY.withColor(TextColor.fromRgb(HontunTheme.overlay2()))
-                        : (kind == Kind.SEARCH ? EditBox.SEARCH_HINT_STYLE : EditBox.DEFAULT_HINT_STYLE)));
+                if (HontunTheme.smog()) {
+                    setHint(HontunFont.apply(Component.literal(hintText)
+                            .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(HontunTheme.textDim())))));
+                } else {
+                    setHint(Component.literal(hintText).setStyle(modern
+                            ? Style.EMPTY.withColor(TextColor.fromRgb(HontunTheme.overlay2()))
+                            : (kind == Kind.SEARCH ? EditBox.SEARCH_HINT_STYLE : EditBox.DEFAULT_HINT_STYLE)));
+                }
             }
+        }
+    }
+
+    private void drawSmog(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        boolean focused = isFocused();
+        int bx = boxX(), by = boxY();
+
+        int fill = HontunTheme.argb(focused ? 0x8C : 0x66, 0x000000);
+        int border = focused
+                ? HontunTheme.argb(0xFF, HontunTheme.textLight())
+                : HontunTheme.argb(0x55, HontunTheme.overlay2());
+        HontunRound.card(g, bx, by, boxW, boxH, 5, fill, border);
+
+        if (kind == Kind.SEARCH) {
+            int col = HontunTheme.argb(0xFF, focused ? HontunTheme.textLight() : HontunTheme.textDim());
+            float gcx = bx + 9.5f, gcy = by + boxH / 2f - 0.5f;
+            float rad = 2.9f, th = 0.95f;
+            HontunRound.ring(g, gcx, gcy, rad, th, col);
+            float k = 0.70710678f;
+            HontunRound.stroke(g, gcx + rad * k, gcy + rad * k,
+                    gcx + rad * k + 2.6f, gcy + rad * k + 2.6f, th, col);
         }
     }
 

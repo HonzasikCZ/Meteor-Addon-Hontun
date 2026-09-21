@@ -36,6 +36,12 @@ public abstract class ButtonStyleMixin {
             return;
         }
 
+        if (HontunTheme.smog()) {
+            hontun$smogButton(g, w);
+            ci.cancel();
+            return;
+        }
+
         int x = w.getX();
         int y = w.getY();
         int x2 = x + w.getWidth();
@@ -142,6 +148,20 @@ public abstract class ButtonStyleMixin {
                         active ? 0xFF : 0x60, hovered ? HontunTheme.accentHi() : HontunTheme.subtext1()));
             }
         }
+    }
+
+    @Unique
+    private void hontun$smogButton(GuiGraphicsExtractor g, AbstractWidget w) {
+        int x = w.getX(), y = w.getY(), bw = w.getWidth(), bh = w.getHeight();
+        if (bw <= 2 || bh <= 2) return;
+
+        boolean active = w.active;
+        boolean hovered = active && w.isHoveredOrFocused();
+        int r = Math.min(8, Math.min(bw, bh) / 2);
+
+        int a = !active ? 0x40 : (hovered ? 0xB4 : 0x6E);
+        cz.honzasik.hontun.gui.widget.HontunRound.fill(g, x, y, bw, bh, r,
+                cz.honzasik.hontun.utils.HontunTheme.argb(a, 0x000000));
     }
 
     @Unique

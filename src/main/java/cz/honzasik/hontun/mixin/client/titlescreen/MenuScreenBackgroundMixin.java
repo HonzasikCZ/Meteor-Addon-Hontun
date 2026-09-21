@@ -23,9 +23,6 @@ public abstract class MenuScreenBackgroundMixin {
         Minecraft mc = Minecraft.getInstance();
         boolean capture = MenuBackground.forceOnServer;
 
-        // Normally this only takes over at the main menu (no world). While the local screenshot
-        // tool is capturing it also takes over on a server, so the shots show the menu background
-        // instead of the live game world sitting behind each screen.
         if (mc.level != null && !capture) return;
         Object self = this;
         if (self instanceof TitleScreen || self instanceof PauseScreen) return;
@@ -36,8 +33,6 @@ public abstract class MenuScreenBackgroundMixin {
                     mc.getWindow().getGuiScaledHeight(), true, particles);
             ci.cancel();
         } else if (capture) {
-            // Vanilla UI mode during a capture on a server: draw Minecraft's own no-world
-            // background (panorama + dirt) so the shot matches the plain main-menu look.
             extractPanorama(graphics, delta);
             extractMenuBackground(graphics);
             ci.cancel();

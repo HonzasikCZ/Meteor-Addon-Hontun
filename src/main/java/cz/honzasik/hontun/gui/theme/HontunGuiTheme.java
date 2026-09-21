@@ -25,6 +25,11 @@ import cz.honzasik.hontun.gui.render.HontunRenderer;
 import cz.honzasik.hontun.gui.render.text.RichTextRenderer;
 import cz.honzasik.hontun.utils.HontunGeo;
 import cz.honzasik.hontun.utils.HontunTheme;
+import meteordevelopment.meteorclient.renderer.Fonts;
+import meteordevelopment.meteorclient.renderer.text.FontFace;
+import meteordevelopment.meteorclient.renderer.text.FontFamily;
+import meteordevelopment.meteorclient.renderer.text.FontInfo;
+import meteordevelopment.meteorclient.renderer.text.SystemFontFace;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.WidgetScreen;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
@@ -51,6 +56,11 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import net.minecraft.client.gui.screens.Screen;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +77,7 @@ public class HontunGuiTheme extends GuiTheme {
     private final Map<HontunColor, Color> colorCache;
 
     private RichTextRenderer textRenderer;
+    private RichTextRenderer smogTextRenderer;
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
     private final SettingGroup sgCorners = settings.createGroup("Corners");
@@ -78,7 +89,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<HontunTheme.UiMode> uiMode = sgGeneral.add(new EnumSetting.Builder<HontunTheme.UiMode>()
             .name("ui-mode")
-            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft look. HModern1 = sleek/flat. HModern2 = reserved (inherits HModern1 for now).")
+            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft look. HModern1 = sleek/flat. HModern2 = reserved (inherits HModern1 for now). SmogClient = smooth rounded deep-navy + cyan port of the SmogClientPro look (SF font).")
             .defaultValue(HontunTheme.UiMode.HModern2)
             .onChanged(m -> HontunTheme.setMode(m))
             .build()
@@ -712,10 +723,19 @@ public class HontunGuiTheme extends GuiTheme {
 
     @Override
     public TextRenderer textRenderer() {
+        if (HontunTheme.smog()) {
+            RichTextRenderer sf = smogRenderer();
+            if (sf != null) return sf;
+        }
         return Config.get().customFont.get() ? richTextRenderer() : VanillaTextRenderer.INSTANCE;
     }
 
     public RichTextRenderer richTextRenderer() {
+        if (HontunTheme.smog()) {
+            RichTextRenderer sf = smogRenderer();
+            if (sf != null) return sf;
+        }
+
         if (textRenderer == null) {
             try {
                 setTextRenderer(new RichTextRenderer(Config.get().font.get()));
@@ -730,6 +750,39 @@ public class HontunGuiTheme extends GuiTheme {
     public void setTextRenderer(RichTextRenderer renderer) {
         if (textRenderer != null) textRenderer.destroy();
         this.textRenderer = renderer;
+    }
+
+    private RichTextRenderer smogRenderer() {
+        if (smogTextRenderer == null) {
+            try {
+                smogTextRenderer = new RichTextRenderer(smogFontFace());
+            } catch (Exception e) {
+                HontunGui.LOG.error("Failed to load SmogClient SF TextRenderer: ", e);
+                return null;
+            }
+        }
+
+        return smogTextRenderer;
+    }
+
+    private static FontFace smogFontFace() throws IOException {
+        Path path = Files.createTempFile("hontun-smog-sf", ".ttf");
+        path.toFile().deleteOnExit();
+
+        try (InputStream in = HontunGuiTheme.class.getResourceAsStream("/assets/hontun/font/sf.ttf")) {
+            if (in == null) throw new IOException("Bundled SmogClient font hontun:font/sf.ttf not found on classpath");
+            Files.copy(in, path, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        FontFace face = new SystemFontFace(new FontInfo("SF", FontInfo.Type.Regular), path);
+
+        if (Fonts.getFamily(face.info.family()) == null) {
+            FontFamily family = new FontFamily(face.info.family());
+            family.addFont(face);
+            Fonts.FONT_FAMILIES.add(family);
+        }
+
+        return face;
     }
 
     public double textWidth(RichTextSegment segment) {
