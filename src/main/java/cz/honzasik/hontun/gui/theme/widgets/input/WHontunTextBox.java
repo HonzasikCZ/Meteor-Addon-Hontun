@@ -82,7 +82,7 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
             super.onRender(renderer, mouseX, mouseY, delta);
 
-            if (selected) renderer.quad(this, SELECTED_COLOR);
+            if (selected) renderer.quad(this, theme().light() ? ColorUtils.withAlpha(theme().textColor(), 15) : SELECTED_COLOR);
         }
 
         @Override
@@ -141,7 +141,7 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
             Color custom = customColor != null ? customColor.get() : null;
             Color textColor = custom != null
                     ? custom
-                    : (focused ? theme.textColor() : ColorUtils.darker(theme.textSecondaryColor()));
+                    : (focused ? theme.textColor() : dimmed(theme));
 
             this.renderer.render(renderer, x + padding - overflowWidth, y + padding, text, textColor);
         }
@@ -191,5 +191,11 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
 
     public void color(Color color) {
         this.customColor = color == null ? null : () -> color;
+    }
+
+    private static Color dimmed(HontunGuiTheme theme) {
+        return theme.light()
+                ? ColorUtils.interpolateColor(theme.textSecondaryColor(), theme.baseColor(), 0.3)
+                : ColorUtils.darker(theme.textSecondaryColor());
     }
 }

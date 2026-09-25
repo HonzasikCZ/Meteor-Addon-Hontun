@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-@Mixin(AbstractWidget.class)
+@Mixin({AbstractWidget.class, AbstractWidget.WithInactiveMessage.class})
 public abstract class AbstractWidgetLabelMixin {
     @Inject(method = "getMessage", at = @At("RETURN"), cancellable = true)
     private void hontun$smogFont(CallbackInfoReturnable<Component> cir) {

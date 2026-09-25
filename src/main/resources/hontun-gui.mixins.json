@@ -14,9 +14,11 @@
     "meteorclient.GuiRendererAccessor",
     "meteorclient.GuiRendererMixin",
     "meteorclient.MeteorWidgetMixin",
+    "meteorclient.ProxiesImportScreenMixin",
     "meteorclient.SettingAccessor",
     "meteorclient.SettingMixin",
     "meteorclient.TabMixin",
+    "meteorclient.VanillaTextRendererMixin",
     "meteorclient.WBrightnessQuadMixin",
     "meteorclient.WContainerMixin",
     "meteorclient.WDropdownMixin",
@@ -26,6 +28,7 @@
     "meteorclient.WSliderMixin",
     "meteorclient.WTextBoxMixin",
     "meteorclient.WViewMixin",
+    "meteorclient.WaypointsModuleMixin",
     "meteorclient.WWidgetMixin"
   ]
 }

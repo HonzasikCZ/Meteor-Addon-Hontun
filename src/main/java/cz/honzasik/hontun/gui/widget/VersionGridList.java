@@ -89,6 +89,7 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
                 boolean over = mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + ch;
 
                 if (modern) HontunCards.row(g, cx, cy, cw, ch, cur, over, HontunTheme.accent());
+                else if (HontunTheme.restyleEnabled()) HontunCards.vanillaStyledCell(g, cx, cy, cw, ch, cur || over);
                 else HontunCards.vanillaButtonCell(g, cx, cy, cw, ch, cur || over);
 
                 int nameCol = cur ? (modern ? HontunTheme.accentHi() : HontunTheme.accent())
@@ -103,9 +104,21 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
                     left += 20;
                 }
 
-                g.textRenderer().acceptScrollingWithDefaultCenter(
-                        cz.honzasik.hontun.utils.HontunFont.apply(colored((cur ? "● " : "") + v.name(), nameCol)),
-                        left, right, cy + 3, cy + 3 + f.lineHeight);
+                boolean smoothDot = cur && HontunRound.smoothDots();
+                Component nameText = cz.honzasik.hontun.utils.HontunFont.apply(
+                        colored((cur && !smoothDot ? "● " : "") + v.name(), nameCol));
+                if (smoothDot) {
+                    int tw = f.width(nameText);
+                    int group = tw + 7;
+                    boolean fits = group <= right - left;
+                    int gx = fits ? left + (right - left - group) / 2 : left;
+                    HontunRound.dot(g, gx + 1.75f, cy + 3 + 4f, 1.75f, HontunTheme.argb(0xFF, nameCol));
+                    g.textRenderer().acceptScrollingWithDefaultCenter(nameText,
+                            gx + 7, fits ? gx + 7 + tw : right, cy + 3, cy + 3 + f.lineHeight);
+                } else {
+                    g.textRenderer().acceptScrollingWithDefaultCenter(nameText,
+                            left, right, cy + 3, cy + 3 + f.lineHeight);
+                }
 
                 g.textRenderer().acceptScrollingWithDefaultCenter(
                         cz.honzasik.hontun.utils.HontunFont.apply(colored("protocol " + v.id(), HontunTheme.textDim())),

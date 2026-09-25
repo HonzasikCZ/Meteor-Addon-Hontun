@@ -23,7 +23,7 @@ public class WHontunSearch extends WSearch implements HontunWidget {
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         HontunGuiTheme theme = theme();
-        Color shadowColor = ColorUtils.withAlpha(theme.crustColor(), 0.4);
+        Color shadowColor = theme.shadowColor();
 
         int shadowOffset = 2;
         roundedRect().pos(x - shadowOffset, y - shadowOffset)

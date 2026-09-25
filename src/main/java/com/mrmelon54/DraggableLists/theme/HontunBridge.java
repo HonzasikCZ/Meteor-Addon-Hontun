@@ -30,7 +30,7 @@ public final class HontunBridge {
     private static MethodHandle accent, accentHi, accentLo;
     private static MethodHandle surface0, surface1, crust, overlay0;
     private static MethodHandle textLight, textDim;
-    private static MethodHandle restyleEnabled, modern1, modern2, version;
+    private static MethodHandle restyleEnabled, modern1, modern2, smog, version;
 
     private static int cachedVersion = Integer.MIN_VALUE;
     private static Palette cached;
@@ -55,6 +55,16 @@ public final class HontunBridge {
         }
     }
 
+    public static boolean smog() {
+        if (!available()) return false;
+        try {
+            return (boolean) smog.invokeExact();
+        } catch (Throwable t) {
+            disable(t);
+            return false;
+        }
+    }
+
     /** The current Hontun palette, or {@code null} if Hontun is unavailable. */
     public static Palette palette() {
         if (!available()) return null;
@@ -68,7 +78,10 @@ public final class HontunBridge {
             // (restyling() is false, so Themes falls back to the built-in palette).
             CornerStyle corners;
             int cornerSize;
-            if ((boolean) modern2.invokeExact()) {
+            if ((boolean) smog.invokeExact()) {
+                corners = CornerStyle.ROUND;
+                cornerSize = 4;
+            } else if ((boolean) modern2.invokeExact()) {
                 corners = CornerStyle.CHAMFER;
                 cornerSize = 5;
             } else if ((boolean) modern1.invokeExact()) {
@@ -123,6 +136,7 @@ public final class HontunBridge {
             restyleEnabled = lookup.findStatic(theme, "restyleEnabled", boolGetter);
             modern1 = lookup.findStatic(theme, "modern1", boolGetter);
             modern2 = lookup.findStatic(theme, "modern2", boolGetter);
+            smog = lookup.findStatic(theme, "smog", boolGetter);
             version = lookup.findStatic(theme, "version", intGetter);
 
             available = true;

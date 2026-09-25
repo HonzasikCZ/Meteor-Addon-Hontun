@@ -111,7 +111,7 @@ public class WHontunModule extends WPressable implements HontunWidget {
         double highlightProgress = highlightAnimation.getProgress();
 
         if (hoverProgress > 0 || highlightProgress > 0) {
-            int baseAlpha = 60;
+            int baseAlpha = theme.light() ? 38 : 60;
             double hoverMultiplier = (mouseOver && moduleActive) ? 1.3f : 1.0f;
             double mix = Math.min(1.0, highlightProgress + hoverProgress);
             double alpha = baseAlpha * mix * hoverMultiplier;

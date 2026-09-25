@@ -548,7 +548,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
                 mc.gui.setScreen(new ColorSettingScreen(theme, set));
             };
 
-            list.add(theme.label(RichText.of("Example Text").scale(TextScale.SMALL.get())).color(color)).expandX();
+            list.add(theme.swatchLabel(RichText.of("Example Text").scale(TextScale.SMALL.get())).color(color)).expandX();
 
             WMinus remove = list.add(theme.minus()).right().widget();
             remove.action = () -> {

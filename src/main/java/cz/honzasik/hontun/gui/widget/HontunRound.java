@@ -26,13 +26,29 @@ public final class HontunRound {
         aaCorner(g, x + w - r, y + h - r, r, argb, +1, +1);
     }
 
+    public static boolean smoothDots() {
+        return cz.honzasik.hontun.utils.HontunTheme.smog() && cz.honzasik.hontun.gui.render.RoundedGui.available();
+    }
+
+    public static void dot(GuiGraphicsExtractor g, float cx, float cy, float r, int argb) {
+        if (cz.honzasik.hontun.gui.render.RoundedGui.circle(g, cx, cy, r, 0f, argb)) return;
+        int d = Math.max(1, Math.round(r * 2f));
+        int x = Math.round(cx - r), y = Math.round(cy - r);
+        g.fill(x, y, x + d, y + d, argb);
+    }
+
     public static void card(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius, int fillArgb, int borderArgb) {
-        fill(g, x, y, w, h, radius, borderArgb);
-        fill(g, x + 1, y + 1, w - 2, h - 2, Math.max(0, radius - 1), fillArgb);
+        cardThick(g, x, y, w, h, radius, fillArgb, borderArgb, 1);
     }
 
     public static void cardThick(GuiGraphicsExtractor g, int x, int y, int w, int h, int radius,
                                  int fillArgb, int borderArgb, int t) {
+        if (w <= 0 || h <= 0) return;
+        if (cz.honzasik.hontun.gui.render.RoundedGui.available()) {
+            cz.honzasik.hontun.gui.render.RoundedGui.fill(g, (float) x, (float) y, (float) w, (float) h, (float) radius, 0f, fillArgb);
+            cz.honzasik.hontun.gui.render.RoundedGui.outline(g, (float) x, (float) y, (float) w, (float) h, (float) radius, (float) t, borderArgb);
+            return;
+        }
         fill(g, x, y, w, h, radius, borderArgb);
         fill(g, x + t, y + t, w - 2 * t, h - 2 * t, Math.max(0, radius - t), fillArgb);
     }
@@ -66,6 +82,7 @@ public final class HontunRound {
     public static void ring(GuiGraphicsExtractor g, float cx, float cy, float radius, float th, int argb) {
         int baseA = (argb >>> 24) & 0xFF, rgb = argb & 0xFFFFFF;
         if (baseA == 0) return;
+        if (cz.honzasik.hontun.gui.render.RoundedGui.ring(g, cx, cy, radius, th * 2f, argb)) return;
         int minX = (int) Math.floor(cx - radius - th - 1);
         int maxX = (int) Math.ceil(cx + radius + th + 1);
         int minY = (int) Math.floor(cy - radius - th - 1);

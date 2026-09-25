@@ -79,8 +79,8 @@ public final class HontunCards {
             float cx = boxX + boxSize / 2f, cy = boxY + boxSize / 2f;
             float arm = Math.min(boxSize / 2f - 2f, 4.5f);
             int col = HontunTheme.argb(0xFF, over ? 0xFFFFFF : HontunTheme.textDim());
-            HontunRound.stroke(g, cx - arm, cy - arm, cx + arm, cy + arm, 1.25f, col);
-            HontunRound.stroke(g, cx - arm, cy + arm, cx + arm, cy - arm, 1.25f, col);
+            HontunRound.stroke(g, cx - arm, cy - arm, cx + arm, cy + arm, 0.9f, col);
+            HontunRound.stroke(g, cx - arm, cy + arm, cx + arm, cy - arm, 0.9f, col);
             return over;
         }
         if (over) {
@@ -168,6 +168,20 @@ public final class HontunCards {
 
     public static void vanillaButtonCell(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean highlighted) {
         g.blitSprite(RenderPipelines.GUI_TEXTURED, highlighted ? BTN_HI : BTN, x, y, w, h);
+    }
+
+    public static void vanillaStyledCell(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean highlighted) {
+        if (w <= 2 || h <= 2) return;
+        int x2 = x + w, y2 = y + h;
+        int bg = highlighted ? HontunTheme.argb(0xCC, HontunTheme.accentLo())
+                : HontunTheme.argb(0x99, HontunTheme.surface1());
+        int border = highlighted ? HontunTheme.argb(0xFF, HontunTheme.accentHi())
+                : HontunTheme.argb(0xAA, HontunTheme.accent());
+        g.fill(x, y, x2, y2, bg);
+        g.fill(x, y, x2, y + 1, border);
+        g.fill(x, y2 - 1, x2, y2, border);
+        g.fill(x, y, x + 1, y2, border);
+        g.fill(x2 - 1, y, x2, y2, border);
     }
 
     public static void vanillaSelection(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean focused) {

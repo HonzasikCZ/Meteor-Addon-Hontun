@@ -23,6 +23,7 @@ import cz.honzasik.hontun.gui.widget.input.WSearch;
 import cz.honzasik.hontun.gui.widget.pressable.WColorPicker;
 import cz.honzasik.hontun.gui.render.HontunRenderer;
 import cz.honzasik.hontun.gui.render.text.RichTextRenderer;
+import cz.honzasik.hontun.gui.util.ColorUtils;
 import cz.honzasik.hontun.utils.HontunGeo;
 import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.renderer.Fonts;
@@ -89,9 +90,17 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<HontunTheme.UiMode> uiMode = sgGeneral.add(new EnumSetting.Builder<HontunTheme.UiMode>()
             .name("ui-mode")
-            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft look. HModern1 = sleek/flat. HModern2 = reserved (inherits HModern1 for now). SmogClient = smooth rounded deep-navy + cyan port of the SmogClientPro look (SF font).")
+            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft shapes. HModern1 = flat and rounded. HModern2 = chamfered corners with an accent glow (default). SmogClient = rounded black and white SmogClientPro look with the SF font.")
             .defaultValue(HontunTheme.UiMode.HModern2)
             .onChanged(m -> HontunTheme.setMode(m))
+            .build()
+    );
+
+    public final Setting<Boolean> lightMode = sgGeneral.add(new BoolSetting.Builder()
+            .name("light-mode")
+            .description("Light palette for the Meteor ClickGUI (modules, settings, search, tabs). Minecraft menus, chat, containers and the HUD keep their dark look. Window and background opacity are raised so dark text stays readable over the game.")
+            .defaultValue(false)
+            .onChanged(v -> refreshPalette())
             .build()
     );
 
@@ -228,6 +237,9 @@ public class HontunGuiTheme extends GuiTheme {
             .defaultValue(1)
             .sliderRange(0, 1)
             .decimalPlaces(2)
+            .onChanged(v -> {
+                if (lightMode.get()) updateCache();
+            })
             .build()
     );
 
@@ -335,6 +347,10 @@ public class HontunGuiTheme extends GuiTheme {
 
     public WLabel label(RichText text) {
         return label(text, 0);
+    }
+
+    public WLabel swatchLabel(RichText text) {
+        return w(new WHontunSwatchLabel(text));
     }
 
     @Override
@@ -605,97 +621,129 @@ public class HontunGuiTheme extends GuiTheme {
     }
 
     public double windowOpacity() {
-        return windowOpacity.get();
+        return lightOpacity(windowOpacity.get());
     }
 
     public double backgroundOpacity() {
-        return backgroundOpacity.get();
+        return lightOpacity(backgroundOpacity.get());
+    }
+
+    private double lightOpacity(double opacity) {
+        return lightMode.get() ? 0.7 + 0.3 * opacity : opacity;
     }
 
     @Override
     public Color starscriptTextColor() {
-        return starscriptText.get();
+        return starscript(starscriptText, textColor());
     }
 
     @Override
     public Color starscriptBraceColor() {
-        return starscriptBraces.get();
+        return starscript(starscriptBraces, textSecondaryColor());
     }
 
     @Override
     public Color starscriptParenthesisColor() {
-        return starscriptParenthesis.get();
+        return starscript(starscriptParenthesis, textColor());
     }
 
     @Override
     public Color starscriptDotColor() {
-        return starscriptDots.get();
+        return starscript(starscriptDots, textColor());
     }
 
     @Override
     public Color starscriptCommaColor() {
-        return starscriptCommas.get();
+        return starscript(starscriptCommas, textColor());
     }
 
     @Override
     public Color starscriptOperatorColor() {
-        return starscriptOperators.get();
+        return starscript(starscriptOperators, textColor());
     }
 
     @Override
     public Color starscriptStringColor() {
-        return starscriptStrings.get();
+        return starscript(starscriptStrings, LIGHT_STARSCRIPT_STRING);
     }
 
     @Override
     public Color starscriptNumberColor() {
-        return starscriptNumbers.get();
+        return starscript(starscriptNumbers, LIGHT_STARSCRIPT_NUMBER);
     }
 
     @Override
     public Color starscriptKeywordColor() {
-        return starscriptKeywords.get();
+        return starscript(starscriptKeywords, LIGHT_STARSCRIPT_KEYWORD);
     }
 
     @Override
     public Color starscriptAccessedObjectColor() {
-        return starscriptAccessedObjects.get();
+        return starscript(starscriptAccessedObjects, LIGHT_STARSCRIPT_OBJECT);
+    }
+
+    private static final Color LIGHT_STARSCRIPT_STRING = new Color(6, 125, 23);
+    private static final Color LIGHT_STARSCRIPT_NUMBER = new Color(23, 80, 235);
+    private static final Color LIGHT_STARSCRIPT_KEYWORD = new Color(0, 51, 179);
+    private static final Color LIGHT_STARSCRIPT_OBJECT = new Color(135, 16, 148);
+
+    private Color starscript(Setting<SettingColor> setting, Color light) {
+        return lightMode.get() && setting.get().equals(setting.getDefaultValue()) ? light : setting.get();
+    }
+
+    public boolean light() {
+        return lightMode.get();
+    }
+
+    public Color shadowColor() {
+        return lightMode.get() ? new Color(0, 0, 0, 38) : ColorUtils.withAlpha(crustColor(), 0.4);
+    }
+
+    private void refreshPalette() {
+        updateCache();
+        if (mc != null && mc.gui != null && mc.gui.screen() instanceof WidgetScreen screen) mc.schedule(screen::reload);
     }
 
     private void updateCache() {
-        put(HontunColor.Crust,    HontunTheme.crust());
-        put(HontunColor.Mantle,   HontunTheme.mantle());
-        put(HontunColor.Base,     HontunTheme.base());
-        put(HontunColor.Surface0, HontunTheme.surface0());
-        put(HontunColor.Surface1, HontunTheme.surface1());
-        put(HontunColor.Surface2, HontunTheme.surface2());
+        boolean light = lightMode.get();
+        int accent = light ? HontunLightPalette.accent(windowOpacity()) : HontunTheme.accent();
+        int accentHi = light ? HontunLightPalette.accentHi(windowOpacity()) : HontunTheme.accentHi();
+        int text = light ? HontunLightPalette.text() : HontunTheme.textLight();
+        int red = light ? HontunLightPalette.red() : HontunTheme.red();
 
-        put(HontunColor.Overlay0, HontunTheme.overlay0());
-        put(HontunColor.Overlay1, HontunTheme.overlay1());
-        put(HontunColor.Overlay2, HontunTheme.overlay2());
+        put(HontunColor.Crust,    light ? HontunLightPalette.crust()    : HontunTheme.crust());
+        put(HontunColor.Mantle,   light ? HontunLightPalette.mantle()   : HontunTheme.mantle());
+        put(HontunColor.Base,     light ? HontunLightPalette.base()     : HontunTheme.base());
+        put(HontunColor.Surface0, light ? HontunLightPalette.surface0() : HontunTheme.surface0());
+        put(HontunColor.Surface1, light ? HontunLightPalette.surface1() : HontunTheme.surface1());
+        put(HontunColor.Surface2, light ? HontunLightPalette.surface2() : HontunTheme.surface2());
 
-        put(HontunColor.Text,     HontunTheme.textLight());
-        put(HontunColor.Subtext1, HontunTheme.subtext1());
-        put(HontunColor.Subtext0, HontunTheme.textDim());
+        put(HontunColor.Overlay0, light ? HontunLightPalette.overlay0() : HontunTheme.overlay0());
+        put(HontunColor.Overlay1, light ? HontunLightPalette.overlay1() : HontunTheme.overlay1());
+        put(HontunColor.Overlay2, light ? HontunLightPalette.overlay2() : HontunTheme.overlay2());
 
-        put(HontunColor.Blue,     HontunTheme.accent());
-        put(HontunColor.Sapphire, HontunTheme.accentHi());
-        put(HontunColor.Sky,      HontunTheme.accentHi());
-        put(HontunColor.Lavender, HontunTheme.accent());
-        put(HontunColor.Green,    HontunTheme.green());
-        put(HontunColor.Yellow,   HontunTheme.yellow());
-        put(HontunColor.Red,      HontunTheme.red());
+        put(HontunColor.Text,     text);
+        put(HontunColor.Subtext1, light ? HontunLightPalette.subtext1() : HontunTheme.subtext1());
+        put(HontunColor.Subtext0, light ? HontunLightPalette.textDim()  : HontunTheme.textDim());
 
-        put(HontunColor.Teal,      HontunTheme.accentHi());
-        put(HontunColor.Peach,     HontunTheme.accent());
-        put(HontunColor.Maroon,    HontunTheme.red());
-        put(HontunColor.Pink,      HontunTheme.accentHi());
-        put(HontunColor.Mauve,     HontunTheme.accent());
-        put(HontunColor.Flamingo,  HontunTheme.accentHi());
-        put(HontunColor.Rosewater, HontunTheme.textLight());
+        put(HontunColor.Blue,     accent);
+        put(HontunColor.Sapphire, accentHi);
+        put(HontunColor.Sky,      accentHi);
+        put(HontunColor.Lavender, accent);
+        put(HontunColor.Green,    light ? HontunLightPalette.green()  : HontunTheme.green());
+        put(HontunColor.Yellow,   light ? HontunLightPalette.yellow() : HontunTheme.yellow());
+        put(HontunColor.Red,      red);
+
+        put(HontunColor.Teal,      accentHi);
+        put(HontunColor.Peach,     accent);
+        put(HontunColor.Maroon,    red);
+        put(HontunColor.Pink,      accentHi);
+        put(HontunColor.Mauve,     accent);
+        put(HontunColor.Flamingo,  accentHi);
+        put(HontunColor.Rosewater, text);
 
         for (HontunColor color : HontunColor.values()) {
-            colorCache.putIfAbsent(color, HontunTheme.color(HontunTheme.accent()).toSetting());
+            colorCache.putIfAbsent(color, HontunTheme.color(accent).toSetting());
         }
     }
 

@@ -134,12 +134,17 @@ public final class HontunShapes {
         if (w <= 0 || bot <= top) return;
 
         if (HontunTheme.smog()) {
-            int tr = Math.max(1, w / 2);
-            HontunRound.fill(g, x, top, w, bot - top, tr, HontunTheme.argb(0x33, HontunTheme.crust()));
-            int pr = Math.max(1, w / 2);
-            HontunRound.fill(g, x, thumbTop, w, thumbH, pr, HontunTheme.argb(0xB0, HontunTheme.overlay2()));
-            HontunRound.fill(g, x, thumbTop, w, Math.max(2, thumbH / 2), pr,
-                    HontunTheme.argb(0x22, HontunTheme.textLight()));
+            float lane = Math.min(3f, w);
+            float lx = x + (w - lane) / 2f;
+            if (cz.honzasik.hontun.gui.render.RoundedGui.available()) {
+                cz.honzasik.hontun.gui.render.RoundedGui.fill(g, lx, top + 2f, lane, bot - top - 4f, lane / 2f, 0f,
+                        HontunTheme.argb(0x16, 0xFFFFFF));
+                cz.honzasik.hontun.gui.render.RoundedGui.fill(g, lx, thumbTop + 2f, lane, Math.max(lane * 2f, thumbH - 4f),
+                        lane / 2f, 0f, HontunTheme.argb(0xA8, HontunTheme.subtext1()));
+                return;
+            }
+            HontunRound.fill(g, x + 1, thumbTop, Math.max(1, w - 2), thumbH, Math.max(1, (w - 2) / 2),
+                    HontunTheme.argb(0xA8, HontunTheme.subtext1()));
             return;
         }
 

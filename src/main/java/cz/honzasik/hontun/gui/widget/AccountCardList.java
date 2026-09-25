@@ -95,9 +95,23 @@ public class AccountCardList extends ObjectSelectionList<AccountCardList.Account
             int nameCol = active ? HontunTheme.textLight() : HontunTheme.subtext1();
             g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, account.getUsername(), room)), tx, nameY,
                     HontunTheme.argb(0xFF, nameCol), true);
-            String type = active ? account.getType().name() + "  • Logged in" : account.getType().name();
             int typeCol = active ? HontunTheme.green() : HontunTheme.textDim();
-            g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, type, room)), tx, subY, HontunTheme.argb(0xFF, typeCol), true);
+            if (active && HontunRound.smoothDots()) {
+                Component typeText = cz.honzasik.hontun.utils.HontunFont.apply(
+                        HontunCards.clip(f, account.getType().name(), room));
+                int typeW = f.width(typeText);
+                int col = HontunTheme.argb(0xFF, typeCol);
+                g.text(f, typeText, tx, subY, col, true);
+                int restRoom = room - typeW - 12;
+                if (restRoom > 8) {
+                    HontunRound.dot(g, tx + typeW + 6f, subY + 4f, 1.6f, col);
+                    g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, "Logged in", restRoom)),
+                            tx + typeW + 11, subY, col, true);
+                }
+            } else {
+                String type = active ? account.getType().name() + "  • Logged in" : account.getType().name();
+                g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, type, room)), tx, subY, HontunTheme.argb(0xFF, typeCol), true);
+            }
 
             if (hovered) HontunCards.deleteButton(g, f, delX(), delY(), DEL, mouseX, mouseY);
         }

@@ -20,6 +20,7 @@ out vec4 v_color;
 out vec2 v_local;
 out vec2 v_half;
 out float v_radius;
+out float v_param;
 
 void main() {
     gl_Position = ProjMat * ModelViewMat * vec4(Position, 1.0);
@@ -28,4 +29,5 @@ void main() {
     v_local = UV0;
     v_half = vec2(UV1) * 0.5;
     v_radius = float(UV2.x);
+    v_param = float(UV2.y);
 }

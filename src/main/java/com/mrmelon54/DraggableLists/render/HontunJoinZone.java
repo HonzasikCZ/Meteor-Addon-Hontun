@@ -1,6 +1,8 @@
 package com.mrmelon54.DraggableLists.render;
 
+import com.mrmelon54.DraggableLists.theme.HontunBridge;
 import com.mrmelon54.DraggableLists.theme.Palette;
+import cz.honzasik.hontun.gui.render.RoundedGui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
@@ -19,6 +21,16 @@ public final class HontunJoinZone {
                             int mouseX, int mouseY, Palette palette) {
         int x = contentX + 16;
         boolean hot = mouseX >= x && mouseX < x + 16 && mouseY >= contentY && mouseY < contentY + 32;
+
+        if (HontunBridge.smog() && RoundedGui.available()) {
+            RoundedGui.fill(graphics, x + 1f, contentY + 1f, 14f, 30f, 4f, 0f,
+                Palette.argb(hot ? 0xC0 : 0x7A, 0x000000));
+            float cx = x + 8f, cy = contentY + 16f;
+            int col = Palette.argb(0xFF, hot ? palette.accentHi() : palette.accent());
+            RoundedGui.capsule(graphics, cx - 1.9f, cy - 4.2f, cx + 2.1f, cy, 0.85f, col);
+            RoundedGui.capsule(graphics, cx + 2.1f, cy, cx - 1.9f, cy + 4.2f, 0.85f, col);
+            return;
+        }
 
         Shapes.fill(graphics, x, contentY, 16, 32, palette.corners(), 2,
             Palette.argb(hot ? 0xE8 : 0xB8, hot ? palette.surfaceHi() : palette.crust()));

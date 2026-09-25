@@ -171,6 +171,7 @@ public class ChannelFetcher extends Module {
             cz.honzasik.hontun.utils.VersionKeeper.clear();
             cz.honzasik.hontun.utils.WorldInfo.clear();
             cz.honzasik.hontun.utils.ResourcePackInfo.clear();
+            cz.honzasik.hontun.utils.ServerSoftware.reset();
         }
     }
 }

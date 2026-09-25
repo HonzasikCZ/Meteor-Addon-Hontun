@@ -109,7 +109,7 @@ public class WHontunWindow extends WWindow implements HontunWidget {
         double windowHeight = Math.max((height - header.height) * animation.getProgress(), 0);
 
         if (theme.effWindowShadow()) {
-            Color shadowColor = ColorUtils.withAlpha(theme.crustColor(), 0.4);
+            Color shadowColor = theme.shadowColor();
 
             roundedRect().pos(x - shadowOffset, y - shadowOffset)
                          .size(width + shadowOffset * 2,

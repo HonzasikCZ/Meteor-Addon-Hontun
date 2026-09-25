@@ -163,8 +163,8 @@ public final class HontunServerCard {
     private static void smogChevron(GuiGraphicsExtractor g, int zx, int zy, int zw, int zh,
                                     char dir, boolean hovered) {
         float cx = zx + zw / 2f, cy = zy + zh / 2f;
-        float s = 3.3f;
-        float th = 1.35f;
+        float s = zh >= 24 ? 4.2f : 3.0f;
+        float th = 0.85f;
         float ax, ay, mx, my, bx, by;
         switch (dir) {
             case '>' -> { mx = cx + s * 0.72f; my = cy;              ax = cx - s * 0.5f; ay = cy - s;        bx = cx - s * 0.5f; by = cy + s; }
@@ -178,7 +178,7 @@ public final class HontunServerCard {
 
     private static void zone(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered) {
         if (HontunTheme.smog()) {
-            HontunRound.fill(g, x, y, w, h, 4, HontunTheme.argb(hovered ? 0xB4 : 0x66, 0x000000));
+            HontunRound.fill(g, x + 1, y + 1, w - 2, h - 2, 4, HontunTheme.argb(hovered ? 0xC0 : 0x7A, 0x000000));
             return;
         }
         if (HontunTheme.modern2()) {

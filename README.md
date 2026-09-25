@@ -18,7 +18,8 @@ picker is simply hidden and everything else works unchanged.
 - `Anti-Exploit` Cancels incoming packets that would crash or freeze your client, with an optional
   per-type debug log of exactly what was blocked.
 - `Channel Fetcher` Records the plugin channels a server uses.
-- `Channel Sender` Sends a custom payload on any channel, even unregistered ones.
+- `Channel Sender` Sends a custom payload on any channel, even unregistered ones. The data can be
+  plain text, hex bytes or a 4-byte number.
 - `Free Interact` Removes a couple of client-side interaction limits.
 - `Gamemode Notify` Alerts you when someone changes their gamemode.
 
@@ -34,14 +35,18 @@ picker is simply hidden and everything else works unchanged.
 - `.server` Adds real backend version, world info, plugin channels, the pushed resource-pack
   (clickable URL + SHA-1) and a plugin scan to Meteor's server info. `.server channels` lists
   captured channels, `.server plugins` scans plugins, `.server players` probes the real online
-  roster and flags players hidden from the tab list.
+  roster and flags players hidden from the tab list. `.server software` guesses what the server runs
+  (Paper, Purpur, Folia, Leaf, Spigot, Vanilla, Fabric...) and if there is a Velocity or BungeeCord
+  proxy in front. It uses what the client already got plus a few hidden tab-complete checks and tells
+  you how sure it is. `.server software full` also runs `/version` and one made-up command to get the
+  exact fork, both show up in the server log. `.server software passive` sends nothing at all.
 
 ## THEMES
 
 One color picker drives everything. Set `palette-color` and every accent, gradient and highlight
 follows it live - no restart, no rebuilding the GUI.
 
-Four looks, switchable in `ClickGUI -> Config -> GUI -> ui-mode`:
+Five looks, switchable in `ClickGUI -> GUI -> ui-mode`:
 
 | Mode | Look |
 |---|---|
@@ -49,6 +54,10 @@ Four looks, switchable in `ClickGUI -> Config -> GUI -> ui-mode`:
 | `HVanilla` | Minecraft's square shapes kept, drawn as translucent panels with a thin accent outline. |
 | `HModern1` | Flat panels, soft gradients, rounded corners. |
 | `HModern2` | Default. Chamfered corners, thin accent outlines with a soft glow, corner brackets, pixel icons next to labels. |
+| `SmogClient` | Rounded black and white look from SmogClientPro, with the SF font and an animated particle background. Ignores `palette-color`. |
+
+The ClickGUI also has a light mode. Tick `light-mode` right under `ui-mode`. Only the ClickGUI goes
+light, Minecraft menus, chat, containers and the HUD stay dark.
 
 ## INTERFACE
 
@@ -69,19 +78,21 @@ Four looks, switchable in `ClickGUI -> Config -> GUI -> ui-mode`:
 - `Versions` Themed protocol-version picker with the same per-version icons ViaFabricPlus uses,
   reachable from the multiplayer screen. Per-server overrides are available from `Edit` and from
   `Direct Connection`.
-- `Containers` Configurable backdrop behind inventories and chests (`container-background`).
+- `Containers` Inventories, chests, furnaces and other containers use the active theme, recipe book
+  button included. The backdrop behind them is configurable (`container-background`).
+- `Sliders` FOV, volume and every other slider get a themed track and knob.
 - `Menu background` Animated gradient with accent particles instead of the panorama
-  (`menu-background`).
+  (`menu-background`). SmogClient has its own animated background.
 - `Lag Notifier` Meteor's own lag-notifier element is restyled in the active theme (themed panel and
   accent), and shows how long the server has gone without responding in both seconds and
   milliseconds.
 - `Chat` `[Hontun]` prefix in the accent color.
 
 Every screen is themed live by the palette colour. Pick the mode in
-`ClickGUI -> Config -> GUI -> ui-mode`, then click a theme below to expand its screenshots.
+`ClickGUI -> GUI -> ui-mode`, then click a theme below to expand its screenshots.
 
 <details open>
-<summary><b>HModern2</b> — chamfered corners, accent glow, corner brackets (default)</summary>
+<summary><b>HModern2</b> - chamfered corners, accent glow, corner brackets (default)</summary>
 <table>
 <tr>
 <td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern2_main.png" alt="HModern2 title screen"></td>
@@ -99,7 +110,7 @@ Every screen is themed live by the palette colour. Pick the mode in
 </details>
 
 <details>
-<summary><b>HModern1</b> — flat panels, soft gradients, rounded corners</summary>
+<summary><b>HModern1</b> - flat panels, soft gradients, rounded corners</summary>
 <table>
 <tr>
 <td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern1_main.png" alt="HModern1 title screen"></td>
@@ -117,7 +128,25 @@ Every screen is themed live by the palette colour. Pick the mode in
 </details>
 
 <details>
-<summary><b>HVanilla</b> — Minecraft's square shapes as translucent panels with a thin accent outline</summary>
+<summary><b>SmogClient</b> - rounded black and white look with the SF font</summary>
+<table>
+<tr>
+<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/SmogClient_main.png" alt="SmogClient title screen"></td>
+<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/SmogClient_multiplayer.png" alt="SmogClient server list"></td>
+</tr>
+<tr>
+<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/SmogClient_multiplayer_drag.png" alt="SmogClient drag to reorder"></td>
+<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/SmogClient_accounts.png" alt="SmogClient accounts"></td>
+</tr>
+<tr>
+<td><b>Versions</b><br><img width="100%" src="docs/screenshots/SmogClient_versions.png" alt="SmogClient versions"></td>
+<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/SmogClient_proxies.png" alt="SmogClient proxies"></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><b>HVanilla</b> - Minecraft's square shapes as translucent panels with a thin accent outline</summary>
 <table>
 <tr>
 <td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HVanilla_main.png" alt="HVanilla title screen"></td>
@@ -130,6 +159,16 @@ Every screen is themed live by the palette colour. Pick the mode in
 <tr>
 <td><b>Versions</b><br><img width="100%" src="docs/screenshots/HVanilla_versions.png" alt="HVanilla versions"></td>
 <td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HVanilla_proxies.png" alt="HVanilla proxies"></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><b>ClickGUI</b> - dark and light mode</summary>
+<table>
+<tr>
+<td width="50%"><b>Dark</b><br><img width="100%" src="docs/screenshots/ClickGUI_dark.png" alt="ClickGUI dark"></td>
+<td width="50%"><b>Light</b><br><img width="100%" src="docs/screenshots/ClickGUI_light.png" alt="ClickGUI light"></td>
 </tr>
 </table>
 </details>

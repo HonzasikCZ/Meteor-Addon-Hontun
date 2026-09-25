@@ -50,7 +50,10 @@ void main() {
         float innerDist = dist + borderWidth;
         float innerAlpha = smoothstep(aa, -aa, innerDist);
 
-        color = mix(u_BorderColor, u_FillColor, innerAlpha);
+        vec4 border = vec4(u_BorderColor.rgb * u_BorderColor.a, u_BorderColor.a);
+        vec4 fill = vec4(u_FillColor.rgb * u_FillColor.a, u_FillColor.a);
+        vec4 mixed = mix(border, fill, innerAlpha);
+        color = vec4(mixed.rgb / max(mixed.a, 0.0001), mixed.a);
     }
 
     color.a *= shapeAlpha;

@@ -16,6 +16,15 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class HontunRenderer implements RoundedRectRenderer {
     private static final HontunRenderer INSTANCE = new HontunRenderer();
+    private static boolean flatText;
+
+    public static boolean flatText() {
+        return flatText;
+    }
+
+    public static void setFlatText(boolean flat) {
+        flatText = flat;
+    }
     public static GuiRenderer guiRenderer;
 
     private HontunGuiTheme theme;

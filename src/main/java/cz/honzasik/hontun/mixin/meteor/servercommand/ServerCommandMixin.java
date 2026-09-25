@@ -3,12 +3,14 @@ package cz.honzasik.hontun.mixin.meteor.servercommand;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.PlayerRoster;
+import cz.honzasik.hontun.commands.SoftwareProbe;
 import cz.honzasik.hontun.mixin.network.custompayload.ClientListenerConnectionAccessor;
 import cz.honzasik.hontun.modules.ChannelFetcher;
 import net.minecraft.network.Connection;
 import cz.honzasik.hontun.utils.HontunChat;
 import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.utils.ResourcePackInfo;
+import cz.honzasik.hontun.utils.ServerSoftware;
 import cz.honzasik.hontun.utils.VersionKeeper;
 import cz.honzasik.hontun.utils.WorldInfo;
 import meteordevelopment.meteorclient.commands.Command;
@@ -78,6 +80,10 @@ public abstract class ServerCommandMixin {
 
         String brand = mc.getConnection() != null ? mc.getConnection().serverBrand() : null;
         self.info("Type: %s", brand != null ? brand : "unknown");
+        try {
+            self.info("Software: %s", SoftwareProbe.summary(ServerSoftware.detect()));
+        } catch (Throwable ignored) {
+        }
         self.info("Motd: %s", server.motd != null ? server.motd.getString() : "unknown");
         self.info("Version: %s", server.version != null ? server.version.getString() : "unknown");
         if (!"unknown".equals(VersionKeeper.version)) {
@@ -201,6 +207,13 @@ public abstract class ServerCommandMixin {
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("players")
             .executes(c -> { PlayerRoster.INSTANCE.run(); return 1; }));
+
+        builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("software")
+            .executes(c -> { SoftwareProbe.INSTANCE.run(false); return 1; })
+            .then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("full")
+                .executes(c -> { SoftwareProbe.INSTANCE.run(true); return 1; }))
+            .then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("passive")
+                .executes(c -> { SoftwareProbe.INSTANCE.passive(); return 1; })));
     }
 
     private void hontun$printChannels() {

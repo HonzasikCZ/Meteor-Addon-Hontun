@@ -1,6 +1,8 @@
 package com.mrmelon54.DraggableLists.render;
 
 import com.mrmelon54.DraggableLists.theme.CornerStyle;
+import com.mrmelon54.DraggableLists.theme.HontunBridge;
+import cz.honzasik.hontun.gui.render.RoundedGui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
@@ -83,7 +85,17 @@ public final class Shapes {
     public static void fill(GuiGraphicsExtractor g, int x, int y, int width, int height,
                             CornerStyle style, int cornerSize, int argb) {
         if (width <= 0 || height <= 0) return;
+        if (smooth() && RoundedGui.fill(g, (float) x, (float) y, (float) width, (float) height,
+                (float) smoothRadius(style, cornerSize), 0f, argb)) return;
         fill(g, x, y, profile(width, height, style, cornerSize), argb);
+    }
+
+    private static boolean smooth() {
+        return HontunBridge.smog() && RoundedGui.available();
+    }
+
+    private static int smoothRadius(CornerStyle style, int cornerSize) {
+        return style == CornerStyle.SQUARE ? 0 : cornerSize;
     }
 
     public static void fill(GuiGraphicsExtractor g, int x, int y, Profile p, int argb) {
@@ -104,6 +116,8 @@ public final class Shapes {
     public static void outline(GuiGraphicsExtractor g, int x, int y, int width, int height,
                                CornerStyle style, int cornerSize, int argb) {
         if (width <= 0 || height <= 0) return;
+        if (smooth() && RoundedGui.outline(g, (float) x, (float) y, (float) width, (float) height,
+                (float) smoothRadius(style, cornerSize), 1f, argb)) return;
         outline(g, x, y, profile(width, height, style, cornerSize), argb);
     }
 
@@ -144,6 +158,11 @@ public final class Shapes {
      */
     public static void shadow(GuiGraphicsExtractor g, int x, int y, int width, int height,
                               CornerStyle style, int cornerSize, int layers, int baseAlpha, int dropY) {
+        if (smooth()) {
+            float spread = layers * 2f;
+            if (RoundedGui.fill(g, x - spread, y - spread + dropY, width + spread * 2f, height + spread * 2f,
+                    smoothRadius(style, cornerSize) + spread, spread * 1.6f, (Math.min(255, baseAlpha) << 24))) return;
+        }
         for (int i = layers; i >= 1; i--) {
             int alpha = Math.max(1, baseAlpha / (i * i));
             outline(g, x - i, y - i + dropY, width + i * 2, height + i * 2, style, cornerSize + i,
@@ -154,6 +173,7 @@ public final class Shapes {
     /** Coloured version of {@link #shadow}, used to make the accent bleed into the background. */
     public static void glow(GuiGraphicsExtractor g, int x, int y, int width, int height,
                             CornerStyle style, int cornerSize, int layers, int baseAlpha, int rgb) {
+        if (smooth()) return;
         for (int i = layers; i >= 1; i--) {
             int alpha = Math.max(1, baseAlpha / (i + 1));
             outline(g, x - i, y - i, width + i * 2, height + i * 2, style, cornerSize + i,

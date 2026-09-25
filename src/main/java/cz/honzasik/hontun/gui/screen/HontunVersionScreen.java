@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.gui.screen;
 
+import cz.honzasik.hontun.gui.widget.HontunDotButton;
 import cz.honzasik.hontun.gui.widget.VersionGridList;
 import cz.honzasik.hontun.utils.VfpBridge;
 import net.minecraft.client.gui.components.Button;
@@ -42,16 +43,15 @@ public class HontunVersionScreen extends HontunScreen {
 
         if (perServer) {
             boolean cur = current == null;
-            addRenderableWidget(Button.builder(
-                    Component.literal((cur ? "● " : "") + "Use global version"), b -> select(null))
-                    .bounds(contentLeft(), top, contentWidth(), 20).build());
+            addRenderableWidget(new HontunDotButton(contentLeft(), top, contentWidth(), 20,
+                    "Use global version", cur, b -> select(null)));
             listTop = top + 26;
         } else {
             Object auto = VfpBridge.autoDetect();
             if (auto != null) {
                 boolean cur = auto.equals(current);
-                addRenderableWidget(Button.builder(Component.literal((cur ? "● " : "") + "Auto Detect (1.7+)"), b -> select(auto))
-                        .bounds(contentLeft(), top, contentWidth(), 20).build());
+                addRenderableWidget(new HontunDotButton(contentLeft(), top, contentWidth(), 20,
+                        "Auto Detect (1.7+)", cur, b -> select(auto)));
                 listTop = top + 26;
             }
         }

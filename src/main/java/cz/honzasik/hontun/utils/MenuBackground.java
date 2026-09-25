@@ -35,6 +35,11 @@ public class MenuBackground {
     public static void render(GuiGraphicsExtractor g, int width, int height, boolean opaque, boolean particles) {
         if (!HontunTheme.restyleEnabled()) return;
 
+        if (HontunTheme.smog()) {
+            SmogBackground.render(g, width, height, opaque, particles);
+            return;
+        }
+
         refreshColors();
         boolean modern = HontunTheme.modern();
 

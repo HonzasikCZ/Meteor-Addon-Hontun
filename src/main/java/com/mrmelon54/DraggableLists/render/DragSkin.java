@@ -1,6 +1,8 @@
 package com.mrmelon54.DraggableLists.render;
 
+import com.mrmelon54.DraggableLists.theme.HontunBridge;
 import com.mrmelon54.DraggableLists.theme.Palette;
+import cz.honzasik.hontun.gui.render.RoundedGui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
@@ -33,6 +35,22 @@ public final class DragSkin {
     public static void handle(GuiGraphicsExtractor g, int x, int contentY, int contentHeight,
                               boolean hot, float fade, Palette p) {
         if (fade <= 0.01f) return;
+
+        if (HontunBridge.smog() && RoundedGui.available()) {
+            float plateH = Math.min(30f, contentHeight - 2f);
+            float plateY = contentY + (contentHeight - plateH) / 2f;
+            RoundedGui.fill(g, x + 1f, plateY, 14f, plateH, 4f, 0f,
+                Palette.argb(scale(hot ? 0xC0 : 0x7A, fade), 0x000000));
+            float cx = x + HANDLE_WIDTH / 2f;
+            float cy = contentY + contentHeight / 2f;
+            int dot = Palette.argb(scale(0xFF, fade), hot ? p.accentHi() : p.accent());
+            for (int col = 0; col < DOT_COLUMNS; col++) {
+                for (int row = 0; row < DOT_ROWS; row++) {
+                    RoundedGui.circle(g, cx + (col - 0.5f) * 4.5f, cy + (row - 1) * 4.5f, 1.3f, 0f, dot);
+                }
+            }
+            return;
+        }
 
         int alpha = (int) (255 * fade);
         int gridWidth = DOT_COLUMNS * DOT + (DOT_COLUMNS - 1) * DOT_GAP;

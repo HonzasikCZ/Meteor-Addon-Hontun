@@ -318,6 +318,14 @@ public class HontunTextBox extends EditBox {
         if (!clearable() || getValue().isEmpty()) return;
         int cx = boxX() + boxW - padRight;
         boolean over = overClear(mouseX, mouseY);
+        if (HontunRound.smoothDots()) {
+            float mx = cx + padRight / 2f - 1f, my = boxY() + boxH / 2f;
+            float a = 2.5f;
+            int col = HontunTheme.argb(0xFF, over ? HontunTheme.textLight() : HontunTheme.textDim());
+            HontunRound.stroke(g, mx - a, my - a, mx + a, my + a, 0.7f, col);
+            HontunRound.stroke(g, mx - a, my + a, mx + a, my - a, 0.7f, col);
+            return;
+        }
         Component x = Component.literal("✕");
         g.text(font, x, cx + (padRight - font.width(x)) / 2, boxY() + (boxH - 8) / 2,
                 HontunTheme.argb(0xFF, over ? HontunTheme.red() : HontunTheme.textDim()), false);

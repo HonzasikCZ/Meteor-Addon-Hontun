@@ -78,27 +78,32 @@ public abstract class GuiRendererMixin {
             );
 
         } else {
-            theme.textRenderer().begin(
+            HontunRenderer.setFlatText(theme instanceof HontunGuiTheme hontun && hontun.light());
+            try {
+                theme.textRenderer().begin(
 
-                    graphics,
-                    theme.scale(1)
-            );
+                        graphics,
+                        theme.scale(1)
+                );
 
-            for (TextOperation text : texts) {
-                if (!text.title) text.run(textPool);
+                for (TextOperation text : texts) {
+                    if (!text.title) text.run(textPool);
+                }
+                theme.textRenderer().end();
+
+                theme.textRenderer().begin(
+
+                        graphics,
+                        theme.scale(1.25)
+                );
+
+                for (TextOperation text : texts) {
+                    if (text.title) text.run(textPool);
+                }
+                theme.textRenderer().end();
+            } finally {
+                HontunRenderer.setFlatText(false);
             }
-            theme.textRenderer().end();
-
-            theme.textRenderer().begin(
-
-                    graphics,
-                    theme.scale(1.25)
-            );
-
-            for (TextOperation text : texts) {
-                if (text.title) text.run(textPool);
-            }
-            theme.textRenderer().end();
         }
 
         texts.clear();

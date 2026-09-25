@@ -41,6 +41,8 @@ public class HontunAccountsScreen extends HontunScreen {
     private String filter = "";
 
     private int modelCardX, modelCardY, modelCardW, modelCardH;
+    private boolean loggedDot;
+    private float loggedDotX, loggedDotY;
     private int addBoxX, addBoxY, addBoxW, addBoxH;
 
     private String valueText = "";
@@ -107,7 +109,20 @@ public class HontunAccountsScreen extends HontunScreen {
         User u = minecraft.getUser();
         addCentered(u != null ? u.getName() : "-", paneX, leftPane(), captionY, HontunTheme.textLight());
         addCentered(currentTypeLabel(), paneX, leftPane(), captionY + lh + 2, HontunTheme.textDim());
-        addCentered("● Logged in", paneX, leftPane(), captionY + (lh + 2) * 2, HontunTheme.green());
+        loggedDot = false;
+        if (cz.honzasik.hontun.gui.widget.HontunRound.smoothDots()) {
+            int ly = captionY + (lh + 2) * 2;
+            Component lc = cz.honzasik.hontun.utils.HontunFont.apply(Component.literal("Logged in")
+                    .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(HontunTheme.green()))));
+            int tw = font.width(lc);
+            int gx = paneX + (leftPane() - (tw + 7)) / 2;
+            addRenderableWidget(new StringWidget(gx + 7, ly, tw, font.lineHeight, lc, font));
+            loggedDot = true;
+            loggedDotX = gx + 1.75f;
+            loggedDotY = ly + 4f;
+        } else {
+            addCentered("● Logged in", paneX, leftPane(), captionY + (lh + 2) * 2, HontunTheme.green());
+        }
 
         if (HontunTheme.modern2()) {
             addLabel("Add account", paneX + 11, addLabelY, HontunTheme.accentHi());
@@ -170,6 +185,10 @@ public class HontunAccountsScreen extends HontunScreen {
                     HontunTheme.argb(0xB0, HontunTheme.base()), HontunTheme.argb(0xFF, HontunTheme.overlay2()));
             cz.honzasik.hontun.gui.widget.HontunRound.card(g, addBoxX, addBoxY, addBoxW, addBoxH, 5,
                     HontunTheme.argb(0x66, 0x000000), HontunTheme.argb(0x55, HontunTheme.overlay2()));
+            if (loggedDot) {
+                cz.honzasik.hontun.gui.widget.HontunRound.dot(g, loggedDotX, loggedDotY, 1.75f,
+                        HontunTheme.argb(0xFF, HontunTheme.green()));
+            }
             return;
         }
         if (!HontunTheme.modern2()) return;

@@ -83,8 +83,14 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
             HontunCards.row(g, x, cy, w, ch, on, hovered, HontunTheme.green());
 
             int dotX = modern ? x + 10 + HontunCards.rowTextInset(on) : x + 4;
-            g.text(f, Component.literal(on ? "●" : "○"), dotX, cy + (ch - f.lineHeight) / 2,
-                    HontunTheme.argb(0xFF, on ? HontunTheme.green() : HontunTheme.textDim()), true);
+            int dotCol = HontunTheme.argb(0xFF, on ? HontunTheme.green() : HontunTheme.textDim());
+            if (HontunRound.smoothDots()) {
+                float dcx = dotX + 3f, dcy = cy + ch / 2f;
+                if (on) HontunRound.dot(g, dcx, dcy, 2.4f, dotCol);
+                else HontunRound.ring(g, dcx, dcy, 2.0f, 0.45f, dotCol);
+            } else {
+                g.text(f, Component.literal(on ? "●" : "○"), dotX, cy + (ch - f.lineHeight) / 2, dotCol, true);
+            }
 
             int tx = modern ? dotX + 12 : x + 16;
             int nameY = modern ? cy + 6 : cy + 3;

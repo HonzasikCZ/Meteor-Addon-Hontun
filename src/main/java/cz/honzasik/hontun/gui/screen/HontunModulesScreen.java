@@ -7,6 +7,7 @@ import cz.honzasik.hontun.gui.theme.widgets.container.WHontunWindow;
 import cz.honzasik.hontun.gui.widget.WGuiTexture;
 import cz.honzasik.hontun.gui.util.search.results.ModuleSearchResult;
 import cz.honzasik.hontun.gui.util.search.SearchUtils;
+import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
@@ -16,6 +17,7 @@ import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
 import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
 import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WWindow;
+import meteordevelopment.meteorclient.gui.widgets.WLabel;
 import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
 import meteordevelopment.meteorclient.systems.config.Config;
 import meteordevelopment.meteorclient.systems.modules.Category;
@@ -60,13 +62,21 @@ public class HontunModulesScreen extends TabScreen {
 
         controller = add(new WCategoryController()).widget();
 
+        if (!theme.modulesHelpText.get()) return;
+
         WVerticalList help = add(theme.verticalList()).pad(4).bottom().widget();
 
         if (theme.hontunSearchScreen.get())
-            help.add(theme.label("Ctrl + F - Open search"));
+            help.add(helpLabel("Ctrl + F - Open search"));
 
-        help.add(theme.label("Left click - Toggle module"));
-        help.add(theme.label("Right click - Open module settings"));
+        help.add(helpLabel("Left click - Toggle module"));
+        help.add(helpLabel("Right click - Open module settings"));
+    }
+
+    private WLabel helpLabel(String text) {
+        WLabel label = theme.label(text);
+        if (theme.light()) label.color(HontunTheme.color(HontunTheme.textLight()));
+        return label;
     }
 
     @Override
