@@ -1,28 +1,26 @@
 package cz.honzasik.hontun.gui.theme.widgets.container;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
 import cz.honzasik.hontun.gui.api.animation.Direction;
-import cz.honzasik.hontun.gui.api.animation.Easing;
-import cz.honzasik.hontun.gui.api.render.Corners;
+import cz.honzasik.hontun.gui.render.route.Routers;
 import cz.honzasik.hontun.gui.screen.HontunModulesScreen;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
-import cz.honzasik.hontun.gui.util.ColorUtils;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
+import cz.honzasik.hontun.gui.theme.style.Pipeline;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.utils.WindowConfig;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
-import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WWindow;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WTriangle;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import net.minecraft.client.input.MouseButtonEvent;
 
 public class WHontunWindow extends WWindow implements HontunWidget {
-    private static final int SHADOW_OFFSET = 2;
-
     private HontunModulesScreen modulesScreen;
     private boolean shouldSnap = false;
     private int gridSize;
@@ -32,8 +30,8 @@ public class WHontunWindow extends WWindow implements HontunWidget {
 
     private double contentOffsetY;
 
-    private Animation animation;
-    private Animation cornerAnimation;
+    private StyleAnimation animation;
+    private StyleAnimation cornerAnimation;
 
     public WHontunWindow(WWidget icon, String title) {
         super(icon, title);
@@ -43,22 +41,43 @@ public class WHontunWindow extends WWindow implements HontunWidget {
     public void init() {
         super.init();
 
-        animation = new Animation(
-                theme().guiAnimationEasing(),
-                theme().guiAnimationDuration(),
-                expanded ? Direction.FORWARDS : Direction.BACKWARDS
-        );
-        cornerAnimation = new Animation(
-                Easing.QUART_OUT,
-                200,
-                expanded ? Direction.FORWARDS : Direction.BACKWARDS
-        );
+        ClickStyle style = style();
+        animation = StyleAnimation.of(style.anim(AnimRole.WINDOW_EXPAND), theme(), expanded);
+        cornerAnimation = StyleAnimation.of(style.anim(AnimRole.WINDOW_CORNER), theme(), expanded);
+
+        applyViewPadding();
+    }
+
+    public void rebuildChrome() {
+        cells.clear();
+        view = null;
+        header = null;
+        init();
+    }
+
+    public void setPadding(double padding) {
+        this.padding = padding;
+        applyViewPadding();
+    }
+
+    private void applyViewPadding() {
+        if (view == null) return;
+
+        Metrics m = metrics();
+        for (Cell<?> cell : cells) {
+            if (cell.widget() != view) continue;
+
+            cell.padLeft(m.windowPadL >= 0 ? m.windowPadL : padding);
+            cell.padRight(m.windowPadR >= 0 ? m.windowPadR : padding);
+            cell.padTop(m.windowPadT >= 0 ? m.windowPadT : padding);
+            cell.padBottom(m.windowPadB >= 0 ? m.windowPadB : padding);
+        }
     }
 
     @Override
     protected void onCalculateSize() {
         super.onCalculateSize();
-        minWidth = theme().scale(200);
+        minWidth = theme().scale(metrics().windowMinWidth);
     }
 
     public void initSnapping(HontunModulesScreen modulesScreen, int gridSize) {
@@ -102,64 +121,49 @@ public class WHontunWindow extends WWindow implements HontunWidget {
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
-        Color backgroundColor = ColorUtils.withAlpha(theme.mantleColor(), theme.windowOpacity());
-
-        int shadowOffset = getShadowOffset();
-        double windowHeight = Math.max((height - header.height) * animation.getProgress(), 0);
-
-        if (theme.effWindowShadow()) {
-            Color shadowColor = theme.shadowColor();
-
-            roundedRect().pos(x - shadowOffset, y - shadowOffset)
-                         .size(width + shadowOffset * 2,
-                                 header.height + windowHeight + shadowOffset * 2)
-                         .radius(radius() + shadowOffset / 2f)
-                         .color(shadowColor)
-                         .render();
-        }
-
-        if (expanded || animation.isRunning())
-            roundedRect().pos(x, y + header.height)
-                         .size(width, windowHeight)
-                         .radius(radius() - shadowOffset, Corners.BOTTOM)
-                         .color(backgroundColor)
-                         .render();
+        style().paintWindowBack(this, renderer, mouseX, mouseY);
     }
 
     @Override
     public boolean render(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         if (!visible) return true;
 
+        ClickStyle style = style();
+        Routers.of(style.pipeline()).windowLayer(renderer);
+
         double progress = animation.getProgress();
         boolean isAnimating = animation.isRunning();
         double contentHeight = height - header.height;
 
-        if (isAnimating) {
-            int shadowOffset = getShadowOffset();
+        if (isAnimating && progress > 1.0) {
+            double overshot = Math.max(progress - 1, 0) * contentHeight;
+            double shift = overshot / 2;
+
+            if (contentOffsetY != shift) {
+                contentOffsetY = shift;
+                invalidate();
+            }
+        }
+
+        boolean scissor = style.pipeline() != Pipeline.PIXEL;
+
+        if (scissor) {
+            double margin = style.chromeMargin(theme());
             double windowHeight = Math.max(contentHeight * progress, 0);
 
-            if (progress > 1.0) {
-                double overshot = Math.max(progress - 1, 0) * contentHeight;
-                double shift = overshot / 2;
+            double left = Math.floor(x - margin);
+            double top = Math.floor(y - margin);
+            double right = Math.ceil(x + width + margin);
+            double bottom = Math.ceil(y + header.height + windowHeight + margin);
 
-                if (contentOffsetY != shift) {
-                    contentOffsetY = shift;
-                    invalidate();
-                }
-            }
-
-            renderer.scissorStart(
-                    x - shadowOffset,
-                    y - shadowOffset,
-                    width + shadowOffset * 2,
-                    header.height + windowHeight + shadowOffset * 2
-            );
+            renderer.scissorStart(left, top, right - left, bottom - top);
         }
 
         boolean toReturn = super.render(renderer, mouseX, mouseY, delta);
 
-        if (isAnimating) renderer.scissorEnd();
+        style.paintWindowFront(this, renderer, mouseX, mouseY);
+
+        if (scissor) renderer.scissorEnd();
 
         return toReturn;
     }
@@ -179,8 +183,10 @@ public class WHontunWindow extends WWindow implements HontunWidget {
     public void setExpanded(boolean expanded) {
         super.setExpanded(expanded);
 
-        if (animation != null)
+        if (animation != null) {
             animation.reverse();
+            style().onPressed(this);
+        }
 
         if (expanded && cornerAnimation != null)
             cornerAnimation.finishedAt(Direction.FORWARDS);
@@ -191,9 +197,46 @@ public class WHontunWindow extends WWindow implements HontunWidget {
         return new WHontunHeader(icon);
     }
 
-    private class WHontunHeader extends WHeader {
+    public WHontunHeader headerWidget() {
+        return (WHontunHeader) header;
+    }
+
+    public double expandProgress() {
+        return animation.getProgress();
+    }
+
+    public boolean expandAnimating() {
+        return animation.isRunning();
+    }
+
+    public double cornerProgress() {
+        return cornerAnimation.getProgress();
+    }
+
+    public boolean cornerAnimating() {
+        return cornerAnimation.isRunning();
+    }
+
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    public boolean isDragging() {
+        return dragging;
+    }
+
+    public String titleText() {
+        return title;
+    }
+
+    public boolean isDialog() {
+        return id == null;
+    }
+
+    public class WHontunHeader extends WHeader {
         private WHorizontalList list;
         private WTriangle openIndicator;
+        private WWidget titleWidget;
 
         public WHontunHeader(WWidget icon) {
             super(icon);
@@ -201,13 +244,17 @@ public class WHontunWindow extends WWindow implements HontunWidget {
 
         @Override
         public void init() {
+            HontunGuiTheme hontun = theme();
+            ClickStyle style = hontun.style();
+            Metrics m = style.metrics();
+
             list = add(theme.horizontalList())
-                    .padHorizontal(theme.scale(10))
-                    .padVertical(theme.scale(8))
+                    .padHorizontal(m.headerPadH)
+                    .padVertical(m.headerPadV)
                     .expandX()
                     .widget();
 
-            list.spacing = theme().scale(6);
+            list.spacing = m.headerSpacing;
 
             if (icon != null)
                 add(icon).centerY();
@@ -215,12 +262,27 @@ public class WHontunWindow extends WWindow implements HontunWidget {
             if (beforeHeaderInit != null)
                 beforeHeaderInit.accept(this);
 
-            add(theme.label(title, true)).expandX().centerY();
+            titleWidget = add(style.headerLabel(hontun, WHontunWindow.this, title)).expandX().centerY().widget();
 
-            openIndicator = add(theme().triangle())
+            WWidget trailing = style.headerTrailing(hontun, WHontunWindow.this);
+            if (trailing != null) add(trailing).centerY();
+
+            openIndicator = add(hontun.triangle())
                     .right()
                     .centerY()
                     .widget();
+        }
+
+        public WHontunWindow window() {
+            return WHontunWindow.this;
+        }
+
+        public WWidget titleWidget() {
+            return titleWidget;
+        }
+
+        public WTriangle openIndicator() {
+            return openIndicator;
         }
 
         @Override
@@ -231,7 +293,6 @@ public class WHontunWindow extends WWindow implements HontunWidget {
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            HontunGuiTheme theme = theme();
             double cornerProgress = cornerAnimation.getProgress();
 
             if (!expanded
@@ -241,33 +302,7 @@ public class WHontunWindow extends WWindow implements HontunWidget {
                 cornerAnimation.start(Direction.BACKWARDS);
             }
 
-            roundedRect().bounds(this)
-                         .radii(radius(),
-                                radius(),
-                                (float) (radius() * (1 - cornerProgress)),
-                                (float) (radius() * (1 - cornerProgress)))
-                         .color(theme.crustColor())
-                         .render();
-
-            if (expanded || (animation.isRunning() && !cornerAnimation.isRunning())) {
-                Color transparentColor = ColorUtils.withAlpha(theme.baseColor(), 0);
-
-                Color semiTransparentColor = ColorUtils.withAlpha(
-                        theme.baseColor(),
-                        0.5 * theme.windowOpacity()
-                );
-
-                renderer.quad(
-                        x,
-                        y + height,
-                        width,
-                        12,
-                        semiTransparentColor,
-                        semiTransparentColor,
-                        transparentColor,
-                        transparentColor
-                );
-            }
+            style().paintWindowHeader(WHontunWindow.this, this, renderer, mouseX, mouseY);
 
             openIndicator.rotation = 90 + 90 * animation.getProgress();
         }
@@ -288,7 +323,7 @@ public class WHontunWindow extends WWindow implements HontunWidget {
                     used
             );
 
-            if (clicked && shouldSnap) {
+            if (clicked) {
                 mouseOffsetX = click.x() - x;
                 mouseOffsetY = click.y() - y;
             }
@@ -310,8 +345,12 @@ public class WHontunWindow extends WWindow implements HontunWidget {
         public void onMouseMoved(double mouseX, double mouseY, double lastMouseX, double lastMouseY) {
             if (!dragging) return;
 
-            double deltaX = shouldSnap ? snapToGrid(mouseX - mouseOffsetX) - x : mouseX - lastMouseX;
-            double deltaY = shouldSnap ? snapToGrid(mouseY - mouseOffsetY) - y : mouseY - lastMouseY;
+            ClickStyle style = style();
+            HontunGuiTheme hontun = theme();
+            int grid = shouldSnap ? gridSize : 0;
+
+            double deltaX = style.snapWindow(hontun, mouseX - mouseOffsetX, grid) - x;
+            double deltaY = style.snapWindow(hontun, mouseY - mouseOffsetY, grid) - y;
 
             WHontunWindow.this.move(deltaX, deltaY);
 
@@ -329,13 +368,5 @@ public class WHontunWindow extends WWindow implements HontunWidget {
             if (shouldSnap && !modulesScreen.showGrid()) modulesScreen.showGrid(true);
             dragged = true;
         }
-    }
-
-    private double snapToGrid(double value) {
-        return Math.round(value / gridSize) * gridSize;
-    }
-
-    private int getShadowOffset() {
-        return theme().effWindowShadow() ? SHADOW_OFFSET : 0;
     }
 }

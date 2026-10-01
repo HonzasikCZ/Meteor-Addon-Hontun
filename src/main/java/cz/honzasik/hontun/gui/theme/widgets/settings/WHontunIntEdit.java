@@ -61,8 +61,8 @@ public class WHontunIntEdit extends WVerticalList implements HontunWidget {
                     .scale(TextScale.SMALL.get());
 
             sliderList.add(theme().label(minText)
-                    .color(ColorUtils.withAlpha(theme().textSecondaryColor(), 0.5)))
-                    .padLeft(pad() / 2);
+                    .color(ColorUtils.withAlpha(theme().textSecondaryColor(), theme().light() ? 0.85 : 0.6)))
+                    .padLeft(metrics().gap / 2);
 
             slider = sliderList.add(theme.slider(value, sliderMin, sliderMax))
                     .padHorizontal(6)
@@ -75,8 +75,8 @@ public class WHontunIntEdit extends WVerticalList implements HontunWidget {
                     .scale(TextScale.SMALL.get());
 
             sliderList.add(theme().label(maxText)
-                    .color(ColorUtils.withAlpha(theme().textSecondaryColor(), 0.5)))
-                    .padRight(pad() / 2);
+                    .color(ColorUtils.withAlpha(theme().textSecondaryColor(), theme().light() ? 0.85 : 0.6)))
+                    .padRight(metrics().gap / 2);
         }
 
         textBox.actionOnUnfocused = () -> {

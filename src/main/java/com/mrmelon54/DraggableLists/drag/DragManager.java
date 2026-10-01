@@ -57,7 +57,6 @@ public class DragManager {
     private int ghostY;
     /** Where the carried row would be if the list did not stop it: decides the drop slot. */
     private int dropY;
-    private int pointerX;
     private float lift;
 
     /** Animated vertical offset from each row's real position, keyed by entry identity. */
@@ -132,7 +131,6 @@ public class DragManager {
     }
 
     private void follow(MouseButtonEvent event) {
-        pointerX = (int) event.x();
         dropY = (int) event.y() + grabDy;
         ghostY = clampGhost(dropY);
     }
@@ -330,7 +328,7 @@ public class DragManager {
 
         boolean transformed = config.lift && lift > 0.005f;
         if (transformed) {
-            float pivotX = pointerX;
+            float pivotX = x + width / 2f;
             float pivotY = ghostY + height / 2f;
             graphics.pose().pushMatrix();
             graphics.pose().translate(pivotX, pivotY);

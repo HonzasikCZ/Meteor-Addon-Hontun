@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class SoftwareConfigMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void hontun$reset(CallbackInfo ci) {
-        ServerSoftware.reset();
+        ServerSoftware.resetConfig();
     }
 
     @Inject(method = "handleRegistryData", at = @At("HEAD"))

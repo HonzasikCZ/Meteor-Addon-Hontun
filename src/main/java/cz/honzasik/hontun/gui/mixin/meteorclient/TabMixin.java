@@ -23,8 +23,8 @@ public abstract class TabMixin {
     private Cell<?> hontun$addTopBarMargin(TabScreen screen, WWidget widget, Operation<Cell<?>> original) {
         Cell<?> cell = original.call(screen, widget);
 
-        if (GuiThemes.get() instanceof HontunGuiTheme)
-            cell.marginTop(10);
+        if (GuiThemes.get() instanceof HontunGuiTheme hontun)
+            cell.marginTop(hontun.style().metrics().topBarMarginTop);
 
         return cell;
     }

@@ -33,7 +33,7 @@ public class HontunEntityTypeListSettingScreen extends WindowScreen {
         WHorizontalList list = add(theme.horizontalList()).expandX().widget();
 
         WTextBox searchBox = list.add(theme.textBox("", "Search entities..."))
-                .padBottom(theme.pad())
+                .padBottom(theme.style().metrics().gap)
                 .minWidth(theme.scale(250))
                 .expandX()
                 .widget();

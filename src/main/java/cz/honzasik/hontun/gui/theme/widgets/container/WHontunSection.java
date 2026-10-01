@@ -1,29 +1,28 @@
 package cz.honzasik.hontun.gui.theme.widgets.container;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
 import cz.honzasik.hontun.gui.api.animation.Direction;
-import cz.honzasik.hontun.gui.api.animation.Easing;
-import cz.honzasik.hontun.gui.api.render.Corners;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
-import cz.honzasik.hontun.gui.util.ColorUtils;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WTriangle;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 
 public class WHontunSection extends WSection implements HontunWidget {
     private double actualHeight;
     private double forcedHeight = -1;
     private double contentOffsetY;
 
-    private WHeader header;
+    private WHontunHeader header;
 
-    private Animation animation;
-    private Animation cornerAnimation;
+    private StyleAnimation animation;
+    private StyleAnimation cornerAnimation;
 
     public WHontunSection(String title, boolean expanded, WWidget headerWidget) {
         super(title, expanded, headerWidget);
@@ -33,16 +32,9 @@ public class WHontunSection extends WSection implements HontunWidget {
     public void init() {
         super.init();
 
-        animation = new Animation(
-                theme().guiAnimationEasing(),
-                theme().guiAnimationDuration(),
-                expanded ? Direction.FORWARDS : Direction.BACKWARDS
-        );
-        cornerAnimation = new Animation(
-                Easing.QUART_OUT,
-                200,
-                expanded ? Direction.FORWARDS : Direction.BACKWARDS
-        );
+        ClickStyle style = style();
+        animation = StyleAnimation.of(style.anim(AnimRole.SECTION_EXPAND), theme(), expanded);
+        cornerAnimation = StyleAnimation.of(style.anim(AnimRole.SECTION_CORNER), theme(), expanded);
     }
 
     @Override
@@ -74,24 +66,7 @@ public class WHontunSection extends WSection implements HontunWidget {
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        if (!expanded && !animation.isRunning()) return;
-
-        Color backgroundColor = ColorUtils.withAlpha(
-                theme().baseColor(),
-                theme().backgroundOpacity()
-        );
-
-        Color outlineColor = ColorUtils.withAlpha(
-                theme().surface0Color(),
-                theme().backgroundOpacity()
-        );
-
-        roundedRect().pos(x, y + header.height)
-                     .size(width, height - header.height)
-                     .radius(radius(), Corners.BOTTOM)
-                     .color(backgroundColor)
-                     .outline(outlineColor, outlineWidth())
-                     .render();
+        style().paintSectionBody(this, renderer, mouseX, mouseY);
     }
 
     @Override
@@ -148,9 +123,38 @@ public class WHontunSection extends WSection implements HontunWidget {
         return header;
     }
 
-    protected class WHontunHeader extends WHeader {
+    public WHontunHeader headerWidget() {
+        return header;
+    }
+
+    public double expandProgress() {
+        return animation.getProgress();
+    }
+
+    public boolean expandAnimating() {
+        return animation.isRunning();
+    }
+
+    public double cornerProgress() {
+        return cornerAnimation.getProgress();
+    }
+
+    public boolean cornerAnimating() {
+        return cornerAnimation.isRunning();
+    }
+
+    public String titleText() {
+        return title;
+    }
+
+    public WWidget customHeaderWidget() {
+        return headerWidget;
+    }
+
+    public class WHontunHeader extends WHeader {
         private WHorizontalList list;
         private WTriangle openIndicator;
+        private WWidget titleWidget;
 
         public WHontunHeader(String title) {
             super(title);
@@ -158,9 +162,13 @@ public class WHontunSection extends WSection implements HontunWidget {
 
         @Override
         public void init() {
+            HontunGuiTheme hontun = theme();
+            ClickStyle style = hontun.style();
+            Metrics m = style.metrics();
+
             list = add(theme.horizontalList())
-                    .padHorizontal(theme.scale(6))
-                    .padVertical(theme.scale(4))
+                    .padHorizontal(m.sectionHeaderPadH)
+                    .padVertical(m.sectionHeaderPadV)
                     .expandX()
                     .widget();
 
@@ -174,11 +182,24 @@ public class WHontunSection extends WSection implements HontunWidget {
             widget.calculateSize();
             double pad = widget.width;
 
-            add(theme.horizontalSeparator(title))
+            titleWidget = add(style.sectionTitle(hontun, WHontunSection.this, title))
                     .expandX()
-                    .padLeft(pad);
+                    .padLeft(pad)
+                    .widget();
 
             add(widget);
+        }
+
+        public WHontunSection section() {
+            return WHontunSection.this;
+        }
+
+        public WWidget titleWidget() {
+            return titleWidget;
+        }
+
+        public WTriangle openIndicator() {
+            return openIndicator;
         }
 
         @Override
@@ -189,7 +210,6 @@ public class WHontunSection extends WSection implements HontunWidget {
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            HontunGuiTheme theme = theme();
             double progress = animation.getProgress();
             double cornerProgress = cornerAnimation.getProgress();
 
@@ -200,18 +220,7 @@ public class WHontunSection extends WSection implements HontunWidget {
                 cornerAnimation.start(Direction.BACKWARDS);
             }
 
-            Color bgColor = ColorUtils.withAlpha(
-                    mouseOver ? theme.surface1Color() : theme.surface0Color(),
-                    theme.backgroundOpacity()
-            );
-
-            roundedRect().bounds(this)
-                         .radii(radius(),
-                                radius(),
-                                (float) (radius() * (1 - cornerProgress)),
-                                (float) (radius() * (1 - cornerProgress)))
-                         .color(bgColor)
-                         .render();
+            style().paintSectionHeader(WHontunSection.this, this, renderer, mouseX, mouseY);
 
             if (openIndicator != null)
                 openIndicator.rotation = 90 + 90 * animation.getProgress();

@@ -4,6 +4,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "MinecraftRenderFrameMixin",
+    "PixelRouteGuardMixin",
     "RenderSystemMixin"
   ],
   "injectors": {
@@ -28,7 +29,9 @@
     "meteorclient.WSliderMixin",
     "meteorclient.WTextBoxMixin",
     "meteorclient.WViewMixin",
+    "meteorclient.WViewScrollAccessor",
     "meteorclient.WaypointsModuleMixin",
+    "meteorclient.WindowScreenAccessor",
     "meteorclient.WWidgetMixin"
   ]
 }

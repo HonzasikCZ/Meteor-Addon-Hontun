@@ -1,17 +1,13 @@
 package cz.honzasik.hontun.gui.theme.widgets.pressable;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
-import cz.honzasik.hontun.gui.api.animation.Direction;
-import cz.honzasik.hontun.gui.api.animation.Easing;
 import cz.honzasik.hontun.gui.api.text.RichText;
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
 import cz.honzasik.hontun.gui.widget.IConditionalWidget;
-import cz.honzasik.hontun.gui.util.ColorUtils;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import java.util.function.BooleanSupplier;
 
@@ -19,7 +15,9 @@ public class WHontunButton extends WButton implements IConditionalWidget, Hontun
     private BooleanSupplier visibilityCondition;
     private RichText richText;
 
-    private Animation hoverAnimation;
+    private StyleAnimation hoverAnimation;
+
+    private final double[] size = new double[2];
 
     public WHontunButton(RichText text, GuiTexture texture) {
         super(text.getPlainText(), texture);
@@ -32,25 +30,30 @@ public class WHontunButton extends WButton implements IConditionalWidget, Hontun
 
     @Override
     public void init() {
-        hoverAnimation = new Animation(Easing.QUAD_OUT, 250);
+        hoverAnimation = StyleAnimation.of(style().anim(AnimRole.BUTTON_HOVER), theme());
+    }
+
+    public RichText displayText() {
+        if (richText != null) return richText;
+        if (texture == null) return null;
+
+        String iconText = style().iconButtonText(texture);
+        return iconText != null ? RichText.of(iconText) : null;
     }
 
     @Override
     protected void onCalculateSize() {
-        double pad = pad();
+        RichText text = displayText();
+        if (text != null) textWidth = theme().textWidth(text);
 
-        if (richText != null) {
-            textWidth = theme().textWidth(richText);
+        style().buttonSize(this, size);
+        width = size[0];
+        height = size[1];
+    }
 
-            width = pad + textWidth + pad;
-            height = pad + theme.textHeight() + pad;
-        }
-        else {
-            double s = theme.textHeight();
-
-            width = pad + s + pad;
-            height = pad + s + pad;
-        }
+    @Override
+    protected void onPressed(int button) {
+        style().onPressed(this);
     }
 
     @Override
@@ -65,27 +68,23 @@ public class WHontunButton extends WButton implements IConditionalWidget, Hontun
         if (!mouseOver && hoverProgress > 0)
             hoverAnimation.reset();
 
-        HontunGuiTheme theme = theme();
+        style().paintButton(this, renderer, mouseX, mouseY);
+    }
 
-        Color bg = theme.backgroundColor.get(pressed, mouseOver);
-        Color accent = ColorUtils.withAlpha(theme.accentColor(), 0.8);
-        Color outline = ColorUtils.interpolateColor(bg, accent, hoverProgress);
+    public double hoverProgress() {
+        return hoverAnimation.getProgress();
+    }
 
-        double pad = pad();
+    public boolean isPressed() {
+        return pressed;
+    }
 
-        background(bg, outline).render();
+    public double labelWidth() {
+        return textWidth;
+    }
 
-        if (richText != null) {
-            renderer().text(
-                    richText,
-                    x + width / 2 - textWidth / 2,
-                    y + pad, theme.textColor()
-            );
-        }
-        else {
-            double ts = theme.textHeight();
-            renderer.quad(x + width / 2 - ts / 2, y + pad, ts, ts, texture, theme.textColor());
-        }
+    public GuiTexture icon() {
+        return texture;
     }
 
     public void set(RichText text) {

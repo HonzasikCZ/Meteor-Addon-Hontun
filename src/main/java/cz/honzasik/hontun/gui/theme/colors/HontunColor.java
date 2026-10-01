@@ -26,5 +26,6 @@ public enum HontunColor {
     Surface0,
     Base,
     Mantle,
-    Crust;
+    Crust,
+    AccentLo;
 }

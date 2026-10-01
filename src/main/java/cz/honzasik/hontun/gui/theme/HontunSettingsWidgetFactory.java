@@ -3,6 +3,7 @@ package cz.honzasik.hontun.gui.theme;
 import it.unimi.dsi.fastutil.ints.IntArrayList;
 import it.unimi.dsi.fastutil.ints.IntList;
 import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
 import cz.honzasik.hontun.gui.screen.settings.HontunEntityTypeListSettingScreen;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.api.text.TextScale;
@@ -93,8 +94,16 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
         factories.put(FileSetting.class, (table, setting) -> fileW(table, (FileSetting) setting));
     }
 
+    private Metrics metrics() {
+        return theme.style().metrics();
+    }
+
     private double settingSpacing() {
-        return theme.pad();
+        return metrics().tableVSpacing;
+    }
+
+    private double gap() {
+        return metrics().gap;
     }
 
     @Override
@@ -118,7 +127,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
     }
 
     private void group(WVerticalList list, SettingGroup group, String filter, List<Consumer<WVerticalList>> removals) {
-        WSection section = list.add(theme.section(group.name, group.sectionExpanded)).expandX().pad(theme.pad()).widget();
+        WSection section = list.add(theme.section(group.name, group.sectionExpanded)).expandX().pad(metrics().sectionPad).widget();
         section.action = () -> group.sectionExpanded = section.isExpanded();
 
         if (theme.indentSettings.get() && (filter == null || filter.isEmpty())) {
@@ -135,7 +144,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
                 }
             );
 
-            section.add(treeTable).expandX().pad(theme.pad() * 2);
+            section.add(treeTable).expandX().pad(metrics().tablePad);
             treeTable.verticalSpacing = settingSpacing();
 
             removals.add(parentList -> {
@@ -145,7 +154,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
             return;
         }
 
-        WTable table = section.add(theme.table()).expandX().pad(theme.pad() * 2).widget();
+        WTable table = section.add(theme.table()).expandX().pad(metrics().tablePad).widget();
         table.verticalSpacing = settingSpacing();
 
         RowRemoval removal = null;
@@ -216,7 +225,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
         WHontunCheckbox checkbox = (WHontunCheckbox) list.add(theme.checkbox(setting.get())).widget();
         checkbox.action = () -> setting.set(checkbox.checked);
 
-        title(list, setting).padLeft(theme.pad()).expandCellX();
+        title(list, setting).padLeft(gap()).expandCellX();
 
         reset(list, setting, () -> checkbox.setChecked(setting.get()), () -> list.mouseOver);
     }
@@ -243,7 +252,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
     private void stringW(WTable table, StringSetting setting) {
         WHorizontalList list = table.add(theme.horizontalList()).expandX().widget();
 
-        title(list, setting).padLeft(theme.pad());
+        title(list, setting).padLeft(gap());
 
         CharFilter filter = setting.filter == null ? (text, c) -> true : setting.filter;
         Cell<WTextBox> cell = list.add(theme.textBox(setting.get(), "", setting.title, filter, setting.renderer));
@@ -295,7 +304,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
                 setting.createScreen(theme)
         );
 
-        title(list, setting).padLeft(theme.pad()).expandCellX();
+        title(list, setting).padLeft(gap()).expandCellX();
         reset(list, setting, null, () -> list.mouseOver);
     }
 
@@ -305,7 +314,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
         WColorPicker colorPicker = list.add(theme.colorPicker(setting.get(), HontunBuiltinIcons.EDIT.texture())).widget();
         colorPicker.action = () -> mc.gui.setScreen(new ColorSettingScreen(theme, setting));
 
-        title(list, setting).padLeft(theme.pad()).expandCellX();
+        title(list, setting).padLeft(gap()).expandCellX();
 
         reset(list, setting, () -> colorPicker.setColor(setting.get()), () -> list.mouseOver);
     }
@@ -433,7 +442,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
                 new BlockDataSettingScreen<>(theme, setting)
         );
 
-        title(list, setting).padLeft(theme.pad()).expandCellX();
+        title(list, setting).padLeft(gap()).expandCellX();
         reset(list, setting, null, () -> list.mouseOver);
     }
 
@@ -481,7 +490,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
             mc.gui.setScreen(screen);
         };
 
-        list.add(label).expandCellX().padLeft(theme.pad());
+        list.add(label).expandCellX().padLeft(gap());
 
         reset(list, setting, () -> label.set(getFontLabel(setting, Fonts.DEFAULT_FONT.info.family())), () -> list.mouseOver);
     }
@@ -528,9 +537,9 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
 
             WHorizontalList list = t.add(theme.horizontalList()).expandX().widget();
 
-            list.add(theme.label(String.valueOf(_i))).padLeft(theme.pad());
+            list.add(theme.label(String.valueOf(_i))).padLeft(gap());
 
-            WColorPicker colorPicker = list.add(theme.colorPicker(color, HontunBuiltinIcons.EDIT.texture())).padHorizontal(theme.pad()).widget();
+            WColorPicker colorPicker = list.add(theme.colorPicker(color, HontunBuiltinIcons.EDIT.texture())).padHorizontal(gap()).widget();
             colorPicker.action = () -> {
                 SettingColor defaultValue = WHITE;
 
@@ -571,7 +580,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
 
         title(headerList, setting, true).expandX();
 
-        indentedList.add(theme.verticalSeparator()).expandWidgetY().padRight(theme.pad());
+        indentedList.add(theme.verticalSeparator()).expandWidgetY().padRight(gap());
         WVerticalList sliderList = indentedList.add(theme.verticalList()).expandX().widget();
 
         WHontunDoubleEdit x = addVectorComponent(sliderList, "X", setting.get().x, val -> setting.get().x = val, setting);
@@ -638,7 +647,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
         button.minWidth = theme.textWidth(button.getText()) * 2;
         button.action = action;
 
-        title(list, setting).padLeft(theme.pad());
+        title(list, setting).padLeft(gap());
 
         if (addCount) list.add(new WSelectedCountLabel(setting).color(theme.accentColor())).expandCellX();
 
@@ -656,7 +665,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
         return title;
     }
 
-    private static class WSelectedCountLabel extends WHontunLabel {
+    public static class WSelectedCountLabel extends WHontunLabel {
         private final Setting<?> setting;
         private int lastSize = -1;
         private double offsetX;
@@ -689,17 +698,23 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
                 lastSize = size;
             }
 
-            roundedRect().bounds(this)
-                         .radius(smallRadius())
-                         .color(theme.surface0Color())
-                         .render();
+            style().paintCountChip(this, renderer, mouseX, mouseY);
+        }
 
-            renderer().text(
-                    richText,
-                    x + offsetX,
-                    y + offsetY,
-                    color != null ? color : theme().textColor()
-            );
+        public RichText label() {
+            return richText;
+        }
+
+        public double offsetX() {
+            return offsetX;
+        }
+
+        public double offsetY() {
+            return offsetY;
+        }
+
+        public Setting<?> setting() {
+            return setting;
         }
 
         public static int getSize(Setting<?> setting) {

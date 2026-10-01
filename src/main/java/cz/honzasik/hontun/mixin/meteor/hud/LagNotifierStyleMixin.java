@@ -3,6 +3,8 @@ package cz.honzasik.hontun.mixin.meteor.hud;
 import cz.honzasik.hontun.gui.widget.HontunIcons;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
 import cz.honzasik.hontun.utils.HontunTheme;
+import meteordevelopment.meteorclient.renderer.text.VanillaTextRenderer;
+import meteordevelopment.meteorclient.settings.Setting;
 import meteordevelopment.meteorclient.systems.hud.Hud;
 import meteordevelopment.meteorclient.systems.hud.HudElement;
 import meteordevelopment.meteorclient.systems.hud.HudRenderer;
@@ -11,8 +13,9 @@ import meteordevelopment.meteorclient.systems.hud.screens.HudEditorScreen;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.world.TickRate;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -20,8 +23,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(value = LagNotifierHud.class, remap = false)
 public abstract class LagNotifierStyleMixin {
 
+    @Shadow @Final private Setting<Boolean> shadow;
+    @Shadow @Final private Setting<Boolean> customScale;
+    @Shadow @Final private Setting<Double> scale;
+
     private final Color hontun$labelCol = new Color();
     private final Color hontun$valueCol = new Color();
+    private final Color hontun$shadowCol = new Color();
+    private final Color hontun$fillCol = new Color();
+    private final Color hontun$topCol = new Color();
+    private final Color hontun$bottomCol = new Color();
 
     @Inject(method = "render", at = @At("HEAD"), cancellable = true)
     private void hontun$themedRender(HudRenderer renderer, CallbackInfo ci) {
@@ -36,7 +47,7 @@ public abstract class LagNotifierStyleMixin {
         }
 
         HudElement el = (HudElement) (Object) this;
-        double scale = Hud.get().getTextScale();
+        double s = customScale.get() ? scale.get() : Hud.get().getTextScale();
         int ms = Math.round(since * 1000f);
 
         int state = since >= 4f ? HontunTheme.red() : HontunTheme.yellow();
@@ -45,24 +56,26 @@ public abstract class LagNotifierStyleMixin {
         String label = "Not responding ";
         String value = String.format("%.2fs / %dms", since, ms);
 
-        GuiGraphicsExtractor g = renderer.graphics;
+        HontunShapes.Fill g = hontun$fill(renderer);
 
-        double th = renderer.textHeight(true, scale);
-        double labelW = renderer.textWidth(label, true, scale);
-        double valueW = renderer.textWidth(value, true, scale);
+        double th = renderer.textHeight(true, s);
+        double labelW = renderer.textWidth(label, true, s);
+        double valueW = renderer.textWidth(value, true, s);
 
         if (HontunTheme.modern2()) {
-            hontun$modern2(renderer, g, el, scale, th, labelW, valueW, label, value, state, accent);
+            hontun$modern2(renderer, g, el, s, th, labelW, valueW, label, value, state, accent);
         } else if (HontunTheme.modern1()) {
-            hontun$modern1(renderer, g, el, scale, th, labelW, valueW, label, value, state, accent);
+            hontun$modern1(renderer, g, el, s, th, labelW, valueW, label, value, state, accent);
+        } else if (HontunTheme.smog()) {
+            hontun$smog(renderer, g, el, s, th, labelW, valueW, label, value, state);
         } else {
-            hontun$vanilla(renderer, g, el, scale, th, labelW, valueW, label, value, state, accent);
+            hontun$vanilla(renderer, g, el, s, th, labelW, valueW, label, value, state, accent);
         }
 
         ci.cancel();
     }
 
-    private void hontun$modern2(HudRenderer r, GuiGraphicsExtractor g, HudElement el, double scale, double th,
+    private void hontun$modern2(HudRenderer r, HontunShapes.Fill g, HudElement el, double scale, double th,
                                 double labelW, double valueW, String label, String value, int state, int accent) {
         int icon = (int) Math.round(HontunIcons.SIZE * scale);
         int pad = (int) Math.round(6 * scale);
@@ -86,13 +99,10 @@ public abstract class LagNotifierStyleMixin {
         int iconY = y + (h - icon) / 2;
         hontun$icon(g, iconX, iconY, scale, state);
 
-        double tx = iconX + icon + gap;
-        double ty = y + (h - th) / 2.0;
-        double after = r.text(label, tx, ty, hontun$col(hontun$labelCol, HontunTheme.textLight()), true, scale);
-        r.text(value, after, ty, hontun$col(hontun$valueCol, state), true, scale);
+        hontun$text(r, iconX + icon + gap, y + (h - th) / 2.0, scale, label, value, state);
     }
 
-    private void hontun$modern1(HudRenderer r, GuiGraphicsExtractor g, HudElement el, double scale, double th,
+    private void hontun$modern1(HudRenderer r, HontunShapes.Fill g, HudElement el, double scale, double th,
                                 double labelW, double valueW, String label, String value, int state, int accent) {
         int icon = (int) Math.round(HontunIcons.SIZE * scale);
         int pad = (int) Math.round(6 * scale);
@@ -104,11 +114,11 @@ public abstract class LagNotifierStyleMixin {
         el.setSize(w, h);
         int x = el.getX(), y = el.getY();
 
-        g.fillGradient(x, y, x + w, y + h,
+        g.gradient(x, y, x + w, y + h,
                 HontunTheme.argb(0xE0, HontunTheme.lighten(HontunTheme.surface1(), 1.05f)),
                 HontunTheme.argb(0xE0, HontunTheme.surface0()));
         g.fill(x, y, x + 2, y + h, HontunTheme.argb(0xFF, state));
-        g.fillGradient(x + 2, y + h - 2, x + w, y + h,
+        g.gradient(x + 2, y + h - 2, x + w, y + h,
                 HontunTheme.argb(0xFF, accent), HontunTheme.argb(0xFF, HontunTheme.accentHi()));
         g.fill(x, y, x + w, y + 1, HontunTheme.argb(0x30, HontunTheme.overlay2()));
 
@@ -116,13 +126,38 @@ public abstract class LagNotifierStyleMixin {
         int iconY = y + (h - icon) / 2;
         hontun$icon(g, iconX, iconY, scale, state);
 
-        double tx = iconX + icon + gap;
-        double ty = y + (h - th) / 2.0;
-        double after = r.text(label, tx, ty, hontun$col(hontun$labelCol, HontunTheme.textLight()), true, scale);
-        r.text(value, after, ty, hontun$col(hontun$valueCol, state), true, scale);
+        hontun$text(r, iconX + icon + gap, y + (h - th) / 2.0, scale, label, value, state);
     }
 
-    private void hontun$vanilla(HudRenderer r, GuiGraphicsExtractor g, HudElement el, double scale, double th,
+    private void hontun$smog(HudRenderer r, HontunShapes.Fill g, HudElement el, double scale, double th,
+                             double labelW, double valueW, String label, String value, int state) {
+        int icon = (int) Math.round(HontunIcons.SIZE * scale);
+        int pad = (int) Math.round(6 * scale);
+        int lead = (int) Math.round(6 * scale);
+        int gap = (int) Math.round(5 * scale);
+
+        int w = lead + icon + gap + (int) Math.ceil(labelW + valueW) + pad;
+        int h = (int) Math.ceil(Math.max(th, icon)) + pad;
+        el.setSize(w, h);
+        int x = el.getX(), y = el.getY();
+        int x2 = x + w, y2 = y + h;
+
+        g.fill(x, y, x2, y2, HontunTheme.argb(0xDC, 0x0C0C0E));
+        int frame = HontunTheme.argb(0x22, 0xFFFFFF);
+        g.fill(x, y, x2, y + 1, frame);
+        g.fill(x, y2 - 1, x2, y2, frame);
+        g.fill(x, y + 1, x + 1, y2 - 1, frame);
+        g.fill(x2 - 1, y + 1, x2, y2 - 1, frame);
+        g.fill(x, y, x + 2, y2, HontunTheme.argb(0xFF, state));
+
+        int iconX = x + lead;
+        int iconY = y + (h - icon) / 2;
+        hontun$icon(g, iconX, iconY, scale, state);
+
+        hontun$text(r, iconX + icon + gap, y + (h - th) / 2.0, scale, label, value, state);
+    }
+
+    private void hontun$vanilla(HudRenderer r, HontunShapes.Fill g, HudElement el, double scale, double th,
                                 double labelW, double valueW, String label, String value, int state, int accent) {
         int icon = (int) Math.round(HontunIcons.SIZE * scale);
         int pad = (int) Math.round(6 * scale);
@@ -135,7 +170,7 @@ public abstract class LagNotifierStyleMixin {
         int x = el.getX(), y = el.getY();
         int x2 = x + w, y2 = y + h;
 
-        g.fill(x, y, x2, y2, HontunTheme.argb(0xA8, HontunTheme.surface1()));
+        g.fill(x, y, x2, y2, HontunTheme.argb(0xD8, HontunTheme.surface1()));
         int b = HontunTheme.argb(0xC0, accent);
         g.fill(x, y, x2, y + 1, b);
         g.fill(x, y2 - 1, x2, y2, b);
@@ -150,19 +185,35 @@ public abstract class LagNotifierStyleMixin {
         int iconY = y + (h - icon) / 2;
         hontun$icon(g, iconX, iconY, scale, state);
 
-        double tx = iconX + icon + gap;
-        double ty = y + (h - th) / 2.0;
-        double after = r.text(label, tx, ty, hontun$col(hontun$labelCol, HontunTheme.textLight()), true, scale);
-        r.text(value, after, ty, hontun$col(hontun$valueCol, state), true, scale);
+        hontun$text(r, iconX + icon + gap, y + (h - th) / 2.0, scale, label, value, state);
     }
 
-    private void hontun$icon(GuiGraphicsExtractor g, int x, int y, double scale, int state) {
-        int argb = HontunTheme.argb(0xFF, state);
-        if (scale <= 1.01) {
-            HontunIcons.draw(g, HontunIcons.WARNING, x, y, argb);
-            return;
+    private void hontun$text(HudRenderer r, double x, double y, double scale, String label, String value, int state) {
+        if (shadow.get()) {
+            double o = hontun$shadowOffset(scale);
+            Color dark = hontun$argb(hontun$shadowCol, 0x90000000);
+            hontun$line(r, x + o, y + o, scale, label, value, dark, dark);
         }
-        int s = (int) Math.round(scale);
+        Color light = hontun$col(hontun$labelCol, 0xFFFFFF);
+        Color tone = hontun$col(hontun$valueCol, state);
+        int passes = Hud.get().hasCustomFont() ? 2 : 1;
+        for (int i = 0; i < passes; i++) hontun$line(r, x, y, scale, label, value, light, tone);
+    }
+
+    private void hontun$line(HudRenderer r, double x, double y, double scale, String label, String value,
+                             Color labelCol, Color valueCol) {
+        double after = r.text(label, x, y, labelCol, false, scale);
+        r.text(value, after, y, valueCol, false, scale);
+    }
+
+    private double hontun$shadowOffset(double scale) {
+        if (Hud.get().hasCustomFont()) return Math.max(1, Math.round(scale));
+        return VanillaTextRenderer.INSTANCE.scale;
+    }
+
+    private void hontun$icon(HontunShapes.Fill g, int x, int y, double scale, int state) {
+        int argb = HontunTheme.argb(0xFF, state);
+        int s = Math.max(1, (int) Math.round(scale));
         for (int dy = 0; dy < HontunIcons.SIZE; dy++) {
             for (int dx = 0; dx < HontunIcons.SIZE; dx++) {
                 if (hontun$warnPixel(dx, dy)) {
@@ -176,6 +227,28 @@ public abstract class LagNotifierStyleMixin {
         boolean stem = dx >= 3 && dx < 5 && dy < 5;
         boolean dot = dx >= 3 && dx < 5 && dy >= 6 && dy < 8;
         return stem || dot;
+    }
+
+    private HontunShapes.Fill hontun$fill(HudRenderer r) {
+        return new HontunShapes.Fill() {
+            @Override
+            public void fill(int x1, int y1, int x2, int y2, int argb) {
+                if (x2 <= x1 || y2 <= y1) return;
+                r.quad(x1, y1, x2 - x1, y2 - y1, hontun$argb(hontun$fillCol, argb));
+            }
+
+            @Override
+            public void gradient(int x1, int y1, int x2, int y2, int topArgb, int bottomArgb) {
+                if (x2 <= x1 || y2 <= y1) return;
+                Color top = hontun$argb(hontun$topCol, topArgb);
+                Color bottom = hontun$argb(hontun$bottomCol, bottomArgb);
+                r.quad(x1, y1, x2 - x1, y2 - y1, top, top, bottom, bottom);
+            }
+        };
+    }
+
+    private Color hontun$argb(Color c, int argb) {
+        return c.set((argb >> 16) & 0xFF, (argb >> 8) & 0xFF, argb & 0xFF, (argb >>> 24) & 0xFF);
     }
 
     private Color hontun$col(Color c, int rgb) {

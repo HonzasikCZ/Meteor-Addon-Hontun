@@ -1,0 +1,21 @@
+package cz.honzasik.hontun.gui.theme.style;
+
+public enum AnimRole {
+    WINDOW_EXPAND,
+    WINDOW_CORNER,
+    SECTION_EXPAND,
+    SECTION_CORNER,
+    MODULE_ACTIVE,
+    MODULE_HOVER,
+    TAB_SELECT,
+    BUTTON_HOVER,
+    CHECKBOX,
+    DROPDOWN_HOVER,
+    DROPDOWN_OPEN,
+    MULTISELECT_EXPAND,
+    HEADER_HOVER,
+    TEXTBOX_FOCUS,
+    SLIDER_HOVER,
+    SCROLLBAR,
+    FAVORITE
+}

@@ -11,6 +11,7 @@ layout(std140) uniform MeshData {
 
 out vec2 v_LocalPos;
 out vec2 v_ScreenPos;
+out vec4 v_Color;
 
 void main() {
     vec4 worldPos = u_ModelView * vec4(Position, 0.0, 1.0);
@@ -18,4 +19,5 @@ void main() {
 
     v_LocalPos = Texture;
     v_ScreenPos = Position;
+    v_Color = Color;
 }

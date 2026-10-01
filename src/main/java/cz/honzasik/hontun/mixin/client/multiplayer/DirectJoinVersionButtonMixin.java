@@ -1,16 +1,19 @@
 package cz.honzasik.hontun.mixin.client.multiplayer;
 
 import cz.honzasik.hontun.gui.screen.HontunVersionScreen;
+import cz.honzasik.hontun.gui.widget.HontunServerForm;
 import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.utils.VfpBridge;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.screens.DirectJoinServerScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
 import org.spongepowered.asm.mixin.Final;
@@ -22,11 +25,13 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
+import java.util.List;
 
 @Mixin(DirectJoinServerScreen.class)
 public abstract class DirectJoinVersionButtonMixin {
     @Shadow @Final private ServerData serverData;
     @Shadow private EditBox ipEdit;
+    @Shadow private Button selectButton;
 
     @Unique private String hontun$savedIp;
 
@@ -37,19 +42,36 @@ public abstract class DirectJoinVersionButtonMixin {
         if (hontun$savedIp != null && ipEdit != null) { ipEdit.setValue(hontun$savedIp); hontun$savedIp = null; }
 
         if (!HontunTheme.restyleEnabled()) return;
-        if (!VfpBridge.available() || serverData == null || !VfpBridge.perServerAvailable(serverData)) return;
+        Button version = null;
+        if (VfpBridge.available() && serverData != null && VfpBridge.perServerAvailable(serverData)) {
+            version = hontun$versionButton(self);
+            ((ScreenInvoker) self).hontun$addRenderableWidget(version);
+        }
+        if (ipEdit == null) return;
+        List<AbstractWidget> options = new ArrayList<>();
+        List<AbstractWidget> actions = new ArrayList<>();
+        if (version != null) options.add(version);
+        Button cancel = null;
+        for (GuiEventListener child : self.children()) {
+            if (child instanceof Button b && b != selectButton && b != version
+                    && CommonComponents.GUI_CANCEL.getString().equals(b.getMessage().getString())) cancel = b;
+        }
+        if (selectButton != null) actions.add(selectButton);
+        if (cancel != null) actions.add(cancel);
+        HontunServerForm.layout(self.width, self.height, List.of(ipEdit), options, actions);
+    }
 
+    @Unique
+    private Button hontun$versionButton(Screen self) {
         Object forced = VfpBridge.forcedVersion(serverData);
         String label = forced == null ? "Version: global" : "Version: " + VfpBridge.nameOf(forced);
 
-        Button b = Button.builder(Component.literal(label), btn -> {
+        return Button.builder(Component.literal(label), btn -> {
             if (ipEdit != null) hontun$savedIp = ipEdit.getValue();
             Minecraft.getInstance().gui.setScreen(new HontunVersionScreen(self, "direct connect",
                     () -> VfpBridge.forcedVersion(serverData),
                     handle -> VfpBridge.setForcedVersion(serverData, handle)));
         }).bounds(self.width / 2 - 100, self.height / 4 + 60, 200, 20).build();
-
-        ((ScreenInvoker) self).hontun$addRenderableWidget(b);
     }
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))

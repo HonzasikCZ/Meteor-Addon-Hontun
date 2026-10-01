@@ -1,11 +1,9 @@
 package cz.honzasik.hontun.gui.theme.widgets.input;
 
-import cz.honzasik.hontun.gui.api.render.Corners;
 import cz.honzasik.hontun.gui.api.text.RichText;
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.render.route.Routers;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
 import cz.honzasik.hontun.gui.theme.widgets.WHontunLabel;
-import cz.honzasik.hontun.gui.util.ColorUtils;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.utils.CharFilter;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
@@ -25,6 +23,8 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
     private double animProgress;
     private boolean renderBackground;
 
+    private final double[] size = new double[2];
+
     public WHontunTextBox(String text, String placeholder, String title, double padding, CharFilter filter, Class<? extends Renderer> renderer) {
         super(text, placeholder, filter, renderer);
         this.title = title;
@@ -35,31 +35,15 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
     @Override
     protected void onCalculateSize() {
         super.onCalculateSize();
-        double s = theme.textHeight();
 
-        width = padding + s + padding;
-        height = padding + s + padding;
+        style().textBoxSize(this, size);
+        width = size[0];
+        height = size[1];
     }
 
     @Override
     protected WContainer createCompletionsRootWidget() {
-        return new WVerticalList() {
-            @Override
-            protected void onRender(GuiRenderer renderer1, double mouseX, double mouseY, double delta) {
-                HontunGuiTheme theme = theme();
-                double s = theme.scale(2);
-                Color c = theme.outlineColor.get();
-
-                Color col = theme.backgroundColor.get().copy();
-                col.a += col.a / 2;
-                col.validate();
-                renderer1.quad(this, col);
-
-                renderer1.quad(x, y + height - s, width, s, c);
-                renderer1.quad(x, y, s, height - s, c);
-                renderer1.quad(x + width - s, y, s, height - s, c);
-            }
-        };
+        return new WCompletions();
     }
 
     @SuppressWarnings("unchecked")
@@ -68,9 +52,24 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
         return (T) new CompletionItem(completion, false, selected);
     }
 
-    private static class CompletionItem extends WHontunLabel implements ICompletionItem {
-        private static final Color SELECTED_COLOR = new Color(255, 255, 255, 15);
+    public class WCompletions extends WVerticalList {
+        public WHontunTextBox owner() {
+            return WHontunTextBox.this;
+        }
 
+        @Override
+        public boolean render(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
+            Routers.of(style().pipeline()).windowLayer(renderer);
+            return super.render(renderer, mouseX, mouseY, delta);
+        }
+
+        @Override
+        protected void onRender(GuiRenderer renderer1, double mouseX, double mouseY, double delta) {
+            style().paintCompletions(WHontunTextBox.this, renderer1, x, y, width, height);
+        }
+    }
+
+    public static class CompletionItem extends WHontunLabel implements ICompletionItem {
         private boolean selected;
 
         public CompletionItem(String text, boolean title, boolean selected) {
@@ -80,9 +79,7 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            super.onRender(renderer, mouseX, mouseY, delta);
-
-            if (selected) renderer.quad(this, theme().light() ? ColorUtils.withAlpha(theme().textColor(), 15) : SELECTED_COLOR);
+            style().paintCompletionItem(this, renderer, mouseX, mouseY);
         }
 
         @Override
@@ -109,10 +106,6 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
-        int HORIZONTAL_LIST_SPACING = 3;
-        double titleWidth = (hasTitle() ? pad() + theme.textWidth(title) + HORIZONTAL_LIST_SPACING : 0);
-
         if (cursorTimer >= 1) {
             cursorVisible = !cursorVisible;
             cursorTimer = 0;
@@ -121,60 +114,74 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
             cursorTimer += delta * 1.75;
         }
 
-        if (renderBackground) {
-            if (hasTitle()) {
-                roundedRect().pos(x - titleWidth, y)
-                             .size(titleWidth, height)
-                             .radius(smallRadius(), Corners.LEFT)
-                             .color(theme.surface0Color())
-                             .render();
-            }
-
-            background(theme.baseColor(), theme.surface0Color()).render();
-        }
-
-        double overflowWidth = getOverflowWidthForRender();
-
-        renderer.scissorStart(x + padding, y, width - padding * 2, height);
-
-        if (!text.isEmpty()) {
-            Color custom = customColor != null ? customColor.get() : null;
-            Color textColor = custom != null
-                    ? custom
-                    : (focused ? theme.textColor() : dimmed(theme));
-
-            this.renderer.render(renderer, x + padding - overflowWidth, y + padding, text, textColor);
-        }
-        else if (placeholder != null) {
-            this.renderer.render(renderer, x + padding - overflowWidth, y + padding, placeholder, theme.textSecondaryColor());
-        }
-
-        if (focused && (cursor != selectionStart || cursor != selectionEnd)) {
-            double selStart = x + padding + getTextWidth(selectionStart) - overflowWidth;
-            double selEnd = x + padding + getTextWidth(selectionEnd) - overflowWidth;
-
-            renderer.quad(selStart, y + padding, selEnd - selStart, theme.textHeight(), theme.textHighlightColor().copy().a(120));
-        }
-
         animProgress += delta * 10 * (focused && cursorVisible ? 1 : -1);
         animProgress = Math.clamp(animProgress, 0, 1);
 
-        if ((focused && cursorVisible) || animProgress > 0) {
-            renderer.setAlpha(animProgress);
-            renderer.quad(x + padding + getTextWidth(cursor) - overflowWidth, y + padding, theme.scale(1), theme.textHeight(), theme.textColor());
-            renderer.setAlpha(1);
-        }
-
-        renderer.scissorEnd();
+        style().paintTextBox(this, renderer, mouseX, mouseY);
     }
 
-    @Override
-    public Corners corners() {
-        return hasTitle() ? Corners.RIGHT : Corners.ALL;
-    }
-
-    private boolean hasTitle() {
+    public boolean hasTitle() {
         return title != null && !title.isEmpty();
+    }
+
+    public String title() {
+        return title;
+    }
+
+    public double padding() {
+        return padding;
+    }
+
+    public boolean rendersBackground() {
+        return renderBackground;
+    }
+
+    public double overflow() {
+        return getOverflowWidthForRender();
+    }
+
+    public String textValue() {
+        return text;
+    }
+
+    public String placeholderValue() {
+        return placeholder;
+    }
+
+    public Color customColor() {
+        return customColor != null ? customColor.get() : null;
+    }
+
+    public boolean caretVisible() {
+        return cursorVisible;
+    }
+
+    public double caretAlpha() {
+        return animProgress;
+    }
+
+    public boolean hasSelection() {
+        return cursor != selectionStart || cursor != selectionEnd;
+    }
+
+    public int cursorIndex() {
+        return cursor;
+    }
+
+    public int selectionStartIndex() {
+        return selectionStart;
+    }
+
+    public int selectionEndIndex() {
+        return selectionEnd;
+    }
+
+    public double textWidthAt(int position) {
+        return getTextWidth(position);
+    }
+
+    public void drawText(GuiRenderer renderer, double x, double y, String text, Color color) {
+        this.renderer.render(renderer, x, y, text, color);
     }
 
     public int getCursor() {
@@ -191,11 +198,5 @@ public class WHontunTextBox extends WTextBox implements HontunWidget {
 
     public void color(Color color) {
         this.customColor = color == null ? null : () -> color;
-    }
-
-    private static Color dimmed(HontunGuiTheme theme) {
-        return theme.light()
-                ? ColorUtils.interpolateColor(theme.textSecondaryColor(), theme.baseColor(), 0.3)
-                : ColorUtils.darker(theme.textSecondaryColor());
     }
 }

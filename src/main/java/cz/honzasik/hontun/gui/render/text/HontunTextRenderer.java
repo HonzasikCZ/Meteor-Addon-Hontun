@@ -4,6 +4,7 @@ import cz.honzasik.hontun.gui.api.text.FontStyle;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.api.text.RichTextSegment;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderOperation;
 import meteordevelopment.meteorclient.utils.misc.Pool;
 import meteordevelopment.meteorclient.utils.render.color.Color;
@@ -21,12 +22,21 @@ public class HontunTextRenderer {
 
     public void text(RichText text, double x, double y, Color color, HontunGuiTheme theme) {
         double segmentX = x;
+        boolean legibility = theme.style().legibilityShadow(theme);
 
         for (RichTextSegment segment : text.getSegments()) {
             if (segment.getText() == null || segment.getText().isEmpty()) continue;
 
+            RichTextSegment drawn = segment;
+            if (legibility && !segment.hasShadow()) {
+                drawn = new RichTextSegment(segment.getText());
+                drawn.setStyle(segment.getStyle());
+                drawn.setScale(segment.getScale());
+                drawn.setShadow(true);
+            }
+
             RichTextOperation operation = getOperation(textPool, segmentX, y, color)
-                    .set(segment, theme.richTextRenderer());
+                    .set(drawn, theme.richTextRenderer());
 
             StyleKey key = new StyleKey(operation.getStyle(), operation.getScale());
 
@@ -43,26 +53,33 @@ public class HontunTextRenderer {
             GuiGraphicsExtractor graphics,
             HontunGuiTheme theme
     ) {
-        for (Map.Entry<StyleKey, List<RichTextOperation>> entry : groupedOperations.entrySet()) {
-            List<RichTextOperation> textOps = entry.getValue();
+        ClickStyle style = theme.style();
+        RichTextRenderer.shadowStyle(style.textShadowColor(), style::textShadowOffset);
 
-            if (textOps.isEmpty()) continue;
+        try {
+            for (Map.Entry<StyleKey, List<RichTextOperation>> entry : groupedOperations.entrySet()) {
+                List<RichTextOperation> textOps = entry.getValue();
 
-            StyleKey key = entry.getKey();
+                if (textOps.isEmpty()) continue;
 
-            theme.richTextRenderer().setFontStyle(key.style());
-            theme.richTextRenderer().begin(
+                StyleKey key = entry.getKey();
 
-                    graphics,
-                    theme.scale(key.scale())
-            );
+                theme.richTextRenderer().setFontStyle(key.style());
+                theme.richTextRenderer().begin(
 
-            for (RichTextOperation text : textOps) {
-                text.run(textPool);
+                        graphics,
+                        theme.scale(key.scale())
+                );
+
+                for (RichTextOperation text : textOps) {
+                    text.run(textPool);
+                }
+
+                theme.richTextRenderer().end();
+                textOps.clear();
             }
-
-            theme.richTextRenderer().end();
-            textOps.clear();
+        } finally {
+            RichTextRenderer.resetShadowStyle();
         }
     }
 

@@ -7,9 +7,19 @@ import cz.honzasik.hontun.gui.api.text.RichTextSegment;
 import cz.honzasik.hontun.gui.screen.HontunModuleScreen;
 import cz.honzasik.hontun.gui.screen.HontunModulesScreen;
 import cz.honzasik.hontun.gui.theme.colors.HontunColor;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.ClickStyles;
+import cz.honzasik.hontun.gui.theme.style.FontChoice;
+import cz.honzasik.hontun.gui.theme.style.Knob;
+import cz.honzasik.hontun.gui.theme.style.Pipeline;
+import cz.honzasik.hontun.gui.theme.style.StylePalette;
+import cz.honzasik.hontun.gui.theme.style.TabGlide;
+import cz.honzasik.hontun.gui.render.route.PrimitiveRouter;
+import cz.honzasik.hontun.gui.render.route.Routers;
 import cz.honzasik.hontun.gui.theme.widgets.*;
 import cz.honzasik.hontun.gui.theme.widgets.container.WHontunSection;
 import cz.honzasik.hontun.gui.theme.widgets.container.WHontunView;
+import cz.honzasik.hontun.gui.mixin.meteorclient.WindowScreenAccessor;
 import cz.honzasik.hontun.gui.theme.widgets.container.WHontunWindow;
 import cz.honzasik.hontun.gui.theme.widgets.input.*;
 import cz.honzasik.hontun.gui.theme.widgets.pressable.*;
@@ -37,6 +47,7 @@ import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.utils.AlignmentX;
 import meteordevelopment.meteorclient.gui.utils.CharFilter;
+import meteordevelopment.meteorclient.gui.utils.WindowConfig;
 import meteordevelopment.meteorclient.gui.widgets.*;
 import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
 import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
@@ -56,6 +67,7 @@ import meteordevelopment.meteorclient.utils.misc.Keybind;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.nbt.CompoundTag;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -76,6 +88,10 @@ import net.minecraft.util.Util;
 
 public class HontunGuiTheme extends GuiTheme {
     private final Map<HontunColor, Color> colorCache;
+    private final StylePalette palette = new StylePalette();
+
+    private volatile HontunTheme.UiMode activeUiMode = HontunTheme.UiMode.HModern2;
+    private volatile HontunTheme.UiMode activeClickGui = HontunTheme.UiMode.HModern2;
 
     private RichTextRenderer textRenderer;
     private RichTextRenderer smogTextRenderer;
@@ -90,9 +106,17 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<HontunTheme.UiMode> uiMode = sgGeneral.add(new EnumSetting.Builder<HontunTheme.UiMode>()
             .name("ui-mode")
-            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft shapes. HModern1 = flat and rounded. HModern2 = chamfered corners with an accent glow (default). SmogClient = rounded black and white SmogClientPro look with the SF font.")
+            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft shapes. HModern1 = flat and rounded. HModern2 = chamfered corners with an accent glow (default). SmogClient = rounded black and white SmogClientPro look with the SF font. Also sets click-gui to the matching style.")
             .defaultValue(HontunTheme.UiMode.HModern2)
-            .onChanged(m -> HontunTheme.setMode(m))
+            .onChanged(this::onUiModeChanged)
+            .build()
+    );
+
+    public final Setting<HontunTheme.UiMode> clickGui = sgGeneral.add(new EnumSetting.Builder<HontunTheme.UiMode>()
+            .name("click-gui")
+            .description("Look of the Meteor ClickGUI only. Changing ui-mode switches this to the matching style; you can pick any other style afterwards. Vanilla and HVanilla always use the Minecraft font, SmogClient always uses the SF font. Vanilla and HVanilla snap scale to half steps and ignore palette-color (Vanilla) or custom font (Vanilla, HVanilla). SmogClient maps BACK easings to QUART_OUT. Low window-opacity triggers readability floors.")
+            .defaultValue(HontunTheme.UiMode.HModern2)
+            .onChanged(this::onClickGuiChanged)
             .build()
     );
 
@@ -119,7 +143,7 @@ public class HontunGuiTheme extends GuiTheme {
             .min(0.75)
             .sliderRange(0.75, 4)
             .onSliderRelease()
-            .onChanged(this::invalidateScreen)
+            .onChanged(this::onScaleChanged)
             .build()
     );
 
@@ -142,6 +166,7 @@ public class HontunGuiTheme extends GuiTheme {
             .description("Displays icons next to tabs in the top bar.")
             .defaultValue(true)
             .onChanged(this::invalidateScreen)
+            .visible(this::tabIconsVisible)
             .build()
     );
 
@@ -159,6 +184,7 @@ public class HontunGuiTheme extends GuiTheme {
             .name("window-shadow")
             .description("Render a subtle shadow under windows.")
             .defaultValue(true)
+            .visible(this::windowShadowVisible)
             .build()
     );
 
@@ -181,6 +207,7 @@ public class HontunGuiTheme extends GuiTheme {
             .description("The radius of corners for large UI elements.")
             .defaultValue(10)
             .sliderRange(1, 25)
+            .visible(this::cornerRadiusVisible)
             .build()
     );
 
@@ -189,6 +216,7 @@ public class HontunGuiTheme extends GuiTheme {
             .description("The radius of corners for small UI elements.")
             .defaultValue(6)
             .sliderRange(1, 25)
+            .visible(this::cornerRadiusVisible)
             .build()
     );
 
@@ -196,6 +224,7 @@ public class HontunGuiTheme extends GuiTheme {
             .name("gui-animation-easing")
             .description("The easing function used for UI animations.")
             .defaultValue(Easing.QUART_OUT)
+            .visible(this::animationVisible)
             .build()
     );
 
@@ -204,6 +233,7 @@ public class HontunGuiTheme extends GuiTheme {
             .description("Duration of the animation in milliseconds.")
             .defaultValue(300)
             .sliderRange(1, 1000)
+            .visible(this::animationVisible)
             .build()
     );
 
@@ -212,6 +242,7 @@ public class HontunGuiTheme extends GuiTheme {
             .description("Accent color for the whole addon (ClickGUI, chat, menu, buttons, hotbar). Pick one color; the gradient is derived automatically. Backgrounds stay neutral grey.")
             .defaultValue(new SettingColor(62, 140, 255))
             .onChanged(c -> HontunTheme.setAccent(c.getPacked()))
+            .visible(this::paletteColorVisible)
             .build()
     );
 
@@ -237,9 +268,7 @@ public class HontunGuiTheme extends GuiTheme {
             .defaultValue(1)
             .sliderRange(0, 1)
             .decimalPlaces(2)
-            .onChanged(v -> {
-                if (lightMode.get()) updateCache();
-            })
+            .onChanged(v -> updateCache())
             .build()
     );
 
@@ -317,6 +346,8 @@ public class HontunGuiTheme extends GuiTheme {
         settingsFactory = new HontunSettingsWidgetFactory(this);
         colorCache = new EnumMap<>(HontunColor.class);
 
+        activeUiMode = uiMode.get();
+        activeClickGui = clickGui.get();
         HontunTheme.setMode(uiMode.get());
         HontunTheme.setAccent(paletteColor.get().getPacked());
         HontunTheme.setBgOverlay(containerBackground.get().getPacked());
@@ -325,6 +356,24 @@ public class HontunGuiTheme extends GuiTheme {
         updateCache();
 
         HontunTheme.addListener(this::updateCache);
+    }
+
+    @Override
+    public CompoundTag toTag() {
+        CompoundTag tag = super.toTag();
+        tag.putString("click-gui", activeClickGui.name());
+        return tag;
+    }
+
+    @Override
+    public GuiTheme fromTag(CompoundTag tag) {
+        super.fromTag(tag);
+        tag.getString("click-gui").ifPresent(value -> {
+            for (HontunTheme.UiMode mode : HontunTheme.UiMode.values()) {
+                if (mode.name().equals(value)) clickGui.set(mode);
+            }
+        });
+        return this;
     }
 
     private Setting<SettingColor> color(SettingGroup group, String name, String description, SettingColor color) {
@@ -355,7 +404,11 @@ public class HontunGuiTheme extends GuiTheme {
 
     @Override
     public WLabel label(String text, boolean title, double maxWidth) {
-        if (maxWidth == 0) return w(new WHontunLabel(RichText.of(text).boldIf(title)));
+        if (maxWidth == 0) {
+            WHontunLabel label = w(new WHontunLabel(RichText.of(text).boldIf(title)));
+            label.titleRole = title;
+            return label;
+        }
         return w(new WHontunMultiLabel(RichText.of(text).boldIf(title), maxWidth));
     }
 
@@ -556,6 +609,14 @@ public class HontunGuiTheme extends GuiTheme {
         return colorCache.get(HontunColor.Blue);
     }
 
+    public Color accentHiColor() {
+        return colorCache.get(HontunColor.Sapphire);
+    }
+
+    public Color accentLoColor() {
+        return colorCache.get(HontunColor.AccentLo);
+    }
+
     public Color greenColor() {
         return colorCache.get(HontunColor.Green);
     }
@@ -621,15 +682,11 @@ public class HontunGuiTheme extends GuiTheme {
     }
 
     public double windowOpacity() {
-        return lightOpacity(windowOpacity.get());
+        return style().windowAlpha(windowOpacity.get(), lightMode.get());
     }
 
     public double backgroundOpacity() {
-        return lightOpacity(backgroundOpacity.get());
-    }
-
-    private double lightOpacity(double opacity) {
-        return lightMode.get() ? 0.7 + 0.3 * opacity : opacity;
+        return style().controlAlpha(backgroundOpacity.get(), lightMode.get());
     }
 
     @Override
@@ -705,45 +762,43 @@ public class HontunGuiTheme extends GuiTheme {
     }
 
     private void updateCache() {
-        boolean light = lightMode.get();
-        int accent = light ? HontunLightPalette.accent(windowOpacity()) : HontunTheme.accent();
-        int accentHi = light ? HontunLightPalette.accentHi(windowOpacity()) : HontunTheme.accentHi();
-        int text = light ? HontunLightPalette.text() : HontunTheme.textLight();
-        int red = light ? HontunLightPalette.red() : HontunTheme.red();
+        StylePalette p = palette;
+        style().palette(p, lightMode.get(), this);
 
-        put(HontunColor.Crust,    light ? HontunLightPalette.crust()    : HontunTheme.crust());
-        put(HontunColor.Mantle,   light ? HontunLightPalette.mantle()   : HontunTheme.mantle());
-        put(HontunColor.Base,     light ? HontunLightPalette.base()     : HontunTheme.base());
-        put(HontunColor.Surface0, light ? HontunLightPalette.surface0() : HontunTheme.surface0());
-        put(HontunColor.Surface1, light ? HontunLightPalette.surface1() : HontunTheme.surface1());
-        put(HontunColor.Surface2, light ? HontunLightPalette.surface2() : HontunTheme.surface2());
+        put(HontunColor.Crust,    p.crust);
+        put(HontunColor.Mantle,   p.mantle);
+        put(HontunColor.Base,     p.base);
+        put(HontunColor.Surface0, p.surface0);
+        put(HontunColor.Surface1, p.surface1);
+        put(HontunColor.Surface2, p.surface2);
 
-        put(HontunColor.Overlay0, light ? HontunLightPalette.overlay0() : HontunTheme.overlay0());
-        put(HontunColor.Overlay1, light ? HontunLightPalette.overlay1() : HontunTheme.overlay1());
-        put(HontunColor.Overlay2, light ? HontunLightPalette.overlay2() : HontunTheme.overlay2());
+        put(HontunColor.Overlay0, p.overlay0);
+        put(HontunColor.Overlay1, p.overlay1);
+        put(HontunColor.Overlay2, p.overlay2);
 
-        put(HontunColor.Text,     text);
-        put(HontunColor.Subtext1, light ? HontunLightPalette.subtext1() : HontunTheme.subtext1());
-        put(HontunColor.Subtext0, light ? HontunLightPalette.textDim()  : HontunTheme.textDim());
+        put(HontunColor.Text,     p.text);
+        put(HontunColor.Subtext1, p.subtext1);
+        put(HontunColor.Subtext0, p.subtext0);
 
-        put(HontunColor.Blue,     accent);
-        put(HontunColor.Sapphire, accentHi);
-        put(HontunColor.Sky,      accentHi);
-        put(HontunColor.Lavender, accent);
-        put(HontunColor.Green,    light ? HontunLightPalette.green()  : HontunTheme.green());
-        put(HontunColor.Yellow,   light ? HontunLightPalette.yellow() : HontunTheme.yellow());
-        put(HontunColor.Red,      red);
+        put(HontunColor.Blue,     p.accent);
+        put(HontunColor.Sapphire, p.accentHi);
+        put(HontunColor.Sky,      p.accentHi);
+        put(HontunColor.Lavender, p.accent);
+        put(HontunColor.Green,    p.green);
+        put(HontunColor.Yellow,   p.yellow);
+        put(HontunColor.Red,      p.red);
 
-        put(HontunColor.Teal,      accentHi);
-        put(HontunColor.Peach,     accent);
-        put(HontunColor.Maroon,    red);
-        put(HontunColor.Pink,      accentHi);
-        put(HontunColor.Mauve,     accent);
-        put(HontunColor.Flamingo,  accentHi);
-        put(HontunColor.Rosewater, text);
+        put(HontunColor.Teal,      p.accentHi);
+        put(HontunColor.Peach,     p.accent);
+        put(HontunColor.Maroon,    p.red);
+        put(HontunColor.Pink,      p.accentHi);
+        put(HontunColor.Mauve,     p.accent);
+        put(HontunColor.Flamingo,  p.accentHi);
+        put(HontunColor.Rosewater, p.text);
+        put(HontunColor.AccentLo,  p.accentLo);
 
         for (HontunColor color : HontunColor.values()) {
-            colorCache.putIfAbsent(color, HontunTheme.color(accent).toSetting());
+            colorCache.putIfAbsent(color, HontunTheme.color(p.accent).toSetting());
         }
     }
 
@@ -771,15 +826,30 @@ public class HontunGuiTheme extends GuiTheme {
 
     @Override
     public TextRenderer textRenderer() {
-        if (HontunTheme.smog()) {
-            RichTextRenderer sf = smogRenderer();
-            if (sf != null) return sf;
-        }
-        return Config.get().customFont.get() ? richTextRenderer() : VanillaTextRenderer.INSTANCE;
+        return switch (style().font()) {
+            case SF -> {
+                RichTextRenderer sf = smogRenderer();
+                yield sf != null ? sf : richTextRenderer();
+            }
+            case MC -> VanillaTextRenderer.INSTANCE;
+            default -> Config.get().customFont.get() ? richTextRenderer() : VanillaTextRenderer.INSTANCE;
+        };
+    }
+
+    public boolean richText() {
+        return textRenderer() instanceof RichTextRenderer;
+    }
+
+    public double mcTextScale() {
+        return Math.max(0.5, Math.round(2 * scale(1)) / 2.0);
+    }
+
+    private double mcFactor() {
+        return mcTextScale() / scale(1);
     }
 
     public RichTextRenderer richTextRenderer() {
-        if (HontunTheme.smog()) {
+        if (style().font() == FontChoice.SF) {
             RichTextRenderer sf = smogRenderer();
             if (sf != null) return sf;
         }
@@ -834,22 +904,25 @@ public class HontunGuiTheme extends GuiTheme {
     }
 
     public double textWidth(RichTextSegment segment) {
-        return scale(Config.get().customFont.get()
-                ? richTextRenderer().getWidth(segment, segment.getText().length())
-                : textRenderer().getWidth(segment.getText()));
+        return richText()
+                ? scale(richTextRenderer().getWidth(segment, segment.getText().length()))
+                : scale(textRenderer().getWidth(segment.getText())) * mcFactor();
     }
 
     public double textWidth(RichText text) {
-        return scale(Config.get().customFont.get()
-                ? richTextRenderer().getWidth(text)
-                : textRenderer().getWidth(text.getPlainText()));
+        double routed = router().measure(this, text);
+        if (routed >= 0) return routed;
+
+        return richText()
+                ? scale(richTextRenderer().getWidth(text))
+                : scale(textRenderer().getWidth(text.getPlainText())) * mcFactor();
     }
 
     @Override
     public double textWidth(String text, int length, boolean title) {
-        return scale(Config.get().customFont.get()
-                ? richTextRenderer().getWidth(RichText.of(text).boldIf(title), length)
-                : textRenderer().getWidth(text, length, title));
+        return richText()
+                ? scale(richTextRenderer().getWidth(RichText.of(text).boldIf(title), length))
+                : scale(textRenderer().getWidth(text, length, title)) * mcFactor();
     }
 
     @Override
@@ -858,14 +931,16 @@ public class HontunGuiTheme extends GuiTheme {
     }
 
     public double textHeight(RichText text) {
-        return scale(Config.get().customFont.get()
-                ? richTextRenderer().getHeight(text)
-                : textRenderer().getHeight());
+        return richText()
+                ? scale(richTextRenderer().getHeight(text))
+                : scale(textRenderer().getHeight()) * mcFactor();
     }
 
     @Override
     public double textHeight(boolean title) {
-        return scale(textRenderer().getHeight(title));
+        TextRenderer renderer = textRenderer();
+        double h = scale(renderer.getHeight(title));
+        return renderer instanceof RichTextRenderer ? h : h * mcFactor();
     }
 
     @Override
@@ -881,7 +956,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     @Override
     public double scale(double value) {
-        double scaled = value * scale.get();
+        double scaled = value * style().effectiveScale(scale.get());
 
         if (Util.getPlatform() == Util.OS.OSX) {
             scaled /= (double) mc.getWindow().getWidth() / mc.getWindow().getWidth();
@@ -910,25 +985,90 @@ public class HontunGuiTheme extends GuiTheme {
             ((WidgetScreen) mc.gui.screen()).invalidate();
     }
 
-    private double modeRadiusFactor() {
-        switch (HontunTheme.mode()) {
-            case HModern1:
-            case HModern2: return 1.0;
-            case Vanilla: return 0.0;
-            default:      return 0.0;
-        }
+    private void onScaleChanged(Object value) {
+        invalidateScreen(value);
+        if (style().pipeline() == Pipeline.PIXEL) scheduleRebuild();
+    }
+
+    private void onUiModeChanged(HontunTheme.UiMode m) {
+        if (m != null) activeUiMode = m;
+        HontunTheme.setMode(m);
+        if (clickGui != null) clickGui.set(m);
+    }
+
+    private void onClickGuiChanged(HontunTheme.UiMode m) {
+        if (m != null) activeClickGui = m;
+        updateCache();
+        HontunRenderer.get().styleChanged();
+        TabGlide.reset();
+        scheduleRebuild();
+    }
+
+    private void scheduleRebuild() {
+        if (mc == null || mc.gui == null || !(mc.gui.screen() instanceof WidgetScreen)) return;
+
+        mc.schedule(() -> {
+            Screen current = mc.gui.screen();
+            if (current instanceof TabScreen ts) ts.tab.openScreen(this);
+            else if (current instanceof WidgetScreen ws) {
+                if (ws instanceof WindowScreenAccessor accessor && accessor.hontun$window() instanceof WHontunWindow window) window.rebuildChrome();
+                ws.reload();
+                ws.invalidate();
+            }
+        });
+    }
+
+    private boolean cornerRadiusVisible() {
+        return style().uses(Knob.CORNER_RADIUS);
+    }
+
+    private boolean paletteColorVisible() {
+        HontunTheme.UiMode ui = activeUiMode;
+        return style().uses(Knob.PALETTE_COLOR) || (ui != HontunTheme.UiMode.Vanilla && ui != HontunTheme.UiMode.SmogClient);
+    }
+
+    private boolean animationVisible() {
+        return style().uses(Knob.ANIMATION);
+    }
+
+    private boolean windowShadowVisible() {
+        return style().uses(Knob.WINDOW_SHADOW);
+    }
+
+    private boolean tabIconsVisible() {
+        return style().uses(Knob.TAB_ICONS);
+    }
+
+    public ClickStyle style() {
+        return ClickStyles.of(activeClickGui);
+    }
+
+    public PrimitiveRouter router() {
+        return Routers.of(style().pipeline());
+    }
+
+    public double rawScale() {
+        return scale.get();
+    }
+
+    public void seedWindowConfig(String base, String id) {
+        if (base == null || id == null || base.equals(id) || windowConfigs.containsKey(id)) return;
+
+        WindowConfig source = windowConfigs.get(base);
+        WindowConfig config = getWindowConfig(id);
+        if (source != null) config.expanded = source.expanded;
     }
 
     public int effCornerRadius() {
-        return (int) Math.round(modeRadiusFactor() * cornerRadius.get());
+        return (int) Math.round(style().radiusFactor() * cornerRadius.get());
     }
 
     public int effSmallCornerRadius() {
-        return (int) Math.round(modeRadiusFactor() * smallCornerRadius.get());
+        return (int) Math.round(style().radiusFactor() * smallCornerRadius.get());
     }
 
     public boolean effWindowShadow() {
-        return windowShadow.get() && HontunTheme.modern();
+        return style().windowShadow(this);
     }
 
     public class ThreeStateColor {

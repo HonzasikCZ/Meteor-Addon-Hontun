@@ -1,7 +1,6 @@
 package cz.honzasik.hontun.gui.theme.widgets.pressable;
 
 import cz.honzasik.hontun.gui.theme.HontunWidget;
-import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WFavorite;
 import meteordevelopment.meteorclient.utils.render.color.Color;
@@ -15,7 +14,7 @@ public class WHontunFavorite extends WFavorite implements HontunWidget {
 
     @Override
     public void init() {
-        size = theme.textHeight();
+        size = style().favoriteSize(this);
     }
 
     @Override
@@ -25,23 +24,30 @@ public class WHontunFavorite extends WFavorite implements HontunWidget {
     }
 
     @Override
+    protected void onPressed(int button) {
+        super.onPressed(button);
+        style().onPressed(this);
+    }
+
+    @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        renderer.quad(
-                x,
-                y,
-                size,
-                size,
-                checked ? HontunBuiltinIcons.BOOKMARK_YES.texture() : HontunBuiltinIcons.BOOKMARK_NO.texture(),
-                getColor()
-        );
+        style().paintFavorite(this, renderer, mouseX, mouseY);
+    }
+
+    public double size() {
+        return size;
+    }
+
+    public Color tint() {
+        return getColor();
+    }
+
+    public boolean isPressed() {
+        return pressed;
     }
 
     @Override
     protected Color getColor() {
-        return checked
-                ? theme().accentColor()
-                : mouseOver
-                    ? theme().textSecondaryColor()
-                    : theme().textColor();
+        return style().favoriteColor(this);
     }
 }

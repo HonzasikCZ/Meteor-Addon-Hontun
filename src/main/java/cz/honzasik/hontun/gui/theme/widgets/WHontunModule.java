@@ -1,29 +1,25 @@
 package cz.honzasik.hontun.gui.theme.widgets;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
 import cz.honzasik.hontun.gui.api.animation.Direction;
-import cz.honzasik.hontun.gui.api.animation.Easing;
-import cz.honzasik.hontun.gui.api.render.Corners;
 import cz.honzasik.hontun.gui.api.text.RichText;
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
-import cz.honzasik.hontun.gui.util.ColorUtils;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.HoverTarget;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
+import meteordevelopment.meteorclient.gui.utils.Cell;
+import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WPressable;
 import meteordevelopment.meteorclient.systems.modules.Module;
-import meteordevelopment.meteorclient.systems.modules.Modules;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT;
 import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 
-import meteordevelopment.meteorclient.systems.config.Config;
-
-public class WHontunModule extends WPressable implements HontunWidget {
+public class WHontunModule extends WPressable implements HontunWidget, HoverTarget {
     private final Module module;
     private final RichText title;
 
@@ -31,11 +27,15 @@ public class WHontunModule extends WPressable implements HontunWidget {
     private boolean wasHovered = false;
     private boolean wasActive = false;
 
-    private Module prevModule;
-    private Module nextModule;
+    private boolean prevActive;
+    private boolean nextActive;
+    private int runIndex;
+    private int runLength;
 
-    private Animation highlightAnimation;
-    private Animation hoverAnimation;
+    private StyleAnimation highlightAnimation;
+    private StyleAnimation hoverAnimation;
+
+    private final double[] size = new double[2];
 
     public WHontunModule(Module module, String title) {
         this.module = module;
@@ -48,38 +48,24 @@ public class WHontunModule extends WPressable implements HontunWidget {
         boolean isActive = module.isActive();
         wasActive = isActive;
 
-        List<Module> visibleModules = new ArrayList<>(Modules.get().getGroup(module.category));
-
-        visibleModules.removeAll(Config.get().hiddenModules.get());
-
-        int visibleIndex = visibleModules.indexOf(module);
-
-        if (visibleIndex > 0)
-            prevModule = visibleModules.get(visibleIndex - 1);
-
-        if (visibleIndex >= 0 && visibleIndex < visibleModules.size() - 1)
-            nextModule = visibleModules.get(visibleIndex + 1);
-
-        highlightAnimation = new Animation(
-                Easing.QUART_OUT,
-                300,
-                isActive ? Direction.FORWARDS : Direction.BACKWARDS
-        );
-
-        hoverAnimation = new Animation(Easing.LINEAR, 200);
+        ClickStyle style = style();
+        highlightAnimation = StyleAnimation.of(style.anim(AnimRole.MODULE_ACTIVE), theme(), isActive);
+        hoverAnimation = StyleAnimation.of(style.anim(AnimRole.MODULE_HOVER), theme());
     }
 
     @Override
     protected void onCalculateSize() {
-        double pad = pad();
         if (titleWidth == 0) titleWidth = theme().textWidth(title);
 
-        width = pad + pad + titleWidth + pad;
-        height = pad + theme.textHeight() + pad;
+        style().moduleSize(this, size);
+        width = size[0];
+        height = size[1];
     }
 
     @Override
     protected void onPressed(int button) {
+        style().onPressed(this);
+
         if (button == GLFW_MOUSE_BUTTON_LEFT)
             module.toggle();
 
@@ -89,9 +75,7 @@ public class WHontunModule extends WPressable implements HontunWidget {
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
         boolean moduleActive = module.isActive();
-        double pad = pad();
 
         if (moduleActive != wasActive) {
             wasActive = moduleActive;
@@ -102,88 +86,95 @@ public class WHontunModule extends WPressable implements HontunWidget {
         if (mouseOver != wasHovered) {
             wasHovered = mouseOver;
 
-            if (mouseOver) hoverAnimation.start();
+            if (mouseOver) hoverAnimation.forward();
 
-            else hoverAnimation.finishedAt(Direction.BACKWARDS);
+            else hoverAnimation.backward();
         }
 
-        double hoverProgress = hoverAnimation.getProgress();
-        double highlightProgress = highlightAnimation.getProgress();
+        updateNeighbours();
 
-        if (hoverProgress > 0 || highlightProgress > 0) {
-            int baseAlpha = theme.light() ? 38 : 60;
-            double hoverMultiplier = (mouseOver && moduleActive) ? 1.3f : 1.0f;
-            double mix = Math.min(1.0, highlightProgress + hoverProgress);
-            double alpha = baseAlpha * mix * hoverMultiplier;
+        style().paintModule(this, renderer, mouseX, mouseY);
+    }
 
-            Color color = ColorUtils.withAlpha(theme.accentColor(), (int) alpha);
-            Corners bgCorners = (mouseOver && !moduleActive) ? Corners.ALL : corners();
+    private void updateNeighbours() {
+        prevActive = false;
+        nextActive = false;
+        runIndex = 0;
+        runLength = module.isActive() ? 1 : 0;
 
-            double maxOffset = 1.5;
-            double offset = maxOffset * (1.0 - highlightProgress);
+        if (!(parent instanceof WContainer container)) return;
 
-            roundedRect().pos(x + offset, y + offset)
-                         .size(width - (offset * 2), height - (offset * 2)).
-                         color(color)
-                         .radius(smallRadius(), bgCorners)
-                         .render();
+        List<Cell<?>> cells = container.cells;
+        int index = -1;
+        for (int i = 0; i < cells.size(); i++) {
+            if (cells.get(i).widget() == this) {
+                index = i;
+                break;
+            }
         }
+        if (index < 0) return;
 
-        double lineWidth = theme.scale(4);
+        prevActive = activeAt(cells, index - 1);
+        nextActive = activeAt(cells, index + 1);
 
-        if (highlightProgress > 0) {
-            Corners corners = corners();
+        if (!module.isActive()) return;
 
-            double offset = theme.scale(3);
-            double offsetTop = isPrevActive() ? 0 : offset;
-            double offsetBottom = isNextActive() ? 0 : offset;
+        int start = index;
+        while (activeAt(cells, start - 1)) start--;
+        int end = index;
+        while (activeAt(cells, end + 1)) end++;
 
-            double lineHeight = height - offsetTop - offsetBottom;
+        runIndex = index - start;
+        runLength = end - start + 1;
+    }
 
-            double finalTop = y + offsetTop;
-            double centerY = finalTop + lineHeight / 2;
+    private static boolean activeAt(List<Cell<?>> cells, int index) {
+        if (index < 0 || index >= cells.size()) return false;
+        return cells.get(index).widget() instanceof WHontunModule m && m.module.isActive();
+    }
 
-            double lineX = x + pad;
-            double lineY = centerY - (lineHeight * highlightProgress)/ 2;
+    public Module module() {
+        return module;
+    }
 
-            roundedRect().pos(lineX, lineY)
-                         .size(lineWidth, lineHeight * highlightProgress)
-                         .color(ColorUtils.withAlpha(theme.accentColor(), highlightProgress))
-                         .radius(smallRadius(), corners)
-                         .render();
-        }
+    public RichText title() {
+        return title;
+    }
 
-        double x = this.x;
-        double w = width;
+    public double titleWidth() {
+        return titleWidth;
+    }
 
-        switch (theme.moduleAlignment.get()) {
-            case Center -> x += w / 2 - titleWidth / 2;
-            case Right -> x += w - titleWidth - pad * 2;
-            default -> x += pad + lineWidth + pad;
-        }
+    public double hoverProgress() {
+        return hoverAnimation.getProgress();
+    }
 
-        Color color = ColorUtils.interpolateColor(
-                theme.textColor(),
-                theme.accentColor(),
-                highlightProgress
-        );
+    public double highlightProgress() {
+        return highlightAnimation.getProgress();
+    }
 
-        renderer().text(title, x, y + pad, color);
+    public boolean isPrevActive() {
+        return prevActive;
+    }
+
+    public boolean isNextActive() {
+        return nextActive;
+    }
+
+    public int runIndex() {
+        return runIndex;
+    }
+
+    public int runLength() {
+        return runLength;
+    }
+
+    public boolean isPressed() {
+        return pressed;
     }
 
     @Override
-    public Corners corners() {
-        boolean prev = isPrevActive(), next = isNextActive();
-        return prev && next ? Corners.NONE :
-                prev ? Corners.BOTTOM :
-                next ? Corners.TOP : Corners.ALL;
-    }
-
-    private boolean isPrevActive() {
-        return prevModule != null && prevModule.isActive();
-    }
-
-    private boolean isNextActive() {
-        return nextModule != null && nextModule.isActive();
+    public boolean hoverLit() {
+        return mouseOver;
     }
 }

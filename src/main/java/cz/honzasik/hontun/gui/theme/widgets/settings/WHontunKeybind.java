@@ -3,6 +3,7 @@ package cz.honzasik.hontun.gui.theme.widgets.settings;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
 import cz.honzasik.hontun.gui.theme.widgets.pressable.WHontunButton;
+import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.widgets.WKeybind;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.utils.misc.Keybind;
@@ -17,7 +18,6 @@ public class WHontunKeybind extends WKeybind implements HontunWidget {
     private final Keybind keybind;
     private final Keybind defaultValue;
 
-    private final String listeningText = "Press any key";
     private boolean listening;
 
     public WHontunKeybind(String title, Keybind keybind, Keybind defaultValue) {
@@ -29,7 +29,7 @@ public class WHontunKeybind extends WKeybind implements HontunWidget {
 
     @Override
     protected void onCalculateSize() {
-        button.width = Math.max(theme.textWidth(listeningText), button.width);
+        button.width = Math.max(theme().textWidth(style().keybindLabel(theme(), this, true, keybind.toString())), button.width);
         super.onCalculateSize();
     }
 
@@ -38,12 +38,19 @@ public class WHontunKeybind extends WKeybind implements HontunWidget {
         button = add(theme().button(RichText.of(""))).widget();
         button.action = () -> {
             listening = true;
-            button.set(listeningText);
+            button.set(style().keybindLabel(theme(), this, true, keybind.toString()));
 
             if (actionOnSet != null) actionOnSet.run();
         };
 
         refreshLabel();
+    }
+
+    @Override
+    public boolean render(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
+        boolean result = super.render(renderer, mouseX, mouseY, delta);
+        if (visible) style().paintKeybindExtra(this, renderer, mouseX, mouseY);
+        return result;
     }
 
     @Override
@@ -85,7 +92,23 @@ public class WHontunKeybind extends WKeybind implements HontunWidget {
         }
     }
 
+    public String title() {
+        return title;
+    }
+
+    public boolean isListening() {
+        return listening;
+    }
+
+    public Keybind keybind() {
+        return keybind;
+    }
+
+    public WHontunButton button() {
+        return button;
+    }
+
     private void refreshLabel() {
-        button.set(RichText.bold(title + ": ").append(keybind.toString()));
+        button.set(style().keybindLabel(theme(), this, false, keybind.toString()));
     }
 }

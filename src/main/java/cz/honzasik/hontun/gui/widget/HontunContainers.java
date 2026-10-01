@@ -89,6 +89,98 @@ public final class HontunContainers {
         "...............#........"
     };
 
+    private static float hlX, hlY, hlS;
+    private static long hlNanos, hlFadeStart;
+    private static int hlScreen;
+
+    public static boolean slotHighlight(GuiGraphicsExtractor g, AbstractContainerScreen<?> s, int sx, int sy, boolean front) {
+        if (!HontunTheme.smog()) return flatHighlight(g, s, sx, sy, front);
+        boolean themed = themed(s);
+        boolean big = themed && bigSlotAt(s, sx, sy);
+        float tx = big ? sx - 4.5f : sx - 0.5f;
+        float ty = big ? sy - 4.5f : sy - 0.5f;
+        float ts = big ? 25f : 17f;
+        float r = themed ? 3.5f : 2.5f;
+
+        if (!RoundedGui.available()) {
+            int o = big ? 5 : 1, n = big ? 26 : 18;
+            if (front) HontunRound.fill(g, sx - o + 1, sy - o + 1, n - 2, n - 2, 2, HontunTheme.argb(0x22, 0xFFFFFF));
+            else HontunRound.fill(g, sx - o, sy - o, n, n, 3, HontunTheme.argb(0x24, 0xFFFFFF));
+            return true;
+        }
+
+        long nanos = System.nanoTime();
+        int id = System.identityHashCode(s);
+        if (!front) {
+            float dt = (nanos - hlNanos) / 1e9f;
+            float dist = Math.abs(tx - hlX) + Math.abs(ty - hlY);
+            if (hlScreen == id && dt < 0.25f && dist < 60f) {
+                float k = 1f - (float) Math.exp(-Math.max(0f, dt) / 0.035f);
+                hlX += (tx - hlX) * k;
+                hlY += (ty - hlY) * k;
+                hlS += (ts - hlS) * k;
+            } else {
+                if (hlScreen != id || dt >= 0.25f) hlFadeStart = nanos;
+                hlX = tx;
+                hlY = ty;
+                hlS = ts;
+            }
+            hlScreen = id;
+            hlNanos = nanos;
+        }
+        float u = Math.min(1f, (nanos - hlFadeStart) / 90_000_000f);
+        float a = 0.35f + 0.65f * (1f - (1f - u) * (1f - u) * (1f - u));
+        float x = hlX, y = hlY, size = hlS;
+        if (front) {
+            RoundedGui.fill(g, x + 1f, y + 1f, size - 2f, size - 2f, r - 1f, 0f, HontunTheme.argb(Math.round(0x22 * a), 0xFFFFFF));
+            return true;
+        }
+        RoundedGui.fill(g, x - 1.5f, y - 1.5f, size + 3f, size + 3f, r + 1.5f, 2f, HontunTheme.argb(Math.round(0x1E * a), 0xFFFFFF));
+        RoundedGui.fill(g, x, y, size, size, r, 0f, HontunTheme.argb(Math.round(0x24 * a), 0xFFFFFF));
+        RoundedGui.outline(g, x, y, size, size, r, 1f, HontunTheme.argb(Math.round(0x8C * a), 0xFFFFFF));
+        return true;
+    }
+
+    private static boolean flatHighlight(GuiGraphicsExtractor g, AbstractContainerScreen<?> s, int sx, int sy, boolean front) {
+        if (!HontunTheme.restyleEnabled() || !themed(s)) return false;
+        boolean big = bigSlotAt(s, sx, sy);
+        int o = big ? 5 : 1, n = big ? 26 : 18;
+        int x = sx - o, y = sy - o;
+        int acc = HontunTheme.accent(), hi = HontunTheme.accentHi();
+        if (HontunTheme.modern2()) {
+            if (front) {
+                HontunShapes.fillClipped(g, x + 1, y + 1, n - 2, n - 2, 2, 2, HontunTheme.argb(0x2A, hi));
+            } else {
+                HontunShapes.glow(g, x, y, n, n, 3, acc, 2, 0x70);
+                HontunShapes.fillClipped(g, x, y, n, n, 3, 3, HontunTheme.argb(0x3C, acc));
+                HontunShapes.outlineClipped(g, x, y, n, n, 3, 3, HontunTheme.argb(0xE6, acc));
+            }
+        } else if (HontunTheme.modern1()) {
+            if (front) {
+                g.fill(x + 1, y + 1, x + n - 1, y + n - 1, HontunTheme.argb(0x2A, hi));
+            } else {
+                g.fill(x, y, x + n, y + n, HontunTheme.argb(0x3C, acc));
+                HontunCards.border(g, x, y, n, n, HontunTheme.argb(0xE6, acc));
+            }
+        } else {
+            if (front) {
+                g.fill(x + 1, y + 1, x + n - 1, y + n - 1, HontunTheme.argb(0x38, 0xFFFFFF));
+            } else {
+                g.fill(x, y, x + n, y + n, HontunTheme.argb(0x46, acc));
+                rect(g, x, y, n, n, HontunTheme.argb(0xFF, acc));
+            }
+        }
+        return true;
+    }
+
+    private static boolean bigSlotAt(AbstractContainerScreen<?> s, int sx, int sy) {
+        int big = s instanceof CraftingScreen ? 0 : (s instanceof AbstractFurnaceScreen<?> ? 2 : -1);
+        List<Slot> slots = s.getMenu().slots;
+        if (big < 0 || big >= slots.size()) return false;
+        Slot slot = slots.get(big);
+        return slot.x == sx && slot.y == sy;
+    }
+
     private static int decorColor() {
         if (HontunTheme.smog()) return HontunTheme.argb(0xFF, 0xB8BDC3);
         return HontunTheme.argb(0xFF, HontunTheme.modern() ? HontunTheme.overlay2() : HontunTheme.overlay1());

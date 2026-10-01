@@ -305,6 +305,39 @@ public class HontunTextBox extends EditBox {
                 HontunTheme.argb(0xFF, focused ? HontunTheme.accentHi() : HontunTheme.textDim()));
     }
 
+    public static boolean themedBox(GuiGraphicsExtractor g, int x, int y, int w, int h,
+                                    boolean focused, boolean hovered, boolean active) {
+        if (!HontunTheme.restyleEnabled() || HontunTheme.hvanilla()) return false;
+        int dim = active ? 0xFF : 0x80;
+        if (HontunTheme.smog()) {
+            int fill = HontunTheme.argb(focused ? 0x8C : (hovered ? 0x78 : 0x66), 0x000000);
+            int border = focused
+                    ? HontunTheme.argb(0xFF, HontunTheme.textLight())
+                    : HontunTheme.argb(hovered ? 0x80 : 0x55, HontunTheme.overlay2());
+            HontunRound.card(g, x, y, w, h, 5, fill, border);
+            return true;
+        }
+        if (HontunTheme.modern2()) {
+            int cut = 4;
+            if (focused) HontunShapes.glow(g, x, y, w, h, cut, HontunTheme.accent(), 2, 0x50);
+            HontunShapes.fillClipped(g, x, y, w, h, cut, cut,
+                    HontunTheme.argb(0xF0, focused ? HontunTheme.surface1() : HontunTheme.crust()));
+            HontunShapes.outlineClipped(g, x, y, w, h, cut, cut,
+                    focused ? HontunTheme.argb(0xFF, HontunTheme.accent())
+                            : HontunTheme.argb(Math.min(dim, hovered ? 0xA0 : 0x70), HontunTheme.overlay0()));
+            return true;
+        }
+        int fill = focused ? HontunTheme.surface2() : (hovered ? HontunTheme.surface1() : HontunTheme.surface0());
+        HontunCards.card(g, x, y, w, h, HontunTheme.argb(0xF0, fill));
+        HontunCards.border(g, x, y, w, h,
+                focused ? HontunTheme.argb(0xFF, HontunTheme.accent())
+                        : HontunTheme.argb(Math.min(dim, 0x60), HontunTheme.overlay0()));
+        g.fillGradient(x + 2, y + h - 2, x + w - 2, y + h - 1,
+                HontunTheme.argb(focused ? 0xFF : 0x50, HontunTheme.accentLo()),
+                HontunTheme.argb(focused ? 0xFF : 0x50, HontunTheme.accentHi()));
+        return true;
+    }
+
     private void drawMagnifier(GuiGraphicsExtractor g, int x, int y, int argb) {
         g.fill(x + 1, y, x + 5, y + 1, argb);
         g.fill(x + 1, y + 5, x + 5, y + 6, argb);

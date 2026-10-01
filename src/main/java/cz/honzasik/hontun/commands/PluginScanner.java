@@ -45,7 +45,7 @@ public class PluginScanner {
 
         "antispoof", "lpx", "exploitfixer", "coffeeprotect", "pl-hide-pro", "plhidepro",
         "antihealthindicator", "sonar", "foxgate", "foxgateplus",
-        "polarloader", "fairplay", "cultac", "cult", "angleguard");
+        "polarloader", "fairplay", "cultac", "cult", "angleguard", "totemguard");
 
     private static final int SENDS_PER_TICK = 3;
     private static final int TIMEOUT_TICKS = 120;
@@ -196,7 +196,7 @@ public class PluginScanner {
             long now = MCUtil.MC.clientTickCount;
             deadlineTick = now + TIMEOUT_TICKS;
             lastActivityTick = now;
-            ChatUtils.warning("Default scan found nothing — trying CommandWhitelist bypass...");
+            ChatUtils.warning("Default scan found nothing — trying the plugin hider bypass...");
             return;
         }
         active = false;

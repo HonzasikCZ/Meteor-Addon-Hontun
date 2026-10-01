@@ -4,10 +4,9 @@
 
 # METEOR ADDON - HONTUN
 
-A Meteor Client addon for Minecraft 26.2 - client-side anti-crash, server recon, and a fully
-recolorable interface that restyles Meteor's ClickGUI and Minecraft's own menus.
+A Meteor Client addon for Minecraft 26.2 - fully recolorable interface that restyles Meteor's ClickGUI and Minecraft's own menus.
 
-Built heavily with AI assistance.
+Built heavily with AI.
 
 Requires [Meteor Client](https://github.com/MeteorDevelopment/meteor-client) and Fabric API.
 [ViaFabricPlus](https://github.com/ViaVersion/ViaFabricPlus) is optional - without it the version
@@ -25,21 +24,26 @@ picker is simply hidden and everything else works unchanged.
 
 ## COMMANDS
 
-- `.cmdprobe` Enumerates commands a CommandWhitelist tries to hide.
-- `.center` `position` snaps you to the middle of your block, `look` snaps your view to the nearest
-  clean direction.
+- `.cmdprobe` Enumerates commands that plugin hiders try to hide.
+- `.center` `position` Snaps you to the middle of your block. Plain `.center` does the same.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`look` Snaps your view to the nearest of the 8 directions and levels your pitch.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`both` Does `position` and `look` at once.
 - `.foreach` Runs a command per player or iteration, with optional delays. Use `%player%` as the
   placeholder for each player's name.
 - `.reconnect` Rejoins the current server (alias `.rejoin`).
 - `.toggletab` Locks the player list (tab) visible so you do not have to hold the key.
-- `.server` Adds real backend version, world info, plugin channels, the pushed resource-pack
-  (clickable URL + SHA-1) and a plugin scan to Meteor's server info. `.server channels` lists
-  captured channels, `.server plugins` scans plugins, `.server players` probes the real online
-  roster and flags players hidden from the tab list. `.server software` guesses what the server runs
-  (Paper, Purpur, Folia, Leaf, Spigot, Vanilla, Fabric...) and if there is a Velocity or BungeeCord
-  proxy in front. It uses what the client already got plus a few hidden tab-complete checks and tells
-  you how sure it is. `.server software full` also runs `/version` and one made-up command to get the
-  exact fork, both show up in the server log. `.server software passive` sends nothing at all.
+- `.server` `info` Meteor's server info plus backend version, world, channels and resource pack.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`channels` Lists the plugin channels captured so far.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins` Scans the server's plugins, falls back to `bypass` when nothing shows up.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins default` The same scan without the `bypass` fallback.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins bypass` Only the tab-completion tricks that get past plugin hiders.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`players` Finds the real online roster and flags players hidden from the tab list.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`software` Guesses the server software and any proxy in front, without sending anything.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, DivineMC, Pufferfish, Pluto, UniverseSpigot, Leaves,<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;CraftBukkit, Spigot, Vanilla, Fabric, Quilt, Forge, NeoForge, Sponge, Youer, Arclight,<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Minestom, PicoLimbo, NanoLimbo, LOOHP Limbo, QuasarMC.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxies: Velocity, Velocity-CTD, BungeeCord, Gate, ViaProxy.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Behind server-side ViaVersion it reads the real backend version.
 
 ## THEMES
 
@@ -50,13 +54,17 @@ Five looks, switchable in `ClickGUI -> GUI -> ui-mode`:
 
 | Mode | Look |
 |---|---|
-| `Vanilla` | Addon draws no chrome at all. Plain Meteor and plain Minecraft. |
+| `Vanilla` | Minecraft menus stay untouched. The ClickGUI is built from Minecraft's own buttons and panels. |
 | `HVanilla` | Minecraft's square shapes kept, drawn as translucent panels with a thin accent outline. |
 | `HModern1` | Flat panels, soft gradients, rounded corners. |
 | `HModern2` | Default. Chamfered corners, thin accent outlines with a soft glow, corner brackets, pixel icons next to labels. |
 | `SmogClient` | Rounded black and white look from SmogClientPro, with the SF font and an animated particle background. Ignores `palette-color`. |
 
-The ClickGUI also has a light mode. Tick `light-mode` right under `ui-mode`. Only the ClickGUI goes
+Every mode also has its own ClickGUI. `click-gui` sits right under `ui-mode` and switches with it
+whenever you change the mode, but you can set it to any of the five. Window positions are shared,
+so switching never moves your windows.
+
+The ClickGUI also has a light mode. Tick `light-mode` in the same tab. Only the ClickGUI goes
 light, Minecraft menus, chat, containers and the HUD stay dark.
 
 ## INTERFACE
@@ -106,6 +114,10 @@ Every screen is themed live by the palette colour. Pick the mode in
 <td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern2_versions.png" alt="HModern2 versions"></td>
 <td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern2_proxies.png" alt="HModern2 proxies"></td>
 </tr>
+<tr>
+<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui.png" alt="HModern2 ClickGUI"></td>
+<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui_module.png" alt="HModern2 module settings"></td>
+</tr>
 </table>
 </details>
 
@@ -123,6 +135,10 @@ Every screen is themed live by the palette colour. Pick the mode in
 <tr>
 <td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern1_versions.png" alt="HModern1 versions"></td>
 <td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern1_proxies.png" alt="HModern1 proxies"></td>
+</tr>
+<tr>
+<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui.png" alt="HModern1 ClickGUI"></td>
+<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui_module.png" alt="HModern1 module settings"></td>
 </tr>
 </table>
 </details>
@@ -142,6 +158,10 @@ Every screen is themed live by the palette colour. Pick the mode in
 <td><b>Versions</b><br><img width="100%" src="docs/screenshots/SmogClient_versions.png" alt="SmogClient versions"></td>
 <td><b>Proxies</b><br><img width="100%" src="docs/screenshots/SmogClient_proxies.png" alt="SmogClient proxies"></td>
 </tr>
+<tr>
+<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/SmogClient_clickgui.png" alt="SmogClient ClickGUI"></td>
+<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/SmogClient_clickgui_module.png" alt="SmogClient module settings"></td>
+</tr>
 </table>
 </details>
 
@@ -159,6 +179,20 @@ Every screen is themed live by the palette colour. Pick the mode in
 <tr>
 <td><b>Versions</b><br><img width="100%" src="docs/screenshots/HVanilla_versions.png" alt="HVanilla versions"></td>
 <td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HVanilla_proxies.png" alt="HVanilla proxies"></td>
+</tr>
+<tr>
+<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HVanilla_clickgui.png" alt="HVanilla ClickGUI"></td>
+<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HVanilla_clickgui_module.png" alt="HVanilla module settings"></td>
+</tr>
+</table>
+</details>
+
+<details>
+<summary><b>Vanilla</b> - untouched Minecraft menus, ClickGUI made from Minecraft's own textures</summary>
+<table>
+<tr>
+<td width="50%"><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/Vanilla_clickgui.png" alt="Vanilla ClickGUI"></td>
+<td width="50%"><b>Module settings</b><br><img width="100%" src="docs/screenshots/Vanilla_clickgui_module.png" alt="Vanilla module settings"></td>
 </tr>
 </table>
 </details>
@@ -186,9 +220,9 @@ The jar lands in `build/libs/`.
 ## CREDITS
 
 - [Meteor Client](https://github.com/MeteorDevelopment/meteor-client)
-- [Catppuccin Addon](https://github.com/X-C-0/catppuccin-addon)
 - [ViaFabricPlus](https://github.com/ViaVersion/ViaFabricPlus)
-- [DupersUnited](https://github.com/DupersUnited/dupersunited-mod)
-- [Meteor Rejects](https://github.com/AntiCope/meteor-rejects)
-- [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon)
-- [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X)
+- [Catppuccin Addon](https://github.com/X-C-0/catppuccin-addon) by Pindour - ClickGUI
+- [DupersUnited](https://github.com/YAYLOLDEV/du-addon-public) - part of Real Version
+- [Meteor Rejects](https://github.com/AntiCope/meteor-rejects) by Cloudburst - `Gamemode Notify`
+- [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon) by 0x06 - `Free Interact`, `Anti-Exploit`
+- [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X) by SpigotRCE - `.toggletab`

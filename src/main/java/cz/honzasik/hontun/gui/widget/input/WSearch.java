@@ -1,9 +1,12 @@
 package cz.honzasik.hontun.gui.widget.input;
 
+import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
 import cz.honzasik.hontun.gui.util.search.SearchResult;
 import cz.honzasik.hontun.gui.util.search.results.ModuleSearchResult;
 import cz.honzasik.hontun.gui.util.search.SearchUtils;
 import cz.honzasik.hontun.gui.util.search.results.SettingSearchResult;
+import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
@@ -21,6 +24,8 @@ import static org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_RIGHT;
 import net.minecraft.client.input.MouseButtonEvent;
 
 public abstract class WSearch extends WVerticalList {
+    private static final Metrics DEFAULT_METRICS = new Metrics();
+
     protected WSearchHeader header;
     protected WResultsContainer searchResults;
 
@@ -41,6 +46,10 @@ public abstract class WSearch extends WVerticalList {
         this.textBox.minWidth = Utils.getWindowWidth() / 3.0d;
     }
 
+    protected static Metrics metrics(GuiTheme theme) {
+        return theme instanceof HontunGuiTheme hontun ? hontun.style().metrics() : DEFAULT_METRICS;
+    }
+
     protected abstract WSearchHeader createHeader(WSearch search);
 
     protected abstract WResultsContainer createResultsContainer();
@@ -56,7 +65,7 @@ public abstract class WSearch extends WVerticalList {
         List<SearchResult> results = SearchUtils.search(query);
 
         for (SearchResult result : results) {
-            searchResults.add(createSearchResult(result)).padHorizontal(theme.scale(8)).expandX();
+            searchResults.add(createSearchResult(result)).padHorizontal(metrics(theme).searchResultPadH).expandX();
         }
     }
 
@@ -73,7 +82,7 @@ public abstract class WSearch extends WVerticalList {
 
         @Override
         public void init() {
-            view = addDirect(theme.view()).expandX().pad(theme.scale(8)).widget();
+            view = addDirect(theme.view()).expandX().pad(metrics(theme).searchViewPad).widget();
             view.hasScrollBar = false;
             view.spacing = 0;
             view.maxHeight = (Utils.getWindowHeight() / 3.0) * 2;

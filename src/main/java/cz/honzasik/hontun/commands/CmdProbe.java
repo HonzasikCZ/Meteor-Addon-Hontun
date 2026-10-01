@@ -42,7 +42,7 @@ public class CmdProbe extends Command {
     private volatile long lastActivityTick = 0;
 
     public CmdProbe() {
-        super("cmdprobe", "Probes/enumerates CommandWhitelist tab-completion (issue #113).");
+        super("cmdprobe", "Enumerates commands that plugin hiders try to hide.");
         MeteorClient.EVENT_BUS.subscribe(this);
     }
 

@@ -3,6 +3,8 @@ package cz.honzasik.hontun.gui.theme;
 import cz.honzasik.hontun.gui.api.render.RoundedRect;
 import cz.honzasik.hontun.gui.render.HontunRenderer;
 import cz.honzasik.hontun.gui.api.render.Corners;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
 import cz.honzasik.hontun.gui.util.ColorUtils;
 import meteordevelopment.meteorclient.gui.utils.BaseWidget;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
@@ -11,6 +13,14 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 public interface HontunWidget extends BaseWidget {
     default HontunGuiTheme theme() {
         return (HontunGuiTheme) getTheme();
+    }
+
+    default ClickStyle style() {
+        return theme().style();
+    }
+
+    default Metrics metrics() {
+        return style().metrics();
     }
 
     default HontunRenderer renderer() {
@@ -22,19 +32,19 @@ public interface HontunWidget extends BaseWidget {
     }
 
     default float radius() {
-        return (float) (theme().scale(theme().effCornerRadius()));
+        return style().radius(this);
     }
 
     default float smallRadius() {
-        return (float) (theme().scale(theme().effSmallCornerRadius()));
+        return style().smallRadius(this);
     }
 
     default Corners corners() {
-        return Corners.ALL;
+        return style().corners(this);
     }
 
     default float outlineWidth() {
-        return 2f;
+        return style().outlineWidth(this);
     }
 
     default RoundedRect background(Color backgroundColor, Color outlineColor) {

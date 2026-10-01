@@ -1,13 +1,14 @@
 package cz.honzasik.hontun.gui.theme.widgets.input;
 
-import cz.honzasik.hontun.gui.api.render.Corners;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.api.text.TextScale;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
 import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
+import cz.honzasik.hontun.gui.theme.style.ChipKind;
+import cz.honzasik.hontun.gui.theme.style.HoverTarget;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
 import cz.honzasik.hontun.gui.widget.input.WSearch;
-import cz.honzasik.hontun.gui.util.ColorUtils;
 import cz.honzasik.hontun.gui.util.search.SearchResult;
 import cz.honzasik.hontun.gui.util.search.results.ModuleSearchResult;
 import cz.honzasik.hontun.gui.util.search.results.SettingSearchResult;
@@ -22,15 +23,7 @@ import meteordevelopment.meteorclient.utils.render.color.Color;
 public class WHontunSearch extends WSearch implements HontunWidget {
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
-        Color shadowColor = theme.shadowColor();
-
-        int shadowOffset = 2;
-        roundedRect().pos(x - shadowOffset, y - shadowOffset)
-                     .size(width + shadowOffset * 2, height + shadowOffset * 2)
-                     .radius(radius() + shadowOffset)
-                     .color(shadowColor)
-                     .render();
+        style().paintSearchPanel(this, renderer, mouseX, mouseY);
     }
 
     @Override
@@ -48,7 +41,7 @@ public class WHontunSearch extends WSearch implements HontunWidget {
         return new WHontunResult(result);
     }
 
-    private static class WHontunHeader extends WSearchHeader implements HontunWidget {
+    public static class WHontunHeader extends WSearchHeader implements HontunWidget {
         public WHontunHeader(WSearch search) {
             super(search);
         }
@@ -57,7 +50,7 @@ public class WHontunSearch extends WSearch implements HontunWidget {
         public void init() {
             HontunGuiTheme theme = theme();
 
-            WHorizontalList row = add(theme.horizontalList()).expandX().pad(theme.scale(12)).widget();
+            WHorizontalList row = add(theme.horizontalList()).expandX().pad(metrics().searchHeaderPad).widget();
 
             row.add(theme.texture(HontunBuiltinIcons.SEARCH.texture(), theme.textHeight())).center();
 
@@ -67,38 +60,30 @@ public class WHontunSearch extends WSearch implements HontunWidget {
             row.add(textBox).expandX();
             search.initTextBox(textBox);
 
-            row.add(theme.label("ESC to close"));
+            row.add(theme.label("ESC to close")).padLeft(metrics().searchHintPadL).padRight(metrics().searchHintPadR);
         }
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            roundedRect().bounds(this)
-                         .color(theme().crustColor())
-                         .radius(radius(), Corners.TOP)
-                         .render();
+            style().paintSearchHeader(this, renderer, mouseX, mouseY);
         }
     }
 
-    private static class WHontunResultsContainer extends WResultsContainer implements HontunWidget {
+    public static class WHontunResultsContainer extends WResultsContainer implements HontunWidget {
         @Override
         public void init() {
             super.init();
 
-            addDirect(theme.label("Left click to toggle module; Right click to open the module's settings.").color(theme().textSecondaryColor())).pad(theme.pad()).centerX();
+            addDirect(theme.label("Left click to toggle module; Right click to open the module's settings.").color(theme().textSecondaryColor())).pad(metrics().gap).centerX();
         }
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            HontunGuiTheme theme = theme();
-
-            roundedRect().bounds(this)
-                         .color(ColorUtils.withAlpha(theme.baseColor(), theme.windowOpacity()))
-                         .radius(radius(), Corners.BOTTOM)
-                         .render();
+            style().paintSearchBody(this, renderer, mouseX, mouseY);
         }
     }
 
-    private static class WHontunResult extends WSearchResult implements HontunWidget {
+    public static class WHontunResult extends WSearchResult implements HontunWidget, HoverTarget {
         private HontunGuiTheme theme;
 
         public WHontunResult(SearchResult result) {
@@ -108,10 +93,11 @@ public class WHontunSearch extends WSearch implements HontunWidget {
         @Override
         public void init() {
             theme = theme();
+            Metrics m = metrics();
 
-            WHorizontalList row = add(theme.horizontalList()).expandX().pad(6).widget();
+            WHorizontalList row = add(theme.horizontalList()).expandX().pad(m.searchRowPad).widget();
 
-            row.add(new WResultType(result)).pad(theme.pad()).center();
+            row.add(new WResultType(result)).pad(m.gap).center();
 
             WVerticalList infoColumn = row.add(theme.verticalList()).expandX().widget();
 
@@ -124,14 +110,20 @@ public class WHontunSearch extends WSearch implements HontunWidget {
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            if (!mouseOver) return;
+            style().paintSearchRow(this, renderer, mouseX, mouseY);
+        }
 
-            Color outlineColor = ColorUtils.withAlpha(
-                    theme.accentColor(),
-                    theme.backgroundOpacity() * 0.5
-            );
+        public SearchResult result() {
+            return result;
+        }
 
-            background(getBackgroundColor(pressed, false), outlineColor).render();
+        public boolean isPressed() {
+            return pressed;
+        }
+
+        @Override
+        public boolean hoverLit() {
+            return mouseOver;
         }
 
         public static class WResultType extends WContainer implements HontunWidget {
@@ -146,15 +138,24 @@ public class WHontunSearch extends WSearch implements HontunWidget {
             public void init() {
                 color = getColor();
 
-                add(theme().texture(getIcon(), theme.textHeight()).color(color)).pad(theme.pad()).center();
+                add(theme().texture(getIcon(), theme.textHeight()).color(color)).pad(metrics().gap).center();
             }
 
             @Override
             protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-                roundedRect().bounds(this)
-                             .color(ColorUtils.withAlpha(color, 60))
-                             .radius(smallRadius())
-                             .render();
+                style().paintChip(renderer, x, y, width, height, color, kind());
+            }
+
+            public ChipKind kind() {
+                return switch (result) {
+                    case ModuleSearchResult r -> r.hasAlias() ? ChipKind.ALIAS : ChipKind.MODULE;
+                    case SettingSearchResult ignored -> ChipKind.SETTING;
+                    default -> ChipKind.MODULE;
+                };
+            }
+
+            public Color chipColor() {
+                return color;
             }
 
             private Color getColor() {

@@ -2,7 +2,7 @@ package cz.honzasik.hontun.gui.api.animation;
 
 public class Animation {
     private final Easing easing;
-    private final long duration;
+    private long duration;
 
     private long startTime;
     private State state = State.IDLE;
@@ -50,6 +50,36 @@ public class Animation {
         startTime = System.currentTimeMillis() - newElapsed;
 
         state = State.RUNNING;
+    }
+
+    public void reverse(long newDuration) {
+        double progress = getProgress();
+        direction = direction.opposite();
+        duration = newDuration;
+
+        double remainingProgress = direction.isForwards() ?
+                (1.0 - progress) : progress;
+
+        long newElapsed = (long)((1.0 - remainingProgress) * duration);
+        startTime = System.currentTimeMillis() - newElapsed;
+
+        state = State.RUNNING;
+    }
+
+    public void setDuration(long durationMillis) {
+        this.duration = durationMillis;
+    }
+
+    public long getDuration() {
+        return duration;
+    }
+
+    public Direction getDirection() {
+        return direction;
+    }
+
+    public boolean isIdle() {
+        return state == State.IDLE;
     }
 
     public void reset() {

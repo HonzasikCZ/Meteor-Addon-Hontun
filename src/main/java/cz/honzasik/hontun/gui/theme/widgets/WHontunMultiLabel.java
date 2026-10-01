@@ -14,7 +14,7 @@ public class WHontunMultiLabel extends WMultiLabel implements HontunWidget {
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
         double h = theme.textHeight(title);
-        Color defaultColor = theme().textColor();
+        Color defaultColor = style().labelColor(theme(), title);
 
         for (int i = 0; i < lines.size(); i++) {
             renderer().text(

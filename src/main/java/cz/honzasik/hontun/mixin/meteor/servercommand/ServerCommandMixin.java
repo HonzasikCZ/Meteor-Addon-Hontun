@@ -79,7 +79,7 @@ public abstract class ServerCommandMixin {
         }
 
         String brand = mc.getConnection() != null ? mc.getConnection().serverBrand() : null;
-        self.info("Type: %s", brand != null ? brand : "unknown");
+        self.info("Brand: %s", brand != null ? brand : "unknown");
         try {
             self.info("Software: %s", SoftwareProbe.summary(ServerSoftware.detect()));
         } catch (Throwable ignored) {
@@ -171,7 +171,7 @@ public abstract class ServerCommandMixin {
         try {
             URI uri = URI.create(url);
             return text.withStyle(style -> style
-                .withColor(HontunTheme.argb(0xFF, HontunTheme.accentHi()))
+                .withColor(HontunTheme.argb(0xFF, HontunTheme.chatValue()))
                 .withUnderlined(true)
                 .withClickEvent(new ClickEvent.OpenUrl(uri))
                 .withHoverEvent(new HoverEvent.ShowText(Component.literal("Open in browser"))));
@@ -209,11 +209,7 @@ public abstract class ServerCommandMixin {
             .executes(c -> { PlayerRoster.INSTANCE.run(); return 1; }));
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("software")
-            .executes(c -> { SoftwareProbe.INSTANCE.run(false); return 1; })
-            .then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("full")
-                .executes(c -> { SoftwareProbe.INSTANCE.run(true); return 1; }))
-            .then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("passive")
-                .executes(c -> { SoftwareProbe.INSTANCE.passive(); return 1; })));
+            .executes(c -> { SoftwareProbe.INSTANCE.run(); return 1; }));
     }
 
     private void hontun$printChannels() {

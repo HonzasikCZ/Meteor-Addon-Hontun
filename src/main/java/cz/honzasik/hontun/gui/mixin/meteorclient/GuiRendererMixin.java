@@ -2,14 +2,15 @@ package cz.honzasik.hontun.gui.mixin.meteorclient;
 
 import cz.honzasik.hontun.gui.render.HontunRenderer;
 import cz.honzasik.hontun.gui.api.text.RichText;
+import cz.honzasik.hontun.gui.render.route.PrimitiveRouter;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.renderer.operations.TextOperation;
 import meteordevelopment.meteorclient.gui.renderer.Scissor;
+import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.renderer.Renderer2D;
-import meteordevelopment.meteorclient.systems.config.Config;
 import meteordevelopment.meteorclient.utils.misc.Pool;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import org.spongepowered.asm.mixin.Final;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
@@ -48,6 +50,7 @@ public abstract class GuiRendererMixin {
     @Inject(method = "beginRender", at = @At("HEAD"))
     private void hontun$beginRender(CallbackInfo ci) {
         if (!isHontunActive()) return;
+        renderer().setFrame(graphics, TEXTURE);
         renderer().begin();
     }
 
@@ -64,6 +67,8 @@ public abstract class GuiRendererMixin {
     ) {
         if (!isHontunActive()) return;
 
+        HontunGuiTheme hontun = (HontunGuiTheme) theme;
+
         if (scissor != null) scissor.push();
 
         r.end();
@@ -71,19 +76,24 @@ public abstract class GuiRendererMixin {
 
         render();
 
-        if (Config.get().customFont.get()) {
+        if (hontun.router().skipTextPass()) {
+            for (TextOperation text : texts) textPool.free(text);
+        } else if (hontun.richText()) {
             renderer().renderText(
 
                     graphics
             );
 
         } else {
-            HontunRenderer.setFlatText(theme instanceof HontunGuiTheme hontun && hontun.light());
+            HontunRenderer.setFlatText(hontun.light());
+            HontunRenderer.setClickGuiTextPass(true);
             try {
+                double textScale = hontun.mcTextScale();
+
                 theme.textRenderer().begin(
 
                         graphics,
-                        theme.scale(1)
+                        textScale
                 );
 
                 for (TextOperation text : texts) {
@@ -94,7 +104,7 @@ public abstract class GuiRendererMixin {
                 theme.textRenderer().begin(
 
                         graphics,
-                        theme.scale(1.25)
+                        textScale
                 );
 
                 for (TextOperation text : texts) {
@@ -103,6 +113,7 @@ public abstract class GuiRendererMixin {
                 theme.textRenderer().end();
             } finally {
                 HontunRenderer.setFlatText(false);
+                HontunRenderer.setClickGuiTextPass(false);
             }
         }
 
@@ -115,10 +126,73 @@ public abstract class GuiRendererMixin {
 
     @Inject(method = "text", at = @At("HEAD"), cancellable = true)
     private void hontun$text(String text, double x, double y, Color color, boolean title, CallbackInfo ci) {
-        if (!isHontunActive() || !Config.get().customFont.get()) return;
+        if (!(theme instanceof HontunGuiTheme hontun)) return;
+
+        if (hontun.router().meteorText((GuiRenderer) (Object) this, text, x, y, color, title)) {
+            ci.cancel();
+            return;
+        }
+
+        if (!hontun.richText()) return;
 
         renderer().text(RichText.of(text).boldIf(title), x, y, color);
         ci.cancel();
+    }
+
+    @Inject(
+            method = "quad(DDDDLmeteordevelopment/meteorclient/utils/render/color/Color;Lmeteordevelopment/meteorclient/utils/render/color/Color;Lmeteordevelopment/meteorclient/utils/render/color/Color;Lmeteordevelopment/meteorclient/utils/render/color/Color;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void hontun$quad(double x, double y, double width, double height, Color cTopLeft, Color cTopRight, Color cBottomRight, Color cBottomLeft, CallbackInfo ci) {
+        PrimitiveRouter router = router();
+        if (router != null && router.quad4((GuiRenderer) (Object) this, x, y, width, height, cTopLeft, cTopRight, cBottomRight, cBottomLeft)) ci.cancel();
+    }
+
+    @Inject(
+            method = "quad(DDDDLmeteordevelopment/meteorclient/gui/renderer/packer/GuiTexture;Lmeteordevelopment/meteorclient/utils/render/color/Color;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void hontun$texQuad(double x, double y, double width, double height, GuiTexture texture, Color color, CallbackInfo ci) {
+        PrimitiveRouter router = router();
+        if (router != null && router.texQuad((GuiRenderer) (Object) this, x, y, width, height, texture, color)) ci.cancel();
+    }
+
+    @Inject(
+            method = "rotatedQuad(DDDDDLmeteordevelopment/meteorclient/gui/renderer/packer/GuiTexture;Lmeteordevelopment/meteorclient/utils/render/color/Color;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void hontun$rotatedQuad(double x, double y, double width, double height, double rotation, GuiTexture texture, Color color, CallbackInfo ci) {
+        PrimitiveRouter router = router();
+        if (router != null && router.rotatedTexQuad((GuiRenderer) (Object) this, x, y, width, height, rotation, texture, color)) ci.cancel();
+    }
+
+    @Inject(
+            method = "triangle(DDDDDDLmeteordevelopment/meteorclient/utils/render/color/Color;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void hontun$triangle(double x1, double y1, double x2, double y2, double x3, double y3, Color color, CallbackInfo ci) {
+        PrimitiveRouter router = router();
+        if (router != null && router.triangle((GuiRenderer) (Object) this, x1, y1, x2, y2, x3, y3, color)) ci.cancel();
+    }
+
+    @Inject(
+            method = "texture(DDDDDLmeteordevelopment/meteorclient/renderer/Texture;)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void hontun$texture(double x, double y, double width, double height, double rotation, Texture texture, CallbackInfo ci) {
+        PrimitiveRouter router = router();
+        if (router != null && router.texture((GuiRenderer) (Object) this, x, y, width, height, rotation, texture)) ci.cancel();
+    }
+
+    @ModifyVariable(method = "setAlpha(D)V", at = @At("HEAD"), argsOnly = true)
+    private double hontun$setAlpha(double a) {
+        if (!isHontunActive()) return a;
+        return HontunRenderer.get().onSetAlpha(a);
     }
 
     @Inject(method = "scissorStart", at = @At("TAIL"))
@@ -137,6 +211,11 @@ public abstract class GuiRendererMixin {
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     private boolean isHontunActive() {
         return theme instanceof HontunGuiTheme;
+    }
+
+    @Unique
+    private PrimitiveRouter router() {
+        return theme instanceof HontunGuiTheme hontun ? hontun.router() : null;
     }
 
     @Unique

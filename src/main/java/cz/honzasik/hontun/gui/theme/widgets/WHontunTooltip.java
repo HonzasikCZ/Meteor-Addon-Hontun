@@ -1,6 +1,7 @@
 package cz.honzasik.hontun.gui.theme.widgets;
 
 import cz.honzasik.hontun.gui.theme.HontunWidget;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.widgets.WTooltip;
 
@@ -11,11 +12,16 @@ public class WHontunTooltip extends WTooltip implements HontunWidget {
 
     @Override
     public void init() {
-        add(theme.label(text)).padVertical(4).padHorizontal(6);
+        Metrics m = metrics();
+        add(theme.label(text)).padVertical(m.tooltipPadV).padHorizontal(m.tooltipPadH);
     }
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        background(theme().baseColor(), theme().surface0Color()).render();
+        style().paintTooltip(this, renderer, mouseX, mouseY);
+    }
+
+    public String textValue() {
+        return text;
     }
 }

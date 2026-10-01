@@ -8,6 +8,7 @@ import meteordevelopment.meteorclient.renderer.text.*;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import java.nio.ByteBuffer;
+import java.util.function.DoubleBinaryOperator;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
@@ -17,6 +18,10 @@ import net.minecraft.client.Minecraft;
 
 public class RichTextRenderer implements TextRenderer {
     public static final Color SHADOW_COLOR = new Color(60, 60, 60, 180);
+
+    private static final Color SHADOW_WORK = new Color();
+    private static Color shadowColor = SHADOW_COLOR;
+    private static DoubleBinaryOperator shadowOffset;
 
     private final MeshBuilder mesh = new MeshBuilder(MeteorRenderPipelines.UI_TEXT);
 
@@ -159,20 +164,36 @@ public class RichTextRenderer implements TextRenderer {
         double width;
 
         if (shadow) {
-            int originalShadowAlpha = SHADOW_COLOR.a;
-            SHADOW_COLOR.a = (int) (color.a / 255.0 * originalShadowAlpha);
+            Color base = shadowColor;
+            SHADOW_WORK.set(base.r, base.g, base.b, (int) (color.a / 255.0 * base.a));
 
-            double shadowOffset = fontScale * renderScale;
+            double offset = shadowOffset != null ? shadowOffset.applyAsDouble(fontScale, renderScale) : fontScale * renderScale;
 
-            width = currentFont.render(mesh, text, x + shadowOffset, y + shadowOffset, SHADOW_COLOR, renderScale);
+            width = currentFont.render(mesh, text, x + offset, y + offset, SHADOW_WORK, renderScale);
             currentFont.render(mesh, text, x, y, color, renderScale);
-
-            SHADOW_COLOR.a = originalShadowAlpha;
         } else {
             width = currentFont.render(mesh, text, x, y, color, renderScale);
         }
 
         return width;
+    }
+
+    public static void shadowStyle(Color color, DoubleBinaryOperator offset) {
+        shadowColor = color != null ? color : SHADOW_COLOR;
+        shadowOffset = offset;
+    }
+
+    public static void resetShadowStyle() {
+        shadowColor = SHADOW_COLOR;
+        shadowOffset = null;
+    }
+
+    public double fontScale() {
+        return fontScale;
+    }
+
+    public double renderScale() {
+        return scale / 1.5;
     }
 
     @Override

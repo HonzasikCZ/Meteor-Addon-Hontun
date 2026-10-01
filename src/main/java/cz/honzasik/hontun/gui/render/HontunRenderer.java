@@ -3,20 +3,27 @@ package cz.honzasik.hontun.gui.render;
 import cz.honzasik.hontun.gui.api.render.RoundedRect;
 import cz.honzasik.hontun.gui.api.render.RoundedRectRenderer;
 import cz.honzasik.hontun.gui.api.text.RichText;
+import cz.honzasik.hontun.gui.render.route.PrimitiveRouter;
+import cz.honzasik.hontun.gui.render.route.Routers;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.render.rounded.RoundedRendererInternal;
 import cz.honzasik.hontun.gui.render.text.HontunTextRenderer;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
-import meteordevelopment.meteorclient.systems.config.Config;
+import meteordevelopment.meteorclient.renderer.Texture;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import cz.honzasik.hontun.gui.render.rounded.modern.RoundedRendererModern;
 
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
 public class HontunRenderer implements RoundedRectRenderer {
     private static final HontunRenderer INSTANCE = new HontunRenderer();
+    private static final List<Runnable> STYLE_LISTENERS = new CopyOnWriteArrayList<>();
     private static boolean flatText;
+    private static boolean clickGuiTextPass;
 
     public static boolean flatText() {
         return flatText;
@@ -24,6 +31,14 @@ public class HontunRenderer implements RoundedRectRenderer {
 
     public static void setFlatText(boolean flat) {
         flatText = flat;
+    }
+
+    public static boolean clickGuiTextPass() {
+        return clickGuiTextPass;
+    }
+
+    public static void setClickGuiTextPass(boolean pass) {
+        clickGuiTextPass = pass;
     }
     public static GuiRenderer guiRenderer;
 
@@ -39,12 +54,60 @@ public class HontunRenderer implements RoundedRectRenderer {
     private float clipMaxX;
     private float clipMaxY;
 
+    private double globalAlpha = 1;
+    private GuiGraphicsExtractor graphics;
+    private Texture atlas;
+
     public static HontunRenderer get() {
         return INSTANCE;
     }
 
+    public static void addStyleListener(Runnable listener) {
+        STYLE_LISTENERS.add(listener);
+    }
+
     public void setTheme(HontunGuiTheme theme) {
         if (this.theme == null) this.theme = theme;
+    }
+
+    public HontunGuiTheme theme() {
+        return theme;
+    }
+
+    public PrimitiveRouter router() {
+        return theme == null ? Routers.LEGACY : theme.router();
+    }
+
+    public double globalAlpha() {
+        return globalAlpha;
+    }
+
+    public double onSetAlpha(double a) {
+        globalAlpha = a;
+        return router().alpha(a);
+    }
+
+    public void styleChanged() {
+        globalAlpha = 1;
+        for (Runnable listener : STYLE_LISTENERS) {
+            try {
+                listener.run();
+            } catch (Throwable ignored) {
+            }
+        }
+    }
+
+    public void setFrame(GuiGraphicsExtractor graphics, Texture atlas) {
+        this.graphics = graphics;
+        this.atlas = atlas;
+    }
+
+    public GuiGraphicsExtractor graphics() {
+        return graphics;
+    }
+
+    public Texture atlas() {
+        return atlas;
     }
 
     public void begin() {
@@ -94,26 +157,19 @@ public class HontunRenderer implements RoundedRectRenderer {
     public float getClipMaxY() { return clipMaxY; }
 
     public void text(RichText text, double x, double y, Color color) {
-        if (guiRenderer != null && !Config.get().customFont.get())
+        if (router().richText(text, x, y, color)) return;
+
+        if (guiRenderer != null && theme != null && !theme.richText())
             guiRenderer.text(text.getPlainText(), x, y, color, false);
 
         else textRenderer.text(text, x, y, color, theme);
     }
 
     @Override
-    public void renderRoundedRect(double x, double y,
-                                  double width, double height,
-                                  float rTopLeft, float rTopRight,
-                                  float rBottomLeft, float rBottomRight,
-                                  Color fillColor, Color outlineColor, float outlineWidth
-    ) {
-        roundedRenderer.render(
-                x, y,
-                width, height,
-                rTopLeft, rTopRight,
-                rBottomLeft, rBottomRight,
-                fillColor, outlineColor, outlineWidth
-        );
+    public void renderRoundedRect(RoundedRect rect) {
+        if (router().roundedRect(rect)) return;
+
+        roundedRenderer.render(rect);
     }
 
     public void flipFrame() {

@@ -2,13 +2,18 @@ package cz.honzasik.hontun.gui.screen;
 
 import cz.honzasik.hontun.gui.api.icons.HontunIcons;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
+import cz.honzasik.hontun.gui.theme.style.WindowKind;
+import cz.honzasik.hontun.gui.theme.widgets.WHontunLabel;
 import cz.honzasik.hontun.gui.theme.widgets.container.WHontunWindow;
 import cz.honzasik.hontun.gui.widget.WGuiTexture;
 import cz.honzasik.hontun.gui.util.search.results.ModuleSearchResult;
 import cz.honzasik.hontun.gui.util.search.SearchUtils;
-import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.gui.GuiTheme;
+import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.tabs.Tabs;
@@ -18,6 +23,7 @@ import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
 import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WWindow;
 import meteordevelopment.meteorclient.gui.widgets.WLabel;
+import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
 import meteordevelopment.meteorclient.systems.config.Config;
 import meteordevelopment.meteorclient.systems.modules.Category;
@@ -25,6 +31,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.systems.modules.Modules;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.misc.NbtUtils;
+import meteordevelopment.meteorclient.utils.render.color.Color;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.ArrayList;
@@ -58,24 +65,26 @@ public class HontunModulesScreen extends TabScreen {
     @Override
     public void initWidgets() {
         shouldSnap = theme.snapModuleCategories.get();
-        gridSize = theme.snappingGridSize.get();
+        gridSize = theme.snappingGridSize.get() * Math.max(1, (int) Math.round(mc.getWindow().getGuiScale()));
 
-        controller = add(new WCategoryController()).widget();
+        Cell<WCategoryController> controllerCell = add(new WCategoryController());
+        if (theme.style().metrics().categoryStartY > 0) controllerCell.top();
+        controller = controllerCell.widget();
 
         if (!theme.modulesHelpText.get()) return;
 
         WVerticalList help = add(theme.verticalList()).pad(4).bottom().widget();
 
         if (theme.hontunSearchScreen.get())
-            help.add(helpLabel("Ctrl + F - Open search"));
+            help.add(helpLabel("Ctrl + F", " - Open search"));
 
-        help.add(helpLabel("Left click - Toggle module"));
-        help.add(helpLabel("Right click - Open module settings"));
+        help.add(helpLabel("Left click", " - Toggle module"));
+        help.add(helpLabel("Right click", " - Open module settings"));
     }
 
-    private WLabel helpLabel(String text) {
-        WLabel label = theme.label(text);
-        if (theme.light()) label.color(HontunTheme.color(HontunTheme.textLight()));
+    private WLabel helpLabel(String key, String text) {
+        WHelpLabel label = new WHelpLabel(key, text);
+        label.theme = theme;
         return label;
     }
 
@@ -91,17 +100,7 @@ public class HontunModulesScreen extends TabScreen {
 
         if (!showGrid) return;
 
-        int color = theme.overlay0Color().copy().a(60).getPacked();
-        int windowWidth = Utils.getWindowWidth();
-        int windowHeight = Utils.getWindowHeight();
-
-        for (int x = 0; x <= windowWidth; x += gridSize) {
-            context.verticalLine(x, 0, windowHeight, color);
-        }
-
-        for (int y = 0; y <= windowHeight; y += gridSize) {
-            context.horizontalLine(0, windowWidth, y, color);
-        }
+        theme.style().paintSnapGrid(context, gridSize);
     }
 
     @Override
@@ -124,13 +123,16 @@ public class HontunModulesScreen extends TabScreen {
     }
 
     protected WWindow createCategory(WContainer c, Category category, List<Module> moduleList) {
+        ClickStyle style = theme.style();
+        Metrics m = style.metrics();
+
         WGuiTexture icon = theme.categoryIcons()
                 ? theme.texture(getIconForCategory(category), theme.textHeight())
                 : null;
 
-        WHontunWindow w = (WHontunWindow) theme.window(icon, category.name);
-        w.id = category.name;
-        w.padding = theme.pad();
+        WHontunWindow w = (WHontunWindow) theme.window(style.windowIcon(theme, WindowKind.CATEGORY, category, icon), category.name);
+        w.id = windowId(style, category.name);
+        w.padding = m.windowPad;
         w.spacing = 0;
 
         if (shouldSnap) w.initSnapping(this, gridSize);
@@ -138,8 +140,8 @@ public class HontunModulesScreen extends TabScreen {
         c.add(w);
         w.view.scrollOnlyWhenMouseOver = true;
         w.view.hasScrollBar = false;
-        w.view.spacing = 0;
-        w.view.maxHeight -= 120;
+        w.view.spacing = m.viewSpacing;
+        w.view.maxHeight -= m.categoryViewInset;
 
         for (Module module : moduleList) {
             w.add(theme.module(module)).expandX();
@@ -178,19 +180,21 @@ public class HontunModulesScreen extends TabScreen {
     }
 
     protected WWindow createSearch(WContainer c) {
+        ClickStyle style = theme.style();
+
         WHontunWindow w = (WHontunWindow) theme.window(
-                theme.texture(HontunBuiltinIcons.SEARCH.texture(), theme.textHeight()),
+                style.windowIcon(theme, WindowKind.SEARCH, null, theme.texture(HontunBuiltinIcons.SEARCH.texture(), theme.textHeight())),
                 "Search"
         );
 
-        w.id = "search";
+        w.id = windowId(style, "search");
 
         if (shouldSnap) w.initSnapping(this, gridSize);
 
         c.add(w);
         w.view.scrollOnlyWhenMouseOver = true;
         w.view.hasScrollBar = false;
-        w.view.maxHeight -= 20;
+        w.view.maxHeight -= style.metrics().searchViewInset;
 
         WVerticalList l = theme.verticalList();
 
@@ -211,12 +215,14 @@ public class HontunModulesScreen extends TabScreen {
         boolean hasFavorites = Modules.get().getAll().stream().anyMatch(module -> module.favorite);
         if (!hasFavorites) return null;
 
+        ClickStyle style = theme.style();
+
         WHontunWindow w = (WHontunWindow) theme.window(
-                theme.texture(HontunBuiltinIcons.BOOKMARK_YES.texture(), theme.textHeight()),
+                style.windowIcon(theme, WindowKind.FAVORITES, null, theme.texture(HontunBuiltinIcons.BOOKMARK_YES.texture(), theme.textHeight())),
                 "Favorites"
         );
 
-        w.id = "favorites";
+        w.id = windowId(style, "favorites");
         w.padding = 0;
         w.spacing = 0;
 
@@ -225,7 +231,7 @@ public class HontunModulesScreen extends TabScreen {
         Cell<WWindow> cell = c.add(w);
         w.view.scrollOnlyWhenMouseOver = true;
         w.view.hasScrollBar = false;
-        w.view.spacing = 0;
+        w.view.spacing = style.metrics().viewSpacing;
 
         createFavoritesW(w);
         return cell;
@@ -247,6 +253,12 @@ public class HontunModulesScreen extends TabScreen {
         }
 
         return !modules.isEmpty();
+    }
+
+    private String windowId(ClickStyle style, String base) {
+        String id = style.windowId(base);
+        theme.seedWindowConfig(base, id);
+        return id;
     }
 
     @Override
@@ -306,11 +318,12 @@ public class HontunModulesScreen extends TabScreen {
 
         @Override
         protected void onCalculateWidgetPositions() {
-            double pad = theme.scale(4);
-            double h = theme.scale(40);
+            Metrics m = ((HontunGuiTheme) theme).style().metrics();
+            double pad = theme.scale(m.categoryGapX);
+            double h = theme.scale(m.categoryRowStep);
 
-            double x = this.x + pad;
-            double y = this.y;
+            double x = this.x + theme.scale(m.categoryStartX);
+            double y = this.y + theme.scale(m.categoryStartY);
 
             for (Cell<?> cell : cells) {
                 double windowWidth = getWindowWidth();
@@ -346,6 +359,34 @@ public class HontunModulesScreen extends TabScreen {
     private GuiTexture getIconForCategory(Category category) {
         GuiTexture icon = HontunIcons.getCategoryIcon(category.name);
         return icon != null ? icon : HontunBuiltinIcons.QUESTION_MARK.texture();
+    }
+
+    private static class WHelpLabel extends WHontunLabel {
+        private final RichText key;
+        private final RichText text;
+
+        WHelpLabel(String key, String text) {
+            super(RichText.of(key + text));
+            this.key = RichText.of(key);
+            this.text = RichText.of(text);
+        }
+
+        @Override
+        public void drawLabel(GuiRenderer renderer, double mouseX, double mouseY) {
+            if (hidden) return;
+
+            ClickStyle style = style();
+            Color keyColor = style.helpKeyColor(theme());
+            Color textColor = style.helpTextColor(theme());
+
+            if (keyColor.getPacked() == textColor.getPacked()) {
+                renderer().text(richText, x, y, textColor);
+                return;
+            }
+
+            renderer().text(key, x, y, keyColor);
+            renderer().text(text, x + theme().textWidth(key), y, textColor);
+        }
     }
 
     public void showGrid(boolean show) {

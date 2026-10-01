@@ -1,18 +1,16 @@
 package cz.honzasik.hontun.gui.theme.widgets.input;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
-import cz.honzasik.hontun.gui.api.animation.Direction;
-import cz.honzasik.hontun.gui.api.animation.Easing;
 import cz.honzasik.hontun.gui.api.text.RichText;
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.render.route.Routers;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
-import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
-import cz.honzasik.hontun.gui.util.ColorUtils;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
+import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.input.WDropdown;
 import meteordevelopment.meteorclient.utils.Utils;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import java.util.Locale;
 
@@ -20,8 +18,10 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
     private final RichText titleText;
     private RichText valueText;
 
-    private Animation hoverAnimation;
-    private Animation indicatorAnimation;
+    private StyleAnimation hoverAnimation;
+    private StyleAnimation indicatorAnimation;
+
+    private final double[] size = new double[2];
 
     public WHontunDropdown(String title, T[] values, T value) {
         super(values, value);
@@ -31,7 +31,7 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
 
     @Override
     public void init() {
-        double pad = theme.pad();
+        double pad = metrics().dropdownPad;
 
         root = createRootWidget();
         root.theme = theme;
@@ -50,18 +50,16 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
             if (i == values.length - 1) cell.padBottom(pad);
         }
 
-        hoverAnimation = new Animation(Easing.QUAD_OUT, 250);
-
-        indicatorAnimation = new Animation(
-                theme().guiAnimationEasing(),
-                theme().guiAnimationDuration(),
-                Direction.BACKWARDS
-        );
+        ClickStyle style = style();
+        hoverAnimation = StyleAnimation.of(style.anim(AnimRole.DROPDOWN_HOVER), theme());
+        indicatorAnimation = StyleAnimation.of(style.anim(AnimRole.DROPDOWN_OPEN), theme(), false);
     }
 
     @Override
     protected WDropdownRoot createRootWidget() {
-        return new WRoot();
+        WRoot r = new WRoot();
+        r.owner = this;
+        return r;
     }
 
     @Override
@@ -71,26 +69,17 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
 
     @Override
     protected void onCalculateSize() {
-        double pad = pad();
-
         root.calculateSize();
 
-        double titleWidth = pad + theme().textWidth(titleText) + pad;
-        double valueWidth = pad + maxValueWidth + pad;
-        double arrowWidth = pad + theme.textHeight() + pad;
-
-        width = titleWidth + valueWidth + arrowWidth;
-        height = pad + theme.textHeight() + pad;
+        style().dropdownSize(this, size);
+        width = size[0];
+        height = size[1];
 
         root.width = width;
     }
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
-        double pad = pad();
-        double s = theme.textHeight();
-
         double hoverProgress = hoverAnimation.getProgress();
 
         if (mouseOver && hoverProgress == 0)
@@ -99,48 +88,7 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
         if (!mouseOver && hoverProgress > 0)
             hoverAnimation.reset();
 
-        Color bg = theme.backgroundColor.get(pressed, mouseOver);
-        Color accent = ColorUtils.withAlpha(theme.accentColor(), 0.8);
-        Color outline = ColorUtils.interpolateColor(bg, accent, hoverProgress);
-
-        background(bg, outline).render();
-
-        renderer().text(
-                titleText,
-                x + pad,
-                y + pad,
-                theme.textColor()
-        );
-
-        double dotSize = theme.textHeight() / 3;
-        double dotX = x + pad + theme.textWidth(titleText) + pad;
-        double dotY = y + pad + theme.textHeight() / 2 - dotSize / 2;
-
-        renderer.quad(
-                dotX,
-                dotY,
-                dotSize,
-                dotSize,
-                GuiRenderer.CIRCLE,
-                theme.accentColor()
-        );
-
-        renderer().text(
-                valueText,
-                dotX + dotSize + pad,
-                y + pad,
-                theme.accentColor()
-        );
-
-        renderer.rotatedQuad(
-                x + width - pad - s,
-                y + height / 2 - s / 2,
-                s,
-                s,
-                180 * (1 - indicatorAnimation.getProgress()),
-                HontunBuiltinIcons.ARROW.texture(),
-                theme.textColor()
-        );
+        style().paintDropdown(this, renderer, mouseX, mouseY);
     }
 
     @Override
@@ -152,6 +100,7 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
 
         if (!render && progress > 0) {
             renderer.absolutePost(() -> {
+                Routers.of(style().pipeline()).windowLayer(renderer);
                 renderer.scissorStart(root.x, root.y, root.width, root.height * progress);
                 root.render(renderer, mouseX, mouseY, delta);
                 renderer.scissorEnd();
@@ -182,47 +131,89 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
         indicatorAnimation.reverse();
     }
 
+    public RichText titleText() {
+        return titleText;
+    }
+
+    public RichText valueText() {
+        return valueText;
+    }
+
+    public double maxValueWidth() {
+        return maxValueWidth;
+    }
+
+    public double hoverProgress() {
+        return hoverAnimation.getProgress();
+    }
+
+    public double indicatorProgress() {
+        return indicatorAnimation.getProgress();
+    }
+
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    public boolean isPressed() {
+        return pressed;
+    }
+
+    public WRoot popup() {
+        return (WRoot) root;
+    }
+
     private String getNameFor(T value) {
         String name = value.toString();
+
+        if (value instanceof HontunTheme.UiMode) return name;
 
         if (name.contains("_")) return Utils.nameToTitle(name.toLowerCase(Locale.ROOT).replace("_", "-"));
 
         return Utils.nameToTitle(name.replaceAll("(?<=[a-z])([A-Z])", "-$1").toLowerCase(Locale.ROOT));
     }
 
-    private static class WRoot extends WDropdownRoot implements HontunWidget {
-        private static final int DROPDOWN_Y_OFFSET = 6;
+    public static class WRoot extends WDropdownRoot implements HontunWidget {
+        private WHontunDropdown<?> owner;
+
+        public WHontunDropdown<?> owner() {
+            return owner;
+        }
 
         @Override
         protected void onCalculateWidgetPositions() {
-            this.y += DROPDOWN_Y_OFFSET;
+            this.y += style().popupOffset(theme());
             super.onCalculateWidgetPositions();
         }
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            HontunGuiTheme theme = theme();
-
-            Color outlineColor = ColorUtils.withAlpha(
-                    theme.accentColor(),
-                    0.8 + (0.2 * theme.backgroundOpacity())
-            );
-
-            Color backgroundColor = ColorUtils.withAlpha(
-                    theme.backgroundColor.get(false, false),
-                    0.8 + (0.2 * theme.backgroundOpacity())
-            );
-
-            background(backgroundColor, outlineColor).render();
+            style().paintDropdownPopup(owner, this, renderer, mouseX, mouseY);
         }
     }
 
-    private class WValue extends WDropdownValue implements HontunWidget {
+    public class WValue extends WDropdownValue implements HontunWidget {
         private final RichText valueName;
 
         public WValue(T value) {
             this.value = value;
             this.valueName = RichText.of(getNameFor(value));
+        }
+
+        public RichText valueName() {
+            return valueName;
+        }
+
+        public boolean isSelectedValue() {
+            return get() == this.value;
+        }
+
+        public WHontunDropdown<T> owner() {
+            return WHontunDropdown.this;
+        }
+
+        public boolean isPressed() {
+            return pressed;
         }
 
         @Override
@@ -235,30 +226,14 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
 
         @Override
         protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-            HontunGuiTheme theme = theme();
-
-            if (mouseOver)
-                roundedRect().bounds(this)
-                             .radius(smallRadius())
-                             .color(ColorUtils.withAlpha(theme.accentColor(), 0.4))
-                             .render();
-
-            boolean isSelected = get() == this.value;
-            RichText text = valueName.boldIf(isSelected);
-            Color textColor = isSelected ? theme.accentColor() : theme.textColor();
-
-            renderer().text(
-                    text,
-                    x + width / 2 - theme.textWidth(text) / 2,
-                    y + pad(),
-                    textColor
-            );
+            style().paintDropdownValue(this, renderer, mouseX, mouseY);
         }
 
         @Override
         protected void onPressed(int button) {
             super.onPressed(button);
             handlePressed();
+            style().onPressed(this);
         }
     }
 }

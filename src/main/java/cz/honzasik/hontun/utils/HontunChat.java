@@ -9,12 +9,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class HontunChat {
-    private static int cName()    { return HontunTheme.accent(); }
-    private static int cBracket() { return HontunTheme.overlay0(); }
-    private static int cTag()     { return HontunTheme.subtext1(); }
+    private static int cName()    { return HontunTheme.chatName(); }
+    private static int cBracket() { return HontunTheme.chatBracket(); }
+    private static int cTag()     { return HontunTheme.chatTag(); }
     private static int cLight()   { return HontunTheme.textLight(); }
-    private static int cValue()   { return HontunTheme.accentHi(); }
-    private static int cPunct()   { return HontunTheme.textDim(); }
+    private static int cValue()   { return HontunTheme.chatValue(); }
+    private static int cPunct()   { return HontunTheme.chatPunct(); }
 
     private HontunChat() {}
 

@@ -33,15 +33,19 @@ public class MenuBackground {
     }
 
     public static void render(GuiGraphicsExtractor g, int width, int height, boolean opaque, boolean particles) {
-        if (!HontunTheme.restyleEnabled()) return;
+        render(g, width, height, opaque, particles, HontunTheme.mode());
+    }
 
-        if (HontunTheme.smog()) {
+    public static void render(GuiGraphicsExtractor g, int width, int height, boolean opaque, boolean particles, HontunTheme.UiMode look) {
+        if (look == null || look == HontunTheme.UiMode.Vanilla) return;
+
+        if (look == HontunTheme.UiMode.SmogClient) {
             SmogBackground.render(g, width, height, opaque, particles);
             return;
         }
 
         refreshColors();
-        boolean modern = HontunTheme.modern();
+        boolean modern = look == HontunTheme.UiMode.HModern1 || look == HontunTheme.UiMode.HModern2;
 
         long now = System.currentTimeMillis();
 
@@ -80,9 +84,9 @@ public class MenuBackground {
         BOT_A = HontunTheme.darken(m, 0.45f);
         BOT_B = m;
 
-        int accHi = HontunTheme.accentHi();
-        int acc   = HontunTheme.accent();
-        int accLo = HontunTheme.accentLo();
+        int accHi = HontunTheme.userAccentHi();
+        int acc   = HontunTheme.userAccent();
+        int accLo = HontunTheme.userAccentLo();
         PARTICLE_COLORS = new int[] { argb(0xCC, accHi), argb(0xCC, acc), argb(0xB0, accLo) };
 
         for (Particle p : PARTICLES) p.recolor();

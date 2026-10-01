@@ -28,9 +28,14 @@ public abstract class MenuScreenBackgroundMixin {
         if (self instanceof TitleScreen || self instanceof PauseScreen) return;
 
         if (HontunTheme.restyleEnabled()) {
-            boolean particles = !(self instanceof net.minecraft.client.gui.screens.ConnectScreen);
-            MenuBackground.render(graphics, mc.getWindow().getGuiScaledWidth(),
-                    mc.getWindow().getGuiScaledHeight(), true, particles);
+            boolean connect = self instanceof net.minecraft.client.gui.screens.ConnectScreen;
+            int w = mc.getWindow().getGuiScaledWidth();
+            int h = mc.getWindow().getGuiScaledHeight();
+            MenuBackground.render(graphics, w, h, true, true);
+            if (connect) {
+                cz.honzasik.hontun.gui.join.JoinView.backdrop(graphics, w, h,
+                        cz.honzasik.hontun.gui.join.JoinView.Mode.CONNECT, null);
+            }
             ci.cancel();
         } else if (capture) {
             extractPanorama(graphics, delta);

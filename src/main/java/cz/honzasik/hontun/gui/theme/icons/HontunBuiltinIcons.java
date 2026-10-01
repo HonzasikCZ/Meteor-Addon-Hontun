@@ -21,6 +21,7 @@ public enum HontunBuiltinIcons {
     BOOKMARK_NO,
     BOOKMARK_YES,
     BRUSH,
+    CHEVRON,
     COPY,
     CUBE,
     EDIT,

@@ -1,16 +1,16 @@
 package cz.honzasik.hontun.gui.theme.widgets.pressable;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
 import cz.honzasik.hontun.gui.api.animation.Direction;
-import cz.honzasik.hontun.gui.api.animation.Easing;
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
-import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WCheckbox;
 
 public class WHontunCheckbox extends WCheckbox implements HontunWidget {
-    private Animation animation;
+    private StyleAnimation animation;
+
+    private final double[] size = new double[2];
 
     public WHontunCheckbox(boolean checked) {
         super(checked);
@@ -20,66 +20,42 @@ public class WHontunCheckbox extends WCheckbox implements HontunWidget {
     public void init() {
         super.init();
 
-        animation = new Animation(
-                Easing.BACK_IN_OUT,
-                300,
-                checked ? Direction.FORWARDS : Direction.BACKWARDS
-        );
+        animation = StyleAnimation.of(style().anim(AnimRole.CHECKBOX), theme(), checked);
     }
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        if (!checked || animation.isRunning()) background(false, mouseOver).render();
-
-        if (!checked && animation.isFinished()) return;
-
-        renderCheckmark(renderer);
+        style().paintCheckbox(this, renderer, mouseX, mouseY);
     }
 
     @Override
     protected void onCalculateSize() {
-        super.onCalculateSize();
-        height *= 0.9;
-        width *= 0.9;
+        style().checkboxSize(this, size);
+        width = size[0];
+        height = size[1];
     }
 
     @Override
     protected void onPressed(int button) {
         super.onPressed(button);
         animation.start(checked ? Direction.FORWARDS : Direction.BACKWARDS);
+        style().onPressed(this);
     }
 
-    private void renderCheckmark(GuiRenderer renderer) {
-        HontunGuiTheme theme = theme();
-        double progress = animation.getProgress();
-        double size = width * progress;
-        double tickSize = size * 0.6;
-        double minSize = theme.scale(6);
+    public double progress() {
+        return animation.getProgress();
+    }
 
-        if (size <= minSize) return;
+    public boolean animating() {
+        return animation.isRunning();
+    }
 
-        double centerOffset = (width - size) / 2;
+    public boolean animFinished() {
+        return animation.isFinished();
+    }
 
-        roundedRect().pos(x + centerOffset, y + centerOffset)
-                     .size(size, size)
-                     .radius(smallRadius())
-                     .color(theme.accentColor())
-                     .outline(theme.accentColor().copy().a(mouseOver ? 140 : 80), 3f)
-                     .render();
-
-        if (tickSize <= minSize) return;
-
-        centerOffset = (width - tickSize) / 2;
-
-        renderer.rotatedQuad(
-                x + centerOffset,
-                y + centerOffset,
-                tickSize,
-                tickSize,
-                0,
-                HontunBuiltinIcons.TICK.texture(),
-                theme.backgroundColor.get(160)
-        );
+    public boolean isPressed() {
+        return pressed;
     }
 
     public void setChecked(boolean checked) {

@@ -1,16 +1,19 @@
 package cz.honzasik.hontun.mixin.client.connect;
 
-import cz.honzasik.hontun.gui.widget.HontunCards;
+import cz.honzasik.hontun.gui.join.JoinView;
 import cz.honzasik.hontun.utils.ConnectTracker;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.client.multiplayer.TransferState;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -18,8 +21,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import java.util.List;
 
 @Mixin(ConnectScreen.class)
 public abstract class ConnectScreenInfoMixin {
@@ -30,19 +31,38 @@ public abstract class ConnectScreenInfoMixin {
                                            CallbackInfo ci) {
         if (minecraft.gui.screen() instanceof ConnectScreen) return;
 
-        String addr = (data != null && data.ip != null && !data.ip.isEmpty())
+        String addr = transferState == null && data != null && data.ip != null && !data.ip.isEmpty()
                 ? data.ip
                 : hostAndPort.getHost() + (hostAndPort.getPort() == 25565 ? "" : ":" + hostAndPort.getPort());
 
-        String first = Component.translatable(
-                transferState != null ? "connect.transferring" : "connect.connecting").getString();
+        ConnectTracker.reset(addr, Component.translatable(
+                transferState != null ? "connect.transferring" : "connect.connecting"));
+    }
 
-        ConnectTracker.reset(addr, first);
+    @Inject(method = "<init>", at = @At("TAIL"))
+    private void hontun$bindTracker(CallbackInfo ci) {
+        ConnectTracker.bind(this);
     }
 
     @Inject(method = "updateStatus", at = @At("HEAD"))
     private void hontun$recordStep(Component status, CallbackInfo ci) {
-        if (status != null) ConnectTracker.step(status.getString());
+        ConnectTracker.step(this, status);
+    }
+
+    @Inject(method = "init", at = @At("TAIL"))
+    private void hontun$placeCancel(CallbackInfo ci) {
+        if (!HontunTheme.restyleEnabled()) return;
+        Screen self = (Screen) (Object) this;
+        Button cancel = null;
+        int buttons = 0;
+        for (GuiEventListener child : self.children()) {
+            if (!(child instanceof Button b)) continue;
+            buttons++;
+            if (cancel == null || hontun$isCancel(b)) cancel = b;
+        }
+        if (cancel == null || (buttons > 1 && !hontun$isCancel(cancel))) return;
+        int[] r = JoinView.cancelBounds(self.width, self.height);
+        cancel.setRectangle(r[2], r[3], r[0], r[1]);
     }
 
     @Redirect(method = "extractRenderState",
@@ -55,47 +75,12 @@ public abstract class ConnectScreenInfoMixin {
     @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void hontun$drawSteps(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if (!HontunTheme.restyleEnabled()) return;
-
         Screen self = (Screen) (Object) this;
-        Font f = Minecraft.getInstance().font;
-        List<ConnectTracker.Step> steps = ConnectTracker.steps();
-        if (steps.isEmpty()) return;
-
-        int lh = f.lineHeight + 3;
-        int pw = 260;
-        int ph = 10 + lh * (steps.size() + 1) + 8;
-        int px = self.width / 2 - pw / 2;
-
-        int cancelY = self.height / 4 + 132;
-        int py = Math.max(8, cancelY - ph - 8);
-
-        HontunCards.surface(g, px, py, pw, ph, HontunTheme.surface0(), 0xE6);
-
-        int y = py + 7;
-
-        String head = ConnectTracker.target().isEmpty() ? "Connecting" : ConnectTracker.target();
-        g.text(f, Component.literal(head), px + 8, y, HontunTheme.argb(0xFF, HontunTheme.textLight()), false);
-        String total = hontun$fmt(ConnectTracker.totalMs());
-        g.text(f, Component.literal(total), px + pw - 8 - f.width(total), y,
-                HontunTheme.argb(0xFF, HontunTheme.textDim()), false);
-        y += lh + 2;
-
-        for (int i = 0; i < steps.size(); i++) {
-            boolean current = i == steps.size() - 1;
-            String mark = current ? "▶ " : "✓ ";
-            int col = current ? HontunTheme.accentHi() : HontunTheme.green();
-            g.text(f, Component.literal(mark + steps.get(i).name()), px + 8, y,
-                    HontunTheme.argb(0xFF, col), false);
-            String ms = hontun$fmt(ConnectTracker.durationOf(i));
-            g.text(f, Component.literal(ms), px + pw - 8 - f.width(ms), y,
-                    HontunTheme.argb(0xFF, HontunTheme.textDim()), false);
-            y += lh;
-        }
+        JoinView.render(g, self, self.width, self.height, JoinView.Mode.CONNECT, 0f, false, null, null);
     }
 
     @Unique
-    private static String hontun$fmt(long ms) {
-        if (ms < 1000) return ms + " ms";
-        return String.format(java.util.Locale.ROOT, "%.1f s", ms / 1000.0);
+    private static boolean hontun$isCancel(Button b) {
+        return CommonComponents.GUI_CANCEL.getString().equals(b.getMessage().getString());
     }
 }

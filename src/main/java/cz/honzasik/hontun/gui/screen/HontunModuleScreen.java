@@ -3,6 +3,7 @@ package cz.honzasik.hontun.gui.screen;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
 import cz.honzasik.hontun.gui.theme.widgets.container.WHontunWindow;
 import cz.honzasik.hontun.gui.theme.widgets.settings.WHontunKeybind;
 import cz.honzasik.hontun.gui.util.WidgetUtils;
@@ -50,10 +51,12 @@ public class HontunModuleScreen extends WindowScreen {
 
     @Override
     public void initWidgets() {
-        double pad = theme.pad();
+        Metrics m = theme.style().metrics();
+        double pad = m.moduleInfoSpacing;
 
         WHontunWindow window = (WHontunWindow) this.window;
-        window.view.spacing = 0;
+        window.setPadding(m.moduleScreenPad);
+        window.view.spacing = m.viewSpacing;
 
         WVerticalList moduleInfo = window.add(theme.verticalList()).padHorizontal(pad).padBottom(pad).expandX().widget();
         moduleInfo.spacing = pad;
@@ -98,7 +101,7 @@ public class HontunModuleScreen extends WindowScreen {
 
         WLabel cfLabel = theme.label("Chat Feedback");
         cfLabel.tooltip = "Displays a toggle message in chat when enabled.";
-        cf.add(cfLabel);
+        cf.add(cfLabel).padLeft(m.gap);
 
         moduleInfo.add(theme.horizontalSeparator()).expandX();
 
@@ -123,10 +126,12 @@ public class HontunModuleScreen extends WindowScreen {
         if (!module.settings.groups.isEmpty() || widget != null)
             window.addDirect(theme.horizontalSeparator()).padHorizontal(windowPadding * 2).expandX();
 
+        Metrics fm = theme.style().metrics();
         WHorizontalList bottom = window.addDirect(theme.horizontalList())
                 .expandX()
                 .padHorizontal(windowPadding * 2)
-                .padVertical(windowPadding)
+                .padTop(fm.footerPadT >= 0 ? fm.footerPadT : windowPadding)
+                .padBottom(fm.footerPadB >= 0 ? fm.footerPadB : windowPadding)
                 .widget();
 
         active = bottom.add(theme.checkbox(module.isActive())).widget();
@@ -134,7 +139,8 @@ public class HontunModuleScreen extends WindowScreen {
             if (module.isActive() != active.checked) module.toggle();
         };
 
-        bottom.add(theme.label(RichText.of("Active"))).expandCellX().padLeft(4);
+        String activeText = module instanceof ActiveLabel label ? label.activeLabel() : "Active";
+        bottom.add(theme.label(RichText.of(activeText))).expandCellX().padLeft(4);
 
         WHorizontalList sharing = bottom.add(theme.horizontalList()).right().widget();
         WButton copy = sharing.add(theme.button(HontunBuiltinIcons.COPY.texture())).widget();

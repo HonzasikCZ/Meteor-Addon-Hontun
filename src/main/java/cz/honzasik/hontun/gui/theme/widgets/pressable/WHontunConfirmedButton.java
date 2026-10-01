@@ -1,36 +1,50 @@
 package cz.honzasik.hontun.gui.theme.widgets.pressable;
 
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WConfirmedButton;
-import meteordevelopment.meteorclient.utils.render.color.Color;
 
 public class WHontunConfirmedButton extends WConfirmedButton implements HontunWidget {
+    private final double[] size = new double[2];
+
     public WHontunConfirmedButton(String text, String confirmText, GuiTexture texture) {
         super(text, confirmText, texture);
     }
 
     @Override
+    protected void onCalculateSize() {
+        super.onCalculateSize();
+        size[0] = width;
+        size[1] = height;
+        style().pressableSize(this, size);
+        width = size[0];
+        height = size[1];
+    }
+
+    @Override
+    protected void onPressed(int button) {
+        style().onPressed(this);
+    }
+
+    @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
-        double pad = pad();
+        style().paintConfirmedButton(this, renderer, mouseX, mouseY);
+    }
 
-        Color outline = theme.outlineColor.get(pressed, mouseOver);
-        Color fg = pressedOnce ? theme.backgroundColor.get(pressed, mouseOver) : theme.textColor();
-        Color bg = pressedOnce ? theme.textColor() : theme.backgroundColor.get(pressed, mouseOver);
+    public boolean armed() {
+        return pressedOnce;
+    }
 
-        background(bg, outline).render();
+    public boolean isPressed() {
+        return pressed;
+    }
 
-        String text = getText();
+    public double labelWidth() {
+        return textWidth;
+    }
 
-        if (text != null) {
-            renderer.text(text, x + width / 2 - textWidth / 2, y + pad, fg, false);
-        }
-        else {
-            double ts = theme.textHeight();
-            renderer.quad(x + width / 2 - ts / 2, y + pad, ts, ts, texture, fg);
-        }
+    public GuiTexture icon() {
+        return texture;
     }
 }

@@ -1,10 +1,12 @@
 package cz.honzasik.hontun.gui.widget.input;
 
-import cz.honzasik.hontun.gui.api.animation.Animation;
 import cz.honzasik.hontun.gui.api.animation.Direction;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.api.text.TextScale;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.style.AnimRole;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
+import cz.honzasik.hontun.gui.theme.style.StyleAnimation;
 import cz.honzasik.hontun.gui.theme.widgets.WHontunLabel;
 import cz.honzasik.hontun.gui.theme.widgets.pressable.WHontunCheckbox;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
@@ -32,7 +34,7 @@ public abstract class WMultiSelect<T> extends WVerticalList {
     protected FilterMode filterMode = FilterMode.ALL;
     private int selectedCount = 0;
 
-    protected Animation animation;
+    protected StyleAnimation animation;
 
     private Function<T, String> labelMapper = Object::toString;
     private Predicate<T> selectionPredicate = item -> false;
@@ -52,19 +54,17 @@ public abstract class WMultiSelect<T> extends WVerticalList {
     public void init() {
         HontunGuiTheme theme = (HontunGuiTheme) getTheme();
 
-        animation = new Animation(
-                theme.guiAnimationEasing(),
-                theme.guiAnimationDuration(),
-                expanded ? Direction.FORWARDS : Direction.BACKWARDS
-        );
+        Metrics m = theme.style().metrics();
 
-        header = add(createHeader()).padBottom(pad()).expandX().widget();
+        animation = StyleAnimation.of(theme.style().anim(AnimRole.MULTISELECT_EXPAND), theme, expanded);
+
+        header = add(createHeader()).padBottom(m.gap).expandX().widget();
 
         if (items.size() > 1) {
-            WHorizontalList list = add(theme.horizontalList()).expandX().pad(4).widget();
+            WHorizontalList list = add(theme.horizontalList()).expandX().pad(m.multiSelectItemPad).widget();
 
-            selectAllCheckbox = (WHontunCheckbox) list.add(theme.checkbox(false)).padLeft(8).widget();
-            list.add(theme.label("Select all")).padLeft(pad()).expandX();
+            selectAllCheckbox = (WHontunCheckbox) list.add(theme.checkbox(false)).padLeft(m.multiSelectCheckPad).widget();
+            list.add(theme.label("Select all")).padLeft(m.gap).expandX();
 
             selectAllCheckbox.action = () -> {
                 boolean shouldSelectAll = selectAllCheckbox.checked;
@@ -75,8 +75,8 @@ public abstract class WMultiSelect<T> extends WVerticalList {
             add(theme.horizontalSeparator()).expandX();
         }
 
-        itemContainer = add(theme.verticalList()).expandX().pad(4).widget();
-        itemContainer.spacing = 2;
+        itemContainer = add(theme.verticalList()).expandX().pad(m.multiSelectItemPad).widget();
+        itemContainer.spacing = m.multiSelectItemSpacing;
 
         refreshItems();
     }
@@ -220,7 +220,7 @@ public abstract class WMultiSelect<T> extends WVerticalList {
         header.sizeLabel.set(header.getSizeLabel());
     }
 
-    protected abstract class WHeader extends WHorizontalList {
+    public abstract class WHeader extends WHorizontalList {
         protected String title;
         protected WHontunLabel sizeLabel;
         protected WTriangle triangle;
@@ -232,9 +232,10 @@ public abstract class WMultiSelect<T> extends WVerticalList {
         @Override
         public void init() {
             HontunGuiTheme theme = (HontunGuiTheme) getTheme();
+            Metrics m = theme.style().metrics();
 
-            add(theme.label(RichText.bold(title))).expandX().padVertical(8).padLeft(12);
-            sizeLabel = (WHontunLabel) add(theme.label(getSizeLabel())).padHorizontal(pad()).widget();
+            add(theme.label(RichText.bold(title))).expandX().padVertical(m.multiSelectHeaderPadV).padLeft(m.multiSelectHeaderPadL);
+            sizeLabel = (WHontunLabel) add(theme.label(getSizeLabel())).padHorizontal(m.gap).widget();
 
             triangle = add(theme.triangle()).widget();
             triangle.action = () -> setExpanded(!expanded);
@@ -271,7 +272,7 @@ public abstract class WMultiSelect<T> extends WVerticalList {
         }
     }
 
-    protected class WItem extends WHorizontalList {
+    public class WItem extends WHorizontalList {
         protected final T item;
         protected WHontunCheckbox checkbox;
 
@@ -281,17 +282,18 @@ public abstract class WMultiSelect<T> extends WVerticalList {
 
         @Override
         public void init() {
+            Metrics m = ((HontunGuiTheme) getTheme()).style().metrics();
             boolean selected = isItemSelected(item);
-            checkbox = (WHontunCheckbox) add(theme.checkbox(selected)).padLeft(8).widget();
+            checkbox = (WHontunCheckbox) add(theme.checkbox(selected)).padLeft(m.multiSelectCheckPad).widget();
             checkbox.action = this::onSelection;
 
-            add(theme.label(getItemLabel(item))).padLeft(pad()).expandX();
+            add(theme.label(getItemLabel(item))).padLeft(m.gap).expandX();
         }
 
         @Override
         protected void onCalculateSize() {
             super.onCalculateSize();
-            height *= 1.25;
+            height *= ((HontunGuiTheme) getTheme()).style().metrics().multiSelectRowScale;
         }
 
         @Override

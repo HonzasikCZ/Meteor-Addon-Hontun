@@ -55,7 +55,7 @@ public class ChannelFetcher extends Module {
     private final Setting<List<String>> ignoreChannels = sgGeneral.add(new StringListSetting.Builder()
         .name("ignore-channels")
         .description("Channels to stop printing AFTER their first sighting. Each channel still prints once (so you see it exists) - only the repeat spam is muted. Use 'namespace:path' for one channel or just 'namespace' for all of it. Recording for .server is unaffected.")
-        .defaultValue(List.of("voicechat:state"))
+        .defaultValue(List.of("voicechat:state", "voicechat:remove_group", "voicechat:add_group", "voicechat:remove_state"))
         .visible(printToChat::get)
         .build()
     );
@@ -81,6 +81,7 @@ public class ChannelFetcher extends Module {
     }
 
     public static void onRawPayload(Identifier id, byte[] data) {
+        cz.honzasik.hontun.utils.ServerSoftware.onRawPayload(id, data);
         String channel = id.toString();
 
         if (channel.equals("minecraft:brand")) return;
@@ -171,7 +172,6 @@ public class ChannelFetcher extends Module {
             cz.honzasik.hontun.utils.VersionKeeper.clear();
             cz.honzasik.hontun.utils.WorldInfo.clear();
             cz.honzasik.hontun.utils.ResourcePackInfo.clear();
-            cz.honzasik.hontun.utils.ServerSoftware.reset();
         }
     }
 }

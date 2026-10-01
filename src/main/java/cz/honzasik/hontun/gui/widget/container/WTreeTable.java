@@ -80,7 +80,7 @@ public class WTreeTable<T> extends WTable {
             int childrenRow = table.rowI();
 
             WHorizontalList indentList = theme.horizontalList();
-            indentList.add(theme.verticalSeparator()).padHorizontal(theme.textHeight() / 2).expandWidgetY();
+            indentList.add(theme.verticalSeparator()).padHorizontal(theme.textHeight() / 2 / theme.scale(1)).expandWidgetY();
 
             WTable childTable = theme.table();
             childTable.verticalSpacing = this.verticalSpacing;

@@ -1,6 +1,5 @@
 package cz.honzasik.hontun.gui.mixin.meteorclient;
 
-import cz.honzasik.hontun.gui.api.render.RoundedRect;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import meteordevelopment.meteorclient.gui.GuiThemes;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
@@ -27,12 +26,7 @@ public interface MeteorWidgetMixin {
     private void hontun$renderBackground(GuiRenderer renderer, WWidget widget, Color outlineColor, Color backgroundColor, CallbackInfo ci) {
         if (!(GuiThemes.get() instanceof HontunGuiTheme theme)) return;
 
-        RoundedRect.get()
-                   .bounds(widget)
-                   .radius(theme.effSmallCornerRadius())
-                   .color(backgroundColor)
-                   .outline(outlineColor, 2f)
-                   .render();
+        theme.style().paintMeteorBackground(widget, renderer, outlineColor, backgroundColor);
 
         ci.cancel();
     }
@@ -47,12 +41,7 @@ public interface MeteorWidgetMixin {
     private void hontun$renderBackground(GuiRenderer renderer, WWidget widget, boolean pressed, boolean mouseOver, CallbackInfo ci) {
         if (!(GuiThemes.get() instanceof HontunGuiTheme theme)) return;
 
-        RoundedRect.get()
-                   .bounds(widget)
-                   .radius(theme.effSmallCornerRadius())
-                   .color(theme.backgroundColor.get(pressed, mouseOver))
-                   .outline(theme.outlineColor.get(pressed, mouseOver), 2f)
-                   .render();
+        theme.style().paintMeteorBackground(widget, renderer, pressed, mouseOver);
 
         ci.cancel();
     }

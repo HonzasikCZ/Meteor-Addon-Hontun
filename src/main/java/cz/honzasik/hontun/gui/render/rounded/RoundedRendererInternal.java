@@ -1,7 +1,7 @@
 package cz.honzasik.hontun.gui.render.rounded;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import meteordevelopment.meteorclient.utils.render.color.Color;
+import cz.honzasik.hontun.gui.api.render.RoundedRect;
 
 public interface RoundedRendererInternal {
     void begin();
@@ -10,11 +10,7 @@ public interface RoundedRendererInternal {
 
     void render(PoseStack stack);
 
-    void render(double x, double y,
-                double width, double height,
-                float topLeft, float topRight,
-                float bottomLeft, float bottomRight,
-                Color fillColor, Color outlineColor, float outlineWidth);
+    void render(RoundedRect rect);
 
     void flipFrame();
 }

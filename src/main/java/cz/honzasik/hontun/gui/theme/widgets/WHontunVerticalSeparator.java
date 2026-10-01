@@ -1,6 +1,5 @@
 package cz.honzasik.hontun.gui.theme.widgets;
 
-import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.widgets.WVerticalSeparator;
@@ -16,11 +15,6 @@ public class WHontunVerticalSeparator extends WVerticalSeparator implements Hont
 
     @Override
     protected void onRender(GuiRenderer renderer, double mouseX, double mouseY, double delta) {
-        HontunGuiTheme theme = theme();
-
-        roundedRect().bounds(this)
-                    .radius(smallRadius())
-                    .color(theme.surface0Color())
-                    .render();
+        style().paintSeparatorV(this, renderer, mouseX, mouseY);
     }
 }
