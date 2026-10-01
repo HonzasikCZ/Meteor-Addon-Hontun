@@ -222,7 +222,7 @@ The jar lands in `build/libs/`.
 - [Meteor Client](https://github.com/MeteorDevelopment/meteor-client)
 - [ViaFabricPlus](https://github.com/ViaVersion/ViaFabricPlus)
 - [Catppuccin Addon](https://github.com/X-C-0/catppuccin-addon) by Pindour - ClickGUI
-- [DupersUnited](https://github.com/YAYLOLDEV/du-addon-public) - part of Real Version
+- [DupersUnited](https://github.com/YAYLOLDEV/du-addon-public) by YAYLOLDEV - part of Real Version
 - [Meteor Rejects](https://github.com/AntiCope/meteor-rejects) by Cloudburst - `Gamemode Notify`
 - [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon) by 0x06 - `Free Interact`, `Anti-Exploit`
 - [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X) by SpigotRCE - `.toggletab`
