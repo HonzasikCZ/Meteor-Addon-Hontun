@@ -2,6 +2,7 @@ package cz.honzasik.hontun.gui.join;
 
 import cz.honzasik.hontun.gui.render.RoundedGui;
 import cz.honzasik.hontun.utils.ConnectTracker;
+import cz.honzasik.hontun.utils.PackTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
@@ -78,11 +79,15 @@ public final class JoinView {
             s.sessionStart = now;
             lastStage = stage;
             s.advancedAt = 0L;
-            for (int i = 0; i < JoinState.STAGES; i++) {
+            for (int i = 0; i <= JoinState.STAGES; i++) {
                 s.doneAt[i] = 0L;
                 s.fromFill[i] = 0f;
                 s.drawnFill[i] = 0f;
             }
+            s.subK = 0f;
+            s.subAnchor = -1;
+            s.subPhase = PackTracker.Phase.NONE;
+            s.subPhaseAt = 0L;
             s.title = null;
             s.prevTitle = null;
             s.titleAt = 0L;
@@ -112,6 +117,7 @@ public final class JoinView {
             s.progress += (target - s.progress) * (1f - (float) Math.exp(-dt / 0.15f));
         }
         s.elapsedMs = mode == Mode.CONNECT || mode == Mode.JOIN ? ConnectTracker.totalMs() : now - s.sessionStart;
+        trackPack(s, now, dt);
 
         String title = titleText(mode, reason);
         if (!title.equals(s.title)) {
@@ -132,6 +138,36 @@ public final class JoinView {
         if (mode == Mode.CONNECT) s.cancelRect = JoinCardView.cancel(w, h);
 
         JoinCardView.render(g, s);
+    }
+
+    private static void trackPack(JoinState s, long now, float dt) {
+        if (!s.track()) {
+            s.subK = 0f;
+            s.subAnchor = -1;
+            s.subPhase = PackTracker.Phase.NONE;
+            return;
+        }
+        PackTracker.View v = PackTracker.view();
+        boolean show = v.phase() != PackTracker.Phase.NONE && v.anchor() >= 0;
+        if (v.phase() != s.subPhase) {
+            if (v.phase() == PackTracker.Phase.DONE && s.doneAt[JoinState.SUB] == 0L) {
+                s.doneAt[JoinState.SUB] = now;
+                s.fromFill[JoinState.SUB] = s.drawnFill[JoinState.SUB];
+            }
+            s.subPhase = v.phase();
+            s.subPhaseAt = now;
+        }
+        if (show) s.subAnchor = v.anchor();
+        s.subCount = v.count();
+        s.subProgress = v.progress();
+        s.subDeterminate = v.determinate();
+        s.subBytes = v.bytes();
+        s.subStartedAt = v.startedAt();
+        s.subEndedAt = v.endedAt();
+        float target = show ? 1f : 0f;
+        s.subK += (target - s.subK) * (1f - (float) Math.exp(-dt / 0.09f));
+        if (Math.abs(target - s.subK) < 0.002f) s.subK = target;
+        if (!show && s.subK == 0f) s.subAnchor = -1;
     }
 
     private static String titleText(Mode mode, LevelLoadingScreen.Reason reason) {
@@ -174,7 +210,14 @@ public final class JoinView {
 
     private static String statusText(Mode mode) {
         String raw;
-        if (mode == Mode.CONNECT) {
+        PackTracker.Phase pack = mode == Mode.CONNECT || mode == Mode.JOIN ? PackTracker.view().phase() : PackTracker.Phase.NONE;
+        if (pack == PackTracker.Phase.WAITING) {
+            raw = "Waiting for the resource pack prompt";
+        } else if (pack == PackTracker.Phase.DOWNLOADING) {
+            raw = "Downloading resource pack";
+        } else if (pack == PackTracker.Phase.APPLYING) {
+            raw = "Applying resource pack";
+        } else if (mode == Mode.CONNECT) {
             ConnectTracker.Step step = ConnectTracker.current();
             raw = step == null ? Component.translatable("connect.connecting").getString() : step.name();
         } else {

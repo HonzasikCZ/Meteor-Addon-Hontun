@@ -1,6 +1,7 @@
 package cz.honzasik.hontun.gui.mixin.meteorclient;
 
 import cz.honzasik.hontun.gui.HontunGui;
+import cz.honzasik.hontun.gui.render.text.BundledFonts;
 import cz.honzasik.hontun.gui.render.text.RichTextRenderer;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import meteordevelopment.meteorclient.gui.GuiThemes;
@@ -13,6 +14,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(value = Fonts.class, remap = false)
 public abstract class FontsMixin {
+    @Inject(method = "refresh", at = @At(value = "INVOKE", target = "Ljava/util/List;sort(Ljava/util/Comparator;)V"))
+    private static void hontun$bundled(CallbackInfo ci) {
+        BundledFonts.register();
+    }
+
     @Inject(method = "load", at = @At("HEAD"))
     private static void hontun$load(FontFace fontFace, CallbackInfo ci) {
         if (!(GuiThemes.get() instanceof HontunGuiTheme theme)) return;

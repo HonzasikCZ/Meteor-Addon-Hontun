@@ -54,6 +54,8 @@ public class HontunModulesScreen extends TabScreen {
     private WCategoryController controller;
 
     private boolean showGrid = false;
+    private float gridFade;
+    private long gridFadeAt = -1;
     private boolean shouldSnap;
     private int gridSize;
 
@@ -97,6 +99,15 @@ public class HontunModulesScreen extends TabScreen {
     @Override
     public void extractBackground(@NonNull GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks) {
         super.extractBackground(context, mouseX, mouseY, deltaTicks);
+
+        long now = System.currentTimeMillis();
+        float step = gridFadeAt < 0 ? 0f : (now - gridFadeAt) / 140f;
+        gridFadeAt = now;
+        gridFade = showGrid ? Math.min(1f, gridFade + step) : Math.max(0f, gridFade - step);
+        if (gridFade > 0f && mc.level != null) {
+            int a = Math.round(0xE0 * gridFade);
+            context.fill(0, 0, width, height, (a << 24) | (theme.style().snapScrim() & 0xFFFFFF));
+        }
 
         if (!showGrid) return;
 

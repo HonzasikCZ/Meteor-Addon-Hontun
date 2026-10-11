@@ -124,6 +124,11 @@ public class HVanillaClickStyle extends ClickStyle {
     }
 
     @Override
+    public double collapsedHeight(WHontunWindow w) {
+        return Math.max(w.headerWidget().height, 16 * unit());
+    }
+
+    @Override
     protected Metrics createMetrics() {
         Metrics m = new Metrics();
         m.windowPad = 2;
@@ -1536,10 +1541,11 @@ public class HVanillaClickStyle extends ClickStyle {
         pose.scale(1f / guiScale, 1f / guiScale);
 
         long dots = (long) (windowWidth / step + 1) * (windowHeight / step + 1);
+        boolean world = mc.level != null;
 
         cz.honzasik.hontun.gui.render.pixel.QuadBatchState.Builder batch = cz.honzasik.hontun.gui.render.pixel.QuadBatchState.builder();
         if (dots <= GRID_DOT_LIMIT) {
-            int color = argb(light ? 0x90 : 0x60, overlay0);
+            int color = argb(light ? 0x90 : world ? 0x88 : 0x60, overlay0);
             int shade = argb(0x60, 0);
             for (int x = 0; x <= windowWidth; x += step) {
                 for (int y = 0; y <= windowHeight; y += step) {
@@ -1548,7 +1554,7 @@ public class HVanillaClickStyle extends ClickStyle {
                 }
             }
         } else {
-            int color = argb(light ? 0x48 : 0x30, overlay0);
+            int color = argb(light ? 0x48 : world ? 0x50 : 0x30, overlay0);
             if (light) {
                 int shade = argb(0x30, 0);
                 for (int x = 0; x <= windowWidth; x += step) batch.add(x + p, 0, x + 2 * p, windowHeight, shade);

@@ -32,7 +32,9 @@ import cz.honzasik.hontun.gui.widget.input.WMultiSelect;
 import cz.honzasik.hontun.gui.widget.input.WSearch;
 import cz.honzasik.hontun.gui.widget.pressable.WColorPicker;
 import cz.honzasik.hontun.gui.render.HontunRenderer;
+import cz.honzasik.hontun.gui.render.text.GlyphSupport;
 import cz.honzasik.hontun.gui.render.text.RichTextRenderer;
+import cz.honzasik.hontun.gui.transition.TransitionStyle;
 import cz.honzasik.hontun.gui.util.ColorUtils;
 import cz.honzasik.hontun.utils.HontunGeo;
 import cz.honzasik.hontun.utils.HontunTheme;
@@ -66,6 +68,7 @@ import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.misc.Keybind;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
 
@@ -256,9 +259,48 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<SettingColor> menuBackground = sgColors.add(new ColorSetting.Builder()
             .name("menu-background")
-            .description("Base color of the animated menu gradient (title/pause/loading). Default dark grey; set it to your accent to make the menu breathe that color. Alpha is ignored.")
+            .description("Base color of the animated menu gradient (title/pause/loading) and of the BlockyHorizon menu-scene. Default dark grey; set it to your accent to make the menu breathe that color. Alpha is ignored. ui-mode SmogClient ignores it and keeps its fixed black and white backdrop, for both the particle backdrop and BlockyHorizon.")
             .defaultValue(new SettingColor(20, 21, 25))
             .onChanged(c -> HontunTheme.setMenuColor(c.getPacked()))
+            .build()
+    );
+
+    public final Setting<HontunTheme.MenuScene> menuScene = sgColors.add(new EnumSetting.Builder<HontunTheme.MenuScene>()
+            .name("menu-scene")
+            .description("Scene behind the title screen and every menu shown without a world (also the ClickGUI opened from the title screen and the Hontun screens). Particles = animated gradient with accent particles (default). BlockyHorizon = shader-drawn blocky night landscape with a moon, stars, clouds and fireflies, tinted by palette-color on a menu-background base (SmogClient stays black and white and ignores both). Menus over a world keep their translucent backdrop and ui-mode Vanilla keeps the panorama. Falls back to Particles if the shader cannot run.")
+            .defaultValue(HontunTheme.MenuScene.Particles)
+            .onChanged(HontunTheme::setMenuScene)
+            .build()
+    );
+
+    public final Setting<Boolean> customCursor = sgScreens.add(new BoolSetting.Builder()
+            .name("custom-cursor")
+            .description("Replaces the mouse cursor with one drawn in the current ui-mode style and palette-color, including the hand over buttons, the text cursor and the resize cursors. ui-mode Vanilla keeps the system cursor.")
+            .defaultValue(true)
+            .build()
+    );
+
+    public final Setting<Boolean> customCrosshair = sgScreens.add(new BoolSetting.Builder()
+            .name("custom-crosshair")
+            .description("Draws the in-game crosshair in the current ui-mode style and palette-color. The attack indicator stays vanilla. ui-mode Vanilla keeps the vanilla crosshair.")
+            .defaultValue(true)
+            .build()
+    );
+
+    public final Setting<TransitionStyle> screenTransition = sgScreens.add(new EnumSetting.Builder<TransitionStyle>()
+            .name("screen-transition")
+            .description("How screens change: the previous screen fades out over the new one instead of switching at once. Covers the title screen and the other menus, the Hontun screens and the Meteor ClickGUI (opening it, closing it back to the game, every tab and module screen). Fade = plain crossfade. FadeZoom = the old screen also grows slightly while it fades (default); over a world, between ClickGUI tabs and when a menu reopens itself it uses the plain crossfade. On ClickGUI tab switches the top bar stays live and only the content fades. Off = instant. Chat, inventories and containers, sign, book and command block editing, the death screen and the credits always switch instantly, and so does the first title screen after the game starts. ui-mode Vanilla keeps instant switching.")
+            .defaultValue(TransitionStyle.FadeZoom)
+            .build()
+    );
+
+    public final Setting<Integer> screenTransitionDuration = sgScreens.add(new IntSetting.Builder()
+            .name("screen-transition-duration")
+            .description("Length of the screen transition in milliseconds.")
+            .defaultValue(220)
+            .range(80, 600)
+            .sliderRange(80, 600)
+            .visible(() -> screenTransition.get() != TransitionStyle.Off)
             .build()
     );
 
@@ -352,6 +394,7 @@ public class HontunGuiTheme extends GuiTheme {
         HontunTheme.setAccent(paletteColor.get().getPacked());
         HontunTheme.setBgOverlay(containerBackground.get().getPacked());
         HontunTheme.setMenuColor(menuBackground.get().getPacked());
+        HontunTheme.setMenuScene(menuScene.get());
         HontunGeo.setEnabled(serverFlags.get());
         updateCache();
 
@@ -903,9 +946,70 @@ public class HontunGuiTheme extends GuiTheme {
         return face;
     }
 
+    public double vanillaTextScale(double segmentScale) {
+        return Math.max(0.5, Math.round(2 * mcTextScale() * segmentScale) / 2.0);
+    }
+
+    public double vanillaUnit(double segmentScale) {
+        return 2 * vanillaTextScale(segmentScale);
+    }
+
+    public double vanillaHeight(double segmentScale) {
+        return 9 * vanillaUnit(segmentScale);
+    }
+
+    public double vanillaTextOffset(double segmentScale) {
+        return -vanillaUnit(segmentScale);
+    }
+
+    public double vanillaWidth(String text, int length, double segmentScale) {
+        if (text.isEmpty() || length <= 0) return 0;
+        String s = length < text.length() ? text.substring(0, length) : text;
+        return Minecraft.getInstance().font.width(s) * vanillaUnit(segmentScale);
+    }
+
+    public double runWidth(RichTextSegment segment, int start, int end, boolean vanilla) {
+        if (end <= start) return 0;
+        if (vanilla) return vanillaWidth(segment.getText().substring(start, end), end - start, segment.getScale());
+        return scale(richTextRenderer().getRunWidth(segment, start, end));
+    }
+
+    private double richSegmentWidth(RichTextSegment segment, int length) {
+        String text = segment.getText();
+        int end = Math.min(length, text.length());
+        if (!GlyphSupport.needsVanilla(text, end)) return scale(richTextRenderer().getWidth(segment, length));
+
+        double total = 0;
+        int start = 0;
+        while (start < end) {
+            int stop = GlyphSupport.runEnd(text, start, end);
+            total += runWidth(segment, start, stop, GlyphSupport.vanillaRun(text, start));
+            start = stop;
+        }
+
+        return total + scale(richTextRenderer().getShadowWidth(segment));
+    }
+
+    private double richTextWidth(RichText text, int length) {
+        double total = 0;
+        int remaining = length;
+
+        for (RichTextSegment segment : text.getSegments()) {
+            if (remaining <= 0) break;
+            String s = segment.getText();
+            if (s.isEmpty()) continue;
+
+            int n = Math.min(s.length(), remaining);
+            total += richSegmentWidth(segment, n);
+            remaining -= n;
+        }
+
+        return total;
+    }
+
     public double textWidth(RichTextSegment segment) {
         return richText()
-                ? scale(richTextRenderer().getWidth(segment, segment.getText().length()))
+                ? richSegmentWidth(segment, segment.getText().length())
                 : scale(textRenderer().getWidth(segment.getText())) * mcFactor();
     }
 
@@ -914,15 +1018,14 @@ public class HontunGuiTheme extends GuiTheme {
         if (routed >= 0) return routed;
 
         return richText()
-                ? scale(richTextRenderer().getWidth(text))
+                ? richTextWidth(text, text.length())
                 : scale(textRenderer().getWidth(text.getPlainText())) * mcFactor();
     }
 
     @Override
     public double textWidth(String text, int length, boolean title) {
-        return richText()
-                ? scale(richTextRenderer().getWidth(RichText.of(text).boldIf(title), length))
-                : scale(textRenderer().getWidth(text, length, title)) * mcFactor();
+        if (!richText()) return scale(textRenderer().getWidth(text, length, title)) * mcFactor();
+        return richTextWidth(RichText.of(text).boldIf(title), length);
     }
 
     @Override
@@ -931,9 +1034,14 @@ public class HontunGuiTheme extends GuiTheme {
     }
 
     public double textHeight(RichText text) {
-        return richText()
-                ? scale(richTextRenderer().getHeight(text))
-                : scale(textRenderer().getHeight()) * mcFactor();
+        if (!richText()) return scale(textRenderer().getHeight()) * mcFactor();
+
+        double h = scale(richTextRenderer().getHeight(text));
+        for (RichTextSegment segment : text.getSegments()) {
+            if (GlyphSupport.needsVanilla(segment.getText()))
+                h = Math.max(h, vanillaHeight(segment.getScale()));
+        }
+        return h;
     }
 
     @Override

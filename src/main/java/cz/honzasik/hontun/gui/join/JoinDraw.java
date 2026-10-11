@@ -276,6 +276,12 @@ public final class JoinDraw {
         return String.format(Locale.ROOT, "%d:%02d", sec / 60L, sec % 60L);
     }
 
+    public static String formatBytes(long bytes) {
+        if (bytes < 1024L) return bytes + " B";
+        if (bytes < 1024L * 1024L) return String.format(Locale.ROOT, "%.0f KB", bytes / 1024.0);
+        return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
+    }
+
     public static String formatStage(long ms, boolean compact) {
         if (ms < 1000L) return compact ? String.valueOf(ms) : ms + " ms";
         return String.format(Locale.ROOT, "%.1f s", ms / 1000.0);

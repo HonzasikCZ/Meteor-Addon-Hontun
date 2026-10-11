@@ -6,13 +6,15 @@
 
 A Meteor Client addon for Minecraft 26.2 - fully recolorable interface that restyles Meteor's ClickGUI and Minecraft's own menus.
 
+🌐 **Website:** [hontun.xyz](https://hontun.xyz) · [Try the ClickGUI in your browser](https://hontun.xyz/demo/)
+
 Built heavily with AI.
 
 Requires [Meteor Client](https://github.com/MeteorDevelopment/meteor-client) and Fabric API.
 [ViaFabricPlus](https://github.com/ViaVersion/ViaFabricPlus) is optional - without it the version
 picker is simply hidden and everything else works unchanged.
 
-## MODULES
+## 🧩 MODULES
 
 - `Anti-Exploit` Cancels incoming packets that would crash or freeze your client, with an optional
   per-type debug log of exactly what was blocked.
@@ -22,7 +24,7 @@ picker is simply hidden and everything else works unchanged.
 - `Free Interact` Removes a couple of client-side interaction limits.
 - `Gamemode Notify` Alerts you when someone changes their gamemode.
 
-## COMMANDS
+## ⌨️ COMMANDS
 
 - `.cmdprobe` Enumerates commands that plugin hiders try to hide.
 - `.center` `position` Snaps you to the middle of your block. Plain `.center` does the same.<br>
@@ -45,9 +47,9 @@ picker is simply hidden and everything else works unchanged.
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxies: Velocity, Velocity-CTD, BungeeCord, Gate, ViaProxy.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Behind server-side ViaVersion it reads the real backend version.
 
-## THEMES
+## 🎨 THEMES
 
-One color picker drives everything. Set `palette-color` and every accent, gradient and highlight
+✨ One color picker drives everything. Set `palette-color` and every accent, gradient and highlight
 follows it live - no restart, no rebuilding the GUI.
 
 Five looks, switchable in `ClickGUI -> GUI -> ui-mode`:
@@ -67,7 +69,7 @@ so switching never moves your windows.
 The ClickGUI also has a light mode. Tick `light-mode` in the same tab. Only the ClickGUI goes
 light, Minecraft menus, chat, containers and the HUD stay dark.
 
-## INTERFACE
+## 🖥️ INTERFACE
 
 - `Title screen` The Hontun badge replaces the Minecraft wordmark, tinted by the palette with a
   soft glow. The vanilla splash text is hidden. `Vanilla` mode keeps the original title.
@@ -90,7 +92,8 @@ light, Minecraft menus, chat, containers and the HUD stay dark.
   button included. The backdrop behind them is configurable (`container-background`).
 - `Sliders` FOV, volume and every other slider get a themed track and knob.
 - `Menu background` Animated gradient with accent particles instead of the panorama
-  (`menu-background`). SmogClient has its own animated background.
+  (`menu-background`). SmogClient has its own animated background. Set `menu-scene` to
+  `BlockyHorizon` for a shader-drawn blocky night landscape behind every menu shown without a world.
 - `Lag Notifier` Meteor's own lag-notifier element is restyled in the active theme (themed panel and
   accent), and shows how long the server has gone without responding in both seconds and
   milliseconds.
@@ -207,7 +210,7 @@ Every screen is themed live by the palette colour. Pick the mode in
 </table>
 </details>
 
-## BUILDING
+## 🔨 BUILDING
 
 Needs JDK 25.
 
@@ -217,7 +220,7 @@ Needs JDK 25.
 
 The jar lands in `build/libs/`.
 
-## CREDITS
+## 🙏 CREDITS
 
 - [Meteor Client](https://github.com/MeteorDevelopment/meteor-client)
 - [ViaFabricPlus](https://github.com/ViaVersion/ViaFabricPlus)

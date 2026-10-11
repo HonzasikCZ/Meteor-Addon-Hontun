@@ -1,12 +1,14 @@
 package cz.honzasik.hontun.gui.join;
 
 import cz.honzasik.hontun.utils.ConnectTracker;
+import cz.honzasik.hontun.utils.PackTracker;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.LevelLoadingScreen;
 import net.minecraft.server.level.progress.ChunkLoadStatusView;
 
 public final class JoinState {
     public static final int STAGES = ConnectTracker.STAGES;
+    public static final int SUB = STAGES;
     private static final String[] LABELS = {"Connect", "Login", "Join", "World"};
 
     public JoinView.Mode mode;
@@ -30,9 +32,17 @@ public final class JoinState {
     public boolean hasProgress;
     public float progress;
 
-    public final long[] doneAt = new long[STAGES];
-    public final float[] fromFill = new float[STAGES];
-    public final float[] drawnFill = new float[STAGES];
+    public final long[] doneAt = new long[STAGES + 1];
+    public final float[] fromFill = new float[STAGES + 1];
+    public final float[] drawnFill = new float[STAGES + 1];
+
+    public PackTracker.Phase subPhase = PackTracker.Phase.NONE;
+    public int subAnchor = -1;
+    public int subCount;
+    public float subK;
+    public float subProgress;
+    public boolean subDeterminate;
+    public long subBytes, subStartedAt, subEndedAt, subPhaseAt;
     public long advancedAt;
     public long ghostAt;
     public int[] cancelRect;
@@ -53,23 +63,41 @@ public final class JoinState {
         return at == 0L ? 1f : JoinDraw.cl((now - at) / ms);
     }
 
+    public boolean sub() {
+        return subAnchor >= 0 && subK > 0.001f;
+    }
+
     public boolean skipped(int i) {
+        if (i == SUB) return subPhase == PackTracker.Phase.DECLINED || subPhase == PackTracker.Phase.FAILED;
         return i == 1 && loginSkipped && stage >= 2;
     }
 
     public boolean done(int i) {
+        if (i == SUB) return subPhase == PackTracker.Phase.DONE;
         return !skipped(i) && stage > i;
     }
 
     public boolean active(int i) {
+        if (i == SUB) {
+            return subPhase == PackTracker.Phase.WAITING || subPhase == PackTracker.Phase.DOWNLOADING
+                    || subPhase == PackTracker.Phase.APPLYING;
+        }
         return stage == i;
     }
 
     public boolean pending(int i) {
+        if (i == SUB) return subPhase == PackTracker.Phase.NONE;
         return stage < i;
     }
 
+    public float arc(int i) {
+        if (i == STAGES - 1 && hasProgress) return progress;
+        if (i == SUB && subPhase == PackTracker.Phase.DOWNLOADING && subDeterminate) return subProgress;
+        return -1f;
+    }
+
     public String label(int i) {
+        if (i == SUB) return subCount > 1 ? "Resource packs" : "Resource pack";
         return i == 0 && transfer ? "Transfer" : LABELS[i];
     }
 
@@ -78,13 +106,38 @@ public final class JoinState {
     }
 
     public String stageText(int i, boolean compact) {
+        if (i == SUB) return subText(compact);
         if (skipped(i)) return "offline";
         if (i == 3 && active(i) && hasProgress) return (int) Math.floor(progress * 100f) + "%";
         if (done(i) || active(i)) return JoinDraw.formatStage(stageMs(i), compact);
         return null;
     }
 
+    private String subText(boolean compact) {
+        String count = subCount > 1 ? subCount + "x " : "";
+        return switch (subPhase) {
+            case WAITING -> "waiting";
+            case DOWNLOADING -> count + (subDeterminate ? (int) Math.floor(subProgress * 100f) + "%" : JoinDraw.formatBytes(subBytes));
+            case APPLYING -> "applying";
+            case DONE -> count + JoinDraw.formatStage(Math.max(0L, (subEndedAt == 0L ? now : subEndedAt) - subStartedAt), compact);
+            case DECLINED -> "declined";
+            case FAILED -> "failed";
+            default -> null;
+        };
+    }
+
     public float fill(int i) {
+        if (i == SUB) {
+            float f = switch (subPhase) {
+                case DONE -> 1f;
+                case DOWNLOADING -> subDeterminate ? Math.max(0.08f, subProgress) : 0.5f;
+                case APPLYING -> 0.9f;
+                case WAITING -> 0.2f;
+                default -> 0f;
+            };
+            drawnFill[SUB] = f;
+            return f;
+        }
         float f;
         if (stage > i) {
             f = doneAt[i] == 0L ? 1f : JoinDraw.lerp(fromFill[i], 1f, JoinDraw.eoc(since(doneAt[i], 260f)));

@@ -2,9 +2,9 @@ package cz.honzasik.hontun.mixin.meteor.gui;
 
 import cz.honzasik.hontun.Hontun;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.style.Backdrop;
 import cz.honzasik.hontun.gui.theme.style.ClickStyle;
 import cz.honzasik.hontun.utils.MenuBackground;
-import cz.honzasik.hontun.utils.SmogBackground;
 import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.WidgetScreen;
 import net.minecraft.client.Minecraft;
@@ -32,14 +32,9 @@ public abstract class WidgetScreenBackgroundMixin {
         int width = mc.getWindow().getGuiScaledWidth();
         int height = mc.getWindow().getGuiScaledHeight();
 
-        switch (style.backdrop()) {
-            case VANILLA -> {
-                return;
-            }
-            case SMOG -> SmogBackground.render(graphics, width, height, true, true);
-            default -> MenuBackground.render(graphics, width, height, true, true, style.id());
-        }
+        if (style.backdrop() == Backdrop.VANILLA) return;
 
+        MenuBackground.render(graphics, width, height, true, true, style.id());
         ci.cancel();
     }
 }

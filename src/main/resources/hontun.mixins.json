@@ -43,7 +43,19 @@
     "client.button.EditBoxStyleMixin",
     "meteor.multiplayer.MeteorStatusTextMixin",
     "meteor.hud.LagNotifierStyleMixin",
-    "meteor.hud.HudRendererGuardMixin"
+    "meteor.hud.HudRendererGuardMixin",
+    "network.antiexploit.ContainerGuardMixin",
+    "network.antiexploit.PacketErrorGuardMixin",
+    "network.antiexploit.PacketDecoderGuardMixin",
+    "network.antiexploit.BundleGuardMixin",
+    "network.antiexploit.IllegalItemLogMixin",
+    "network.antiexploit.HolderSetNamedInvoker",
+    "network.antiexploit.UnknownTagGuardMixin",
+    "network.antiexploit.BundleSubPacketGuardMixin",
+    "network.antiexploit.BossBarGuardMixin",
+    "client.cursor.CursorTypeMixin",
+    "client.cursor.WindowCursorMixin",
+    "client.cursor.CrosshairMixin"
   ],
   "mixins": [
     "network.custompayload.CustomPayloadEncoderMixin",
@@ -61,6 +73,7 @@
     "network.version.ClientConfigMixin",
     "network.worldinfo.ClientLoginMixin",
     "network.resourcepack.ResourcePackPushMixin",
+    "network.resourcepack.PackProgressMixin",
     "meteor.servercommand.ServerCommandMixin",
     "meteor.gui.WidgetScreenBackgroundMixin",
     "meteor.chat.ChatUtilsPrefixMixin",

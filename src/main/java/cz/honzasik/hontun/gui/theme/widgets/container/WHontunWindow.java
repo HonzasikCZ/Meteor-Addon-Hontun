@@ -17,6 +17,7 @@ import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import meteordevelopment.meteorclient.gui.widgets.containers.WWindow;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WTriangle;
+import meteordevelopment.meteorclient.utils.Utils;
 
 import net.minecraft.client.input.MouseButtonEvent;
 
@@ -117,6 +118,24 @@ public class WHontunWindow extends WWindow implements HontunWidget {
 
             contentOffsetY = 0;
         }
+
+        clampCollapsed();
+    }
+
+    private void clampCollapsed() {
+        if (id == null || expanded || moved || header == null) return;
+
+        WindowConfig config = theme.getWindowConfig(id);
+        if (config.y == -1) return;
+
+        double target = config.y;
+        double screen = Utils.getWindowHeight();
+        double visible = style().collapsedHeight(this);
+        if (target + visible > screen) target = screen - visible;
+        if (target < 0) target = 0;
+
+        double dy = target - y;
+        if (dy != 0) move(0, dy);
     }
 
     @Override
@@ -182,6 +201,7 @@ public class WHontunWindow extends WWindow implements HontunWidget {
     @Override
     public void setExpanded(boolean expanded) {
         super.setExpanded(expanded);
+        if (id != null) invalidate();
 
         if (animation != null) {
             animation.reverse();

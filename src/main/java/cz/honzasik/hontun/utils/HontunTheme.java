@@ -7,6 +7,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public final class HontunTheme {
     public enum UiMode { Vanilla, HVanilla, HModern1, HModern2, SmogClient }
 
+    public enum MenuScene { Particles, BlockyHorizon }
+
     public record Ramp(int crust, int mantle, int base, int surface0, int surface1, int surface2,
                        int overlay0, int overlay1, int overlay2, int text, int subtext1, int textDim) {}
 
@@ -35,6 +37,8 @@ public final class HontunTheme {
     private static volatile int bgOverlay = (235 << 24) | 0xA8ABB2;
 
     private static volatile int menuColor = 0x141519;
+
+    private static volatile MenuScene menuScene = MenuScene.Particles;
 
     private static volatile int version = 0;
     private static final CopyOnWriteArrayList<Runnable> listeners = new CopyOnWriteArrayList<>();
@@ -100,6 +104,14 @@ public final class HontunTheme {
         rgb &= 0xFFFFFF;
         if (rgb == menuColor) return;
         menuColor = rgb;
+        bump();
+    }
+
+    public static MenuScene menuScene() { return menuScene; }
+
+    public static void setMenuScene(MenuScene scene) {
+        if (scene == null || scene == menuScene) return;
+        menuScene = scene;
         bump();
     }
 

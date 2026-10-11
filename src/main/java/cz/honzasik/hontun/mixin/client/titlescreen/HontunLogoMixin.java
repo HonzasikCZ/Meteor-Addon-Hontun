@@ -28,7 +28,7 @@ public abstract class HontunLogoMixin {
 
         LogoRenderer self = (LogoRenderer) (Object) this;
         float a = self.keepLogoThroughFade() ? 1.0f : Mth.clamp(alpha, 0.0f, 1.0f);
-        int tint = HontunTheme.argb(Math.round(a * 255f), HontunTheme.accentHi());
+        int tint = HontunTheme.argb(Math.round(a * 255f), HontunTheme.accent());
 
         int size, x, y;
         if (heightOffset == LogoRenderer.DEFAULT_HEIGHT_OFFSET) {
@@ -74,7 +74,7 @@ public abstract class HontunLogoMixin {
                 int off = (gs - size) / 2;
                 g.blit(RenderPipelines.GUI_TEXTURED, HONTUN_LOGO, x - off, y - off, 0.0f, 0.0f,
                         gs, gs, TEX, TEX, TEX, TEX,
-                        HontunTheme.argb(Math.max(1, glowA / (i * i + 2)), HontunTheme.accentHi()));
+                        HontunTheme.argb(Math.max(1, glowA / (i * i + 2)), HontunTheme.accent()));
             }
         }
 

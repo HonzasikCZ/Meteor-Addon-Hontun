@@ -61,6 +61,7 @@ public abstract class ConnectScreenInfoMixin {
             if (cancel == null || hontun$isCancel(b)) cancel = b;
         }
         if (cancel == null || (buttons > 1 && !hontun$isCancel(cancel))) return;
+        hontun$cancel = cancel;
         int[] r = JoinView.cancelBounds(self.width, self.height);
         cancel.setRectangle(r[2], r[3], r[0], r[1]);
     }
@@ -77,7 +78,16 @@ public abstract class ConnectScreenInfoMixin {
         if (!HontunTheme.restyleEnabled()) return;
         Screen self = (Screen) (Object) this;
         JoinView.render(g, self, self.width, self.height, JoinView.Mode.CONNECT, 0f, false, null, null);
+        Button cancel = hontun$cancel;
+        if (cancel == null) return;
+        int[] r = JoinView.cancelBounds(self.width, self.height);
+        if (cancel.getX() != r[0] || cancel.getY() != r[1] || cancel.getWidth() != r[2] || cancel.getHeight() != r[3]) {
+            cancel.setRectangle(r[2], r[3], r[0], r[1]);
+        }
     }
+
+    @Unique
+    private Button hontun$cancel;
 
     @Unique
     private static boolean hontun$isCancel(Button b) {

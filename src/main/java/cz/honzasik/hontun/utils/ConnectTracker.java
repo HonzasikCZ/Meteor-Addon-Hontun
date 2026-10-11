@@ -38,6 +38,7 @@ public final class ConnectTracker {
         transfer = false;
         finishedAt = 0L;
         for (int i = 0; i < STAGES; i++) STAGE_START[i] = 0L;
+        PackTracker.reset();
         if (firstStep != null) step(firstStep);
     }
 

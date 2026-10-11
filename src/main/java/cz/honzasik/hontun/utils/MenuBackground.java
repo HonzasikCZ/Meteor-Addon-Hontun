@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.utils;
 
+import cz.honzasik.hontun.gui.render.BlockyHorizon;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.Random;
@@ -38,6 +39,9 @@ public class MenuBackground {
 
     public static void render(GuiGraphicsExtractor g, int width, int height, boolean opaque, boolean particles, HontunTheme.UiMode look) {
         if (look == null || look == HontunTheme.UiMode.Vanilla) return;
+
+        if (opaque && HontunTheme.menuScene() == HontunTheme.MenuScene.BlockyHorizon
+                && BlockyHorizon.render(g, width, height, look)) return;
 
         if (look == HontunTheme.UiMode.SmogClient) {
             SmogBackground.render(g, width, height, opaque, particles);

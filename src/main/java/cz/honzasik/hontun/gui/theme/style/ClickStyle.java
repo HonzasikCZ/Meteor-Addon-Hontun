@@ -81,6 +81,14 @@ public abstract class ClickStyle {
         };
     }
 
+    public int snapScrim() {
+        return switch (backdrop()) {
+            case VANILLA -> 0x000000;
+            case SMOG -> 0x0F0F11;
+            default -> HontunTheme.menuColor();
+        };
+    }
+
     public boolean uses(Knob knob) {
         return switch (knob) {
             case CORNER_RADIUS -> id() == HontunTheme.UiMode.HModern1 || id() == HontunTheme.UiMode.HModern2;
@@ -140,6 +148,10 @@ public abstract class ClickStyle {
 
     public String windowId(String base) {
         return base;
+    }
+
+    public double collapsedHeight(WHontunWindow w) {
+        return w.headerWidget().height;
     }
 
     public double snapWindow(HontunGuiTheme t, double value, int gridSize) {

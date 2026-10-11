@@ -7,6 +7,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -20,9 +21,15 @@ import java.util.Locale;
 public abstract class ButtonStyleMixin {
     @Inject(method = "extractDefaultSprite", at = @At("HEAD"), cancellable = true)
     private void hontun$modernButton(GuiGraphicsExtractor g, CallbackInfo ci) {
-        if (!HontunTheme.restyleEnabled()) return;
-
         AbstractWidget w = (AbstractWidget) (Object) this;
+
+        if (!HontunTheme.restyleEnabled()) {
+            if (hontun$selected(w) && w.active) {
+                g.blitSprite(RenderPipelines.GUI_TEXTURED, HONTUN$BTN_HI, w.getX(), w.getY(), w.getWidth(), w.getHeight());
+                ci.cancel();
+            }
+            return;
+        }
 
         if (!HontunTheme.modern()) {
             hontun$vanillaStyled(g, w);
@@ -49,6 +56,7 @@ public abstract class ButtonStyleMixin {
 
         boolean active = w.active;
         boolean hovered = active && w.isHoveredOrFocused();
+        boolean selected = active && hontun$selected(w);
 
         int surface0 = HontunTheme.surface0();
         int surface1 = HontunTheme.surface1();
@@ -64,6 +72,9 @@ public abstract class ButtonStyleMixin {
             } else if (hovered) {
                 topFill = HontunTheme.argb(0x9A, accentLo);
                 botFill = HontunTheme.argb(0x66, HontunTheme.darken(accentLo, 0.6f));
+            } else if (selected) {
+                topFill = HontunTheme.argb(0x6A, accentLo);
+                botFill = HontunTheme.argb(0x4A, HontunTheme.darken(accentLo, 0.6f));
             } else {
                 topFill = HontunTheme.argb(0x55, HontunTheme.lighten(surface2, 1.04f));
                 botFill = HontunTheme.argb(0x4A, surface0);
@@ -80,11 +91,16 @@ public abstract class ButtonStyleMixin {
                     HontunTheme.argb(active ? (hovered ? 0xFF : 0xC0) : 0x40, accent),
                     HontunTheme.argb(active ? 0xFF : 0x40, accentHi));
 
-            if (hovered) {
-                int bd = HontunTheme.argb(0xE0, accentHi);
+            if (hovered || selected) {
+                int bd = hovered ? HontunTheme.argb(0xE0, accentHi) : HontunTheme.argb(0xB0, accent);
                 g.fill(x + 1, y, x2 - 1, y + 1, bd);
                 g.fill(x, y + 1, x + 1, y2 - 1, bd);
                 g.fill(x2 - 1, y + 1, x2, y2 - 1, bd);
+            }
+
+            if (selected) {
+                g.fillGradient(x + 2, y + 3, x + 4, y2 - 4,
+                        HontunTheme.argb(0xFF, accentHi), HontunTheme.argb(0xFF, accentLo));
             }
 
         ci.cancel();
@@ -98,12 +114,14 @@ public abstract class ButtonStyleMixin {
 
         boolean active = w.active;
         boolean hovered = active && w.isHoveredOrFocused();
+        boolean selected = active && hontun$selected(w);
 
         int bg = !active ? HontunTheme.argb(0x55, HontunTheme.surface0())
                 : hovered ? HontunTheme.argb(0xCC, HontunTheme.accentLo())
+                : selected ? HontunTheme.argb(0xA8, HontunTheme.accentLo())
                 : HontunTheme.argb(0x99, HontunTheme.surface1());
         int border = !active ? HontunTheme.argb(0x44, HontunTheme.accentLo())
-                : hovered ? HontunTheme.argb(0xFF, HontunTheme.accentHi())
+                : hovered || selected ? HontunTheme.argb(0xFF, HontunTheme.accentHi())
                 : HontunTheme.argb(0xAA, HontunTheme.accent());
 
         g.fill(x, y, x2, y2, bg);
@@ -111,7 +129,18 @@ public abstract class ButtonStyleMixin {
         g.fill(x, y2 - 1, x2, y2, border);
         g.fill(x, y, x + 1, y2, border);
         g.fill(x2 - 1, y, x2, y2, border);
+
+        if (selected && bw > 4 && bh > 4) {
+            int in = HontunTheme.argb(0x90, HontunTheme.accent());
+            g.fill(x + 1, y + 1, x2 - 1, y + 2, in);
+            g.fill(x + 1, y2 - 2, x2 - 1, y2 - 1, in);
+            g.fill(x + 1, y + 2, x + 2, y2 - 2, in);
+            g.fill(x2 - 2, y + 2, x2 - 1, y2 - 2, in);
+        }
     }
+
+    @Unique private static final net.minecraft.resources.Identifier HONTUN$BTN_HI =
+            net.minecraft.resources.Identifier.withDefaultNamespace("widget/button_highlighted");
 
     @Unique private Component hontun$lastMsg;
     @Unique private int hontun$icon = -1;
@@ -123,20 +152,22 @@ public abstract class ButtonStyleMixin {
 
         boolean active = w.active;
         boolean hovered = active && w.isHoveredOrFocused();
+        boolean selected = active && hontun$selected(w);
         int cut = Math.min(5, Math.min(bw, bh) / 3);
 
         if (hovered) HontunShapes.glow(g, x, y, bw, bh, cut, HontunTheme.accent(), 2, 0x60);
+        else if (selected) HontunShapes.glow(g, x, y, bw, bh, cut, HontunTheme.accent(), 2, 0x30);
 
         HontunShapes.fillClipped(g, x, y, bw, bh, cut, cut, HontunTheme.argb(
-                active ? (hovered ? 0xF0 : 0xD0) : 0x60,
-                hovered ? HontunTheme.surface2() : HontunTheme.surface0()));
+                active ? (hovered ? 0xF0 : selected ? 0xE8 : 0xD0) : 0x60,
+                hovered ? HontunTheme.surface2() : selected ? HontunTheme.surface1() : HontunTheme.surface0()));
         HontunShapes.outlineClipped(g, x, y, bw, bh, cut, cut, HontunTheme.argb(
-                active ? (hovered ? 0xFF : 0x90) : 0x40,
-                hovered ? HontunTheme.accentHi() : HontunTheme.accentLo()));
+                active ? (hovered || selected ? 0xFF : 0x90) : 0x40,
+                hovered ? HontunTheme.accentHi() : selected ? HontunTheme.accent() : HontunTheme.accentLo()));
 
         if (bw > cut + 4) {
             g.fill(x + 2, y + bh - 2, x + bw - cut - 1, y + bh - 1,
-                    HontunTheme.argb(active ? (hovered ? 0xFF : 0xA0) : 0x30, HontunTheme.accent()));
+                    HontunTheme.argb(active ? (hovered || selected ? 0xFF : 0xA0) : 0x30, HontunTheme.accent()));
         }
 
         int icon = hontun$iconFor(w.getMessage());
@@ -157,11 +188,22 @@ public abstract class ButtonStyleMixin {
 
         boolean active = w.active;
         boolean hovered = active && w.isHoveredOrFocused();
+        boolean selected = active && hontun$selected(w);
         int r = Math.min(8, Math.min(bw, bh) / 2);
 
-        int a = !active ? 0x40 : (hovered ? 0xB4 : 0x6E);
+        int a = !active ? 0x40 : (hovered ? 0xB4 : selected ? 0x96 : 0x6E);
+        if (selected) {
+            cz.honzasik.hontun.gui.widget.HontunRound.card(g, x, y, bw, bh, r,
+                    HontunTheme.argb(a, 0x000000), HontunTheme.argb(hovered ? 0xFF : 0xC8, HontunTheme.accent()));
+            return;
+        }
         cz.honzasik.hontun.gui.widget.HontunRound.fill(g, x, y, bw, bh, r,
                 cz.honzasik.hontun.utils.HontunTheme.argb(a, 0x000000));
+    }
+
+    @Unique
+    private static boolean hontun$selected(AbstractWidget w) {
+        return w instanceof cz.honzasik.hontun.gui.widget.HontunDotButton d && d.selected();
     }
 
     @Unique

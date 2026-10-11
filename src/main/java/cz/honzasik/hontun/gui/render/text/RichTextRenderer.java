@@ -55,6 +55,10 @@ public class RichTextRenderer implements TextRenderer {
         mesh.alpha = a;
     }
 
+    public double alpha() {
+        return mesh.alpha;
+    }
+
     @Override
     public void begin(
 
@@ -93,6 +97,18 @@ public class RichTextRenderer implements TextRenderer {
         if (segment.hasShadow()) width += 1;
 
         return width * (segment.getScale() / 1.5);
+    }
+
+    public double getRunWidth(RichTextSegment segment, int start, int end) {
+        if (end <= start) return 0;
+        Font[] fonts = getFonts(segment.getStyle());
+        Font font = building ? (currentFontIndex < fonts.length ? fonts[currentFontIndex] : fonts[0]) : fonts[0];
+
+        return font.getWidth(segment.getText().substring(start, end), end - start) * (segment.getScale() / 1.5);
+    }
+
+    public double getShadowWidth(RichTextSegment segment) {
+        return segment.hasShadow() ? segment.getScale() / 1.5 : 0;
     }
 
     public double getWidth(RichText text, int length) {
@@ -186,6 +202,22 @@ public class RichTextRenderer implements TextRenderer {
     public static void resetShadowStyle() {
         shadowColor = SHADOW_COLOR;
         shadowOffset = null;
+    }
+
+    public double shadowOffsetFor(FontStyle style, double beginScale, DoubleBinaryOperator offset) {
+        int index;
+        if (beginScale >= 3) index = 4;
+        else if (beginScale >= 2.5) index = 3;
+        else if (beginScale >= 2) index = 2;
+        else if (beginScale >= 1.5) index = 1;
+        else index = 0;
+
+        Font[] fonts = getFonts(style);
+        if (index >= fonts.length) index = fonts.length - 1;
+
+        double fs = fonts[index].getHeight() / 27.0;
+        double rs = (1 + (beginScale - fs) / fs) / 1.5;
+        return offset != null ? offset.applyAsDouble(fs, rs) : fs * rs;
     }
 
     public double fontScale() {

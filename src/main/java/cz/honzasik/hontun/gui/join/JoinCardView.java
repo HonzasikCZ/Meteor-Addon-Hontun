@@ -7,6 +7,8 @@ import static cz.honzasik.hontun.gui.join.JoinDraw.*;
 
 public final class JoinCardView {
     private static final int ROWS = JoinState.STAGES;
+    private static final int SUB = JoinState.SUB;
+    private static final float SUB_H = 0.9f;
     private static final int[] INNER_SMOG = {208, 236, 296};
     private static final int[] INNER_PIXEL = {220, 244, 276};
     private static final float[] PAD = {10f, 12f, 15f};
@@ -44,7 +46,8 @@ public final class JoinCardView {
                      int btnX, int btnY, int btnW, int btnH, float barY, float barH, float wellTop, float wellArg) {}
 
     private static L cache;
-    private static int cacheW = -1, cacheH = -1, cacheRadius = -1;
+    private static float extraRows;
+    private static int cacheW = -1, cacheH = -1, cacheRadius = -1, cacheExtra = -1;
     private static JoinView.Mode cacheMode;
     private static JoinSkin cacheSkin;
     private static long session = -1L;
@@ -54,18 +57,23 @@ public final class JoinCardView {
 
     private static L at(int w, int h, JoinView.Mode mode, ChunkLoadStatusView view, JoinSkin skin) {
         int radius = mode == JoinView.Mode.LOCAL && view != null ? view.radius() : -1;
-        if (cache == null || w != cacheW || h != cacheH || mode != cacheMode || radius != cacheRadius || skin != cacheSkin) {
-            cache = layout(w, h, mode, view, skin.pixel());
+        boolean track = mode == JoinView.Mode.CONNECT || mode == JoinView.Mode.JOIN;
+        float extra = track ? extraRows : 0f;
+        int extraKey = Math.round(extra * 1000f);
+        if (cache == null || w != cacheW || h != cacheH || mode != cacheMode || radius != cacheRadius || skin != cacheSkin
+                || extraKey != cacheExtra) {
+            cache = layout(w, h, mode, view, skin.pixel(), extra);
             cacheW = w;
             cacheH = h;
             cacheMode = mode;
             cacheRadius = radius;
             cacheSkin = skin;
+            cacheExtra = extraKey;
         }
         return cache;
     }
 
-    private static L layout(int w, int h, JoinView.Mode mode, ChunkLoadStatusView view, boolean px) {
+    private static L layout(int w, int h, JoinView.Mode mode, ChunkLoadStatusView view, boolean px, float extra) {
         int t = h < 250 ? 0 : (h < 400 ? 1 : 2);
         float p = PAD[t];
         float inner = Math.max(120f, Math.min(px ? INNER_PIXEL[t] : INNER_SMOG[t], w - 24f - 2f * p));
@@ -80,7 +88,7 @@ public final class JoinCardView {
         float body;
         float wellArg = 0f;
         if (track) {
-            body = ROWS * rh + GAP_B[t] + GAP_F[t] + btnH;
+            body = (ROWS + extra) * rh + GAP_B[t] + GAP_F[t] + btnH;
         } else {
             body = 9f * ss + BAR_GAP[t] + barH;
             if (mode == JoinView.Mode.LOCAL && view != null) {
@@ -102,7 +110,7 @@ public final class JoinCardView {
 
         float rule1 = (float) Math.floor(top + 9f * ts + GAP_A[t]) + 0.5f;
         float rowsTop = (float) Math.floor(rule1) + GAP_B[t];
-        float rule2 = rowsTop + ROWS * rh + GAP_B[t] + 0.5f;
+        float rule2 = rowsTop + (ROWS + (track ? extra : 0f)) * rh + GAP_B[t] + 0.5f;
         int btnY = Math.round(rule2 - 0.5f + GAP_F[t]);
         int btnX = Math.round(x1) - btnW;
 
@@ -133,6 +141,7 @@ public final class JoinCardView {
     }
 
     public static void render(GuiGraphicsExtractor g, JoinState s) {
+        extraRows = s.track() && s.subAnchor >= 0 ? s.subK * SUB_H : 0f;
         JoinSkin skin = JoinSkin.current();
         L l = at(s.w, s.h, s.mode, s.view, skin);
         header(g, s, l, skin);
@@ -186,8 +195,24 @@ public final class JoinCardView {
         skin.rule(g, l.x0(), l.x1(), l.rule1(), s.ent(90));
     }
 
-    private static float rowY(L l, int i, float e) {
-        return l.rowsTop() + (i + 0.5f) * l.rowH() + (1f - e) * 3f;
+    private static float off(JoinState s, L l, float i) {
+        return s.subAnchor >= 0 && i > s.subAnchor ? s.subK * SUB_H * l.rowH() : 0f;
+    }
+
+    private static float rowY(JoinState s, L l, int i, float e) {
+        return l.rowsTop() + (i + 0.5f) * l.rowH() + off(s, l, i) + (1f - e) * 3f;
+    }
+
+    private static float subY(JoinState s, L l, float e) {
+        return l.rowsTop() + (s.subAnchor + 1) * l.rowH() + 0.5f * s.subK * SUB_H * l.rowH() + (1f - e) * 3f;
+    }
+
+    private static float subR(L l) {
+        return l.pixel() ? l.r() : Math.max(2.5f, l.r() * 0.75f);
+    }
+
+    private static float subX(L l) {
+        return l.labelX() + subR(l);
     }
 
     private static void highlight(GuiGraphicsExtractor g, JoinState s, L l, JoinSkin skin) {
@@ -204,14 +229,14 @@ public final class JoinCardView {
         float e = s.ent(ROW_MS + STEP_MS * st);
         if (e <= 0.01f) return;
         float a = 1f;
-        float row = st;
+        float top = l.rowsTop() + st * l.rowH() + off(s, l, st);
         if (s.advancedAt != 0L) {
             float u = s.since(s.advancedAt, 380f);
-            if (hiFrom >= 0 && hiFrom < ROWS) row = lerp(hiFrom, st, eoc(u));
+            if (hiFrom >= 0 && hiFrom < ROWS) top = lerp(l.rowsTop() + hiFrom * l.rowH() + off(s, l, hiFrom), top, eoc(u));
             else a = u;
         }
         float hh = l.rowH() - 2f;
-        float y = l.rowsTop() + row * l.rowH() + 1f + (1f - e) * 3f;
+        float y = top + 1f + (1f - e) * 3f;
         skin.highlight(g, l.x0() - l.bleed(), y, l.x1() - l.x0() + 2f * l.bleed(), hh, a * e);
     }
 
@@ -221,9 +246,22 @@ public final class JoinCardView {
             float f = s.fill(i);
             float ea = s.ent(ROW_MS + STEP_MS * i), eb = s.ent(ROW_MS + STEP_MS * (i + 1));
             if (eb <= 0.01f) continue;
-            float a = rowY(l, i, ea) + gap, b = rowY(l, i + 1, eb) - gap;
+            float a = rowY(s, l, i, ea) + gap, b = rowY(s, l, i + 1, eb) - gap;
             if (b - a < 1f) continue;
             skin.link(g, mx, a, b, f, s.done(i) || s.skipped(i), eb);
+        }
+        if (s.sub()) {
+            int anchor = Math.min(s.subAnchor, ROWS - 1);
+            float ea = s.ent(ROW_MS + STEP_MS * anchor) * s.subK;
+            if (ea <= 0.01f) return;
+            float sy = subY(s, l, ea);
+            float sr = subR(l);
+            if (anchor == ROWS - 1) {
+                float a = rowY(s, l, anchor, ea) + gap;
+                if (sy - a >= 1f) skin.link(g, mx, a, sy, 1f, s.done(anchor), ea);
+            }
+            float bx = subX(l) - sr - 2f;
+            if (bx - mx >= 1f) skin.branch(g, mx, bx, sy, s.fill(SUB), s.done(SUB) || s.skipped(SUB), ea);
         }
     }
 
@@ -233,7 +271,7 @@ public final class JoinCardView {
         for (int i = 0; i < ROWS; i++) {
             float e = s.ent(ROW_MS + STEP_MS * i);
             if (e <= 0.01f) continue;
-            float cy = rowY(l, i, e);
+            float cy = rowY(s, l, i, e);
             skin.marker(g, s, i, mx, cy, l.r(), e);
 
             int col, a, tcol, ta;
@@ -272,6 +310,55 @@ public final class JoinCardView {
             if (width(s.font, label, lsc) > room) label = fit(s.font, label, room, lsc);
             txt(g, s, l, label, l.labelX(), cy - 4f * lsc, lsc, argb(Math.round(a * e), col));
         }
+        if (s.sub()) subRow(g, s, l, skin);
+    }
+
+    private static void subRow(GuiGraphicsExtractor g, JoinState s, L l, JoinSkin skin) {
+        int anchor = Math.min(s.subAnchor, ROWS - 1);
+        float e = s.ent(ROW_MS + STEP_MS * anchor) * s.subK;
+        if (e <= 0.01f) return;
+        float cy = subY(s, l, e);
+        float sr = subR(l);
+        float sx = subX(l);
+        skin.marker(g, s, SUB, sx, cy, sr, e);
+
+        int col, a, tcol, ta;
+        if (s.skipped(SUB)) {
+            col = skin.muted();
+            a = 255;
+            tcol = skin.muted();
+            ta = 255;
+        } else if (s.done(SUB)) {
+            float k = s.doneAt[SUB] == 0L ? 1f : s.since(s.doneAt[SUB], 320f);
+            col = lerpRgb(skin.title(), skin.light(), k);
+            a = 255;
+            tcol = skin.dim();
+            ta = 255;
+        } else if (s.active(SUB)) {
+            float k = s.since(s.subPhaseAt, 320f);
+            col = lerpRgb(skin.dim(), skin.title(), k);
+            a = Math.round(lerp(0x8C, 255, k));
+            tcol = skin.title();
+            ta = 0xD0;
+        } else {
+            col = skin.dim();
+            a = 0x8C;
+            tcol = skin.dim();
+            ta = 0;
+        }
+
+        float ls = l.pixel() ? 1f : l.labelS() * 0.94f, ms = l.pixel() ? 1f : l.msS();
+        float gap = l.labelX() - (l.x0() + 2f * l.r());
+        float lx = sx + sr + gap;
+        float room = l.x1() - lx;
+        String time = s.stageText(SUB, false);
+        if (time != null) {
+            room -= width(s.font, time, ms) + 8f;
+            txtRight(g, s, l, time, l.x1(), cy - 4f * ms, ms, argb(Math.round(ta * e), tcol));
+        }
+        String label = s.label(SUB);
+        if (width(s.font, label, ls) > room) label = fit(s.font, label, room, ls);
+        txt(g, s, l, label, lx, cy - 4f * ls, ls, argb(Math.round(a * e), col));
     }
 
     private static void footer(GuiGraphicsExtractor g, JoinState s, L l, JoinSkin skin) {

@@ -40,6 +40,8 @@ public abstract class JoinSkin {
 
     public abstract void link(GuiGraphicsExtractor g, float x, float y0, float y1, float fill, boolean bright, float e);
 
+    public abstract void branch(GuiGraphicsExtractor g, float x0, float x1, float y, float fill, boolean bright, float e);
+
     public abstract void marker(GuiGraphicsExtractor g, JoinState s, int i, float cx, float cy, float r, float e);
 
     public abstract void bar(GuiGraphicsExtractor g, JoinState s, float x, float y, float w, float h, float e);
@@ -162,6 +164,12 @@ public abstract class JoinSkin {
         }
 
         @Override
+        public void branch(GuiGraphicsExtractor g, float x0, float x1, float y, float fill, boolean bright, float e) {
+            line(g, x0, y, x1, y, 0.5f, argb(Math.round(0x1E * e), WHITE));
+            if (fill > 0.001f) line(g, x0, y, x0 + (x1 - x0) * cl(fill), y, 0.5f, argb(Math.round((bright ? 0xB0 : 0x80) * e), WHITE));
+        }
+
+        @Override
         public void marker(GuiGraphicsExtractor g, JoinState s, int i, float mx, float cy, float r, float e) {
             float st = 0.55f * r / 4f;
             if (s.skipped(i)) {
@@ -180,7 +188,7 @@ public abstract class JoinSkin {
                     glow(g, mx, cy, 2.4f * r, argb(Math.round(0x1C * (0.65f + 0.35f * pulse(s.t, 1.8)) * e), WHITE));
                     ring(g, mx, cy, r - 0.4f, 0.9f, argb(Math.round(0x38 * e), WHITE));
                     int c = argb(Math.round(255 * e), WHITE);
-                    if (i == JoinState.STAGES - 1 && s.hasProgress) arc(g, mx, cy, r - 0.4f, -Math.PI / 2, TAU * cl(s.progress), st, c);
+                    if (s.arc(i) >= 0f) arc(g, mx, cy, r - 0.4f, -Math.PI / 2, TAU * cl(s.arc(i)), st, c);
                     else arc(g, mx, cy, r - 0.4f, TAU * frac(s.t / 0.9), 1.3 + 0.9 * pulse(s.t, 1.8), st, c);
                     ripple(g, s, mx, cy, r);
                 } else {
@@ -250,6 +258,13 @@ public abstract class JoinSkin {
         }
 
         @Override
+        public void branch(GuiGraphicsExtractor g, float x0, float x1, float y, float fill, boolean bright, float e) {
+            int iy = Math.round(y - 0.5f), a = Math.round(x0), b = Math.round(x1);
+            g.fill(a, iy, b, iy + 1, HontunTheme.argb(Math.round(0x70 * e), HontunTheme.overlay0()));
+            if (fill > 0.001f) g.fill(a, iy, a + Math.round((b - a) * cl(fill)), iy + 1, HontunTheme.argb(Math.round((bright ? 0xE6 : 0x90) * e), HontunTheme.accent()));
+        }
+
+        @Override
         public void marker(GuiGraphicsExtractor g, JoinState s, int i, float mx, float cy, float r, float e) {
             if (!s.sdf) {
                 PIXEL.marker(g, s, i, mx, cy, r, e);
@@ -266,7 +281,7 @@ public abstract class JoinSkin {
             } else if (s.active(i)) {
                 ring(g, mx, cy, r - 0.4f, 0.9f, argb(Math.round(0x60 * e), acc));
                 int c = argb(Math.round(255 * e), HontunTheme.accentHi());
-                if (i == JoinState.STAGES - 1 && s.hasProgress) arc(g, mx, cy, r - 0.4f, -Math.PI / 2, TAU * cl(s.progress), st, c);
+                if (s.arc(i) >= 0f) arc(g, mx, cy, r - 0.4f, -Math.PI / 2, TAU * cl(s.arc(i)), st, c);
                 else arc(g, mx, cy, r - 0.4f, TAU * frac(s.t / 0.9), 1.3 + 0.9 * pulse(s.t, 1.8), st, c);
             } else {
                 ring(g, mx, cy, r - 0.4f, 0.9f, argb(Math.round(0xB0 * e), HontunTheme.overlay1()));
@@ -322,6 +337,13 @@ public abstract class JoinSkin {
             int ix = Math.round(x - 0.5f), a = Math.round(y0), b = Math.round(y1);
             g.fill(ix, a, ix + 1, b, HontunTheme.argb(Math.round(0x80 * e), HontunTheme.overlay0()));
             if (fill > 0.001f) g.fill(ix, a, ix + 1, a + Math.round((b - a) * cl(fill)), HontunTheme.argb(Math.round((bright ? 0xFF : 0x9C) * e), HontunTheme.accent()));
+        }
+
+        @Override
+        public void branch(GuiGraphicsExtractor g, float x0, float x1, float y, float fill, boolean bright, float e) {
+            int iy = Math.round(y - 0.5f), a = Math.round(x0), b = Math.round(x1);
+            g.fill(a, iy, b, iy + 1, HontunTheme.argb(Math.round(0x80 * e), HontunTheme.overlay0()));
+            if (fill > 0.001f) g.fill(a, iy, a + Math.round((b - a) * cl(fill)), iy + 1, HontunTheme.argb(Math.round((bright ? 0xFF : 0x9C) * e), HontunTheme.accent()));
         }
 
         @Override
@@ -397,6 +419,13 @@ public abstract class JoinSkin {
             int ix = Math.round(x - 0.5f), a = Math.round(y0), b = Math.round(y1);
             g.fill(ix, a, ix + 1, b, HontunTheme.argb(Math.round(0x80 * e), HontunTheme.overlay0()));
             if (fill > 0.001f) g.fill(ix, a, ix + 1, a + Math.round((b - a) * cl(fill)), HontunTheme.argb(Math.round((bright ? 0xFF : 0x9C) * e), HontunTheme.accent()));
+        }
+
+        @Override
+        public void branch(GuiGraphicsExtractor g, float x0, float x1, float y, float fill, boolean bright, float e) {
+            int iy = Math.round(y - 0.5f), a = Math.round(x0), b = Math.round(x1);
+            g.fill(a, iy, b, iy + 1, HontunTheme.argb(Math.round(0x80 * e), HontunTheme.overlay0()));
+            if (fill > 0.001f) g.fill(a, iy, a + Math.round((b - a) * cl(fill)), iy + 1, HontunTheme.argb(Math.round((bright ? 0xFF : 0x9C) * e), HontunTheme.accent()));
         }
 
         @Override
