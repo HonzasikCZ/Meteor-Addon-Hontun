@@ -1,0 +1,205 @@
+v 1.8-1.8.9 47
+v 1.9 107
+v 1.9.1 108
+v 1.9.2 109
+v 1.9.3-1.9.4 110
+v 1.10-1.10.2 210
+v 1.11 315
+v 1.11.1-1.11.2 316
+v 1.12 335
+v 1.12.1 338
+v 1.12.2 340
+v 1.13 393
+v 1.13.1 401
+v 1.13.2 404
+v 1.14 477
+v 1.14.1 480
+v 1.14.2 485
+v 1.14.3 490
+v 1.14.4 498
+v 1.15 573
+v 1.15.1 575
+v 1.15.2 578
+v 1.16 735
+v 1.16.1 736
+v 1.16.2 751
+v 1.16.3 753
+v 1.16.4 754
+v 1.16.5 754
+v 1.17 755
+v 1.17.1 756
+v 1.18 757
+v 1.18.1 757
+v 1.18.2 758
+v 1.19 759
+v 1.19.1 760
+v 1.19.2 760
+v 1.19.3 761
+v 1.19.4 762
+v 1.20 763
+v 1.20.1 763
+v 1.20.2 764
+v 1.20.3 765
+v 1.20.4 765
+v 1.20.5 766
+v 1.20.6 766
+v 1.21 767
+v 1.21.1 767
+v 1.21.2 768
+v 1.21.3 768
+v 1.21.4 769
+v 1.21.5 770
+v 1.21.6 771
+v 1.21.7 772
+v 1.21.8 772
+v 1.21.9 773
+v 1.21.10 773
+v 1.21.11 774
+v 26.1 775
+v 26.1.1 775
+v 26.1.2 775
+v 26.2 776
+v 26.3 777
+t 1.14 1.14 block enderman_holdable cornflower
+t 1.14 1.14 block flower_pots potted_bamboo
+t 1.14 1.14 block slabs andesite_slab
+t 1.14 1.14 block stairs andesite_stairs
+t 1.14 1.14 item slabs andesite_slab
+t 1.14 1.14 item stairs andesite_stairs
+t 1.14 1.14.2 block slabs cut_red_sandstone_slab
+t 1.14 1.14.2 item slabs cut_red_sandstone_slab
+t 1.16 1.16 block buttons crimson_button
+t 1.16 1.16 block doors crimson_door
+t 1.16 1.16 block enderman_holdable crimson_fungus
+t 1.16 1.16 block flower_pots potted_crimson_fungus
+t 1.16 1.16 block logs crimson_hyphae
+t 1.16 1.16 block planks crimson_planks
+t 1.17 1.17 block enderman_holdable moss_block
+t 1.17 1.17 block flower_pots potted_azalea_bush
+t 1.17 1.17 block impermeable tinted_glass
+t 1.17 1.17 block leaves azalea_leaves
+t 1.17 1.17 block saplings azalea
+t 1.17 1.17 block slabs cobbled_deepslate_slab
+t 1.19 1.19 block buttons mangrove_button
+t 1.19 1.19 block doors mangrove_door
+t 1.19 1.19 block enderman_holdable mud
+t 1.19 1.19 block flower_pots potted_mangrove_propagule
+t 1.19 1.19 block leaves mangrove_leaves
+t 1.19 1.19 block logs mangrove_log
+t 1.19.3 1.20 block buttons bamboo_button
+t 1.19.3 1.20 block doors bamboo_door
+t 1.19.3 1.20 block planks bamboo_planks
+t 1.19.3 1.20 block slabs bamboo_mosaic_slab
+t 1.19.3 1.20 block stairs bamboo_mosaic_stairs
+t 1.19.3 1.20 block trapdoors bamboo_trapdoor
+t 1.20.3 1.21 block doors copper_door
+t 1.20.3 1.21 block slabs polished_tuff_slab
+t 1.20.3 1.21 block stairs polished_tuff_stairs
+t 1.20.3 1.21 block trapdoors copper_trapdoor
+t 1.20.3 1.21 item doors copper_door
+t 1.20.3 1.21 item slabs polished_tuff_slab
+t 1.21.2 1.21.2 item bundles black_bundle
+t 1.21.4 1.21.4 block enderman_holdable closed_eyeblossom
+t 1.21.4 1.21.4 block flower_pots potted_closed_eyeblossom
+t 1.21.4 1.21.4 block slabs resin_brick_slab
+t 1.21.4 1.21.4 block stairs resin_brick_stairs
+t 1.21.4 1.21.4 item slabs resin_brick_slab
+t 1.21.4 1.21.4 item stairs resin_brick_stairs
+t 1.21.5 1.21.5 block enderman_holdable cactus_flower
+t 1.21.5 1.21.5 block bee_attractive wildflowers
+t 1.21.5 1.21.5 block edible_for_sheep short_dry_grass
+t 1.21.5 1.21.5 block replaceable_by_mushrooms bush
+t 1.21.5 1.21.5 item eggs blue_egg
+t 1.21.6 1.21.6 item happy_ghast_tempt_items black_harness
+t 1.21.6 1.21.6 item harnesses blue_harness
+t 1.13 1.21.9 block impermeable barrier
+t 1.21.9 1.21.9 block bars copper_bars
+t 1.21.9 1.21.9 block chains copper_chain
+t 1.21.9 1.21.9 block copper_chests copper_chest
+t 1.21.9 1.21.9 block copper_golem_statues copper_golem_statue
+t 1.21.9 1.21.9 block lanterns copper_lantern
+t 1.21.11 1.21.11 item piglin_preferred_weapons golden_spear
+t 1.13 1.21.11 entity_type cannot_be_pushed_onto_boats nautilus
+t 1.21.11 1.21.11 item enchantable/lunge copper_spear
+t 1.21.11 1.21.11 item enchantable/melee_weapon diamond_spear
+t 1.21.11 1.21.11 item spears iron_spear
+t 26.1 26.1 block enderman_holdable golden_dandelion
+t 26.1 26.1 block flower_pots potted_golden_dandelion
+t 26.2 26.2 block slabs cinnabar_brick_slab
+t 26.2 26.2 block stairs cinnabar_brick_stairs
+t 26.2 26.2 item slabs cinnabar_brick_slab
+t 26.2 26.2 item stairs cinnabar_brick_stairs
+t 26.2 26.2 block happy_ghast_avoids sulfur_spike
+t 1.13 26.2 entity_type cannot_be_pushed_onto_boats sulfur_cube
+t 26.3 26.3 block buttons poplar_button
+t 26.3 26.3 block doors poplar_door
+t 26.3 26.3 block flower_pots potted_poplar_sapling
+t 26.3 26.3 block leaves orange_poplar_leaves
+t 26.3 26.3 block logs poplar_log
+t 26.3 26.3 block planks poplar_planks
+n 1.13.1 1.13.1 block coral_plants
+n 1.13.1 1.13.1 block underwater_bonemeals
+n 1.18.2 1.18.2 worldgen/biome has_structure/bastion_remnant
+n 1.18.2 1.18.2 worldgen/biome has_structure/buried_treasure
+n 1.19 1.19 instrument goat_horns
+n 1.19 1.19 instrument regular_goat_horns
+n 1.19 1.19 painting_variant placeable
+n 1.19 1.19 point_of_interest_type acquirable_job_site
+n 1.19.4 1.19.4 worldgen/biome spawns_gold_rabbits
+n 1.19.4 1.19.4 worldgen/biome spawns_snow_foxes
+n 1.20 1.20 worldgen/biome has_structure/trail_ruins
+n 1.20.3 1.21 worldgen/biome has_structure/trial_chambers
+n 1.21.2 1.21.2 block bats_spawnable_on
+n 1.21.2 1.21.2 entity_type boat
+n 1.21.2 1.21.2 item bundles
+n 1.21.2 1.21.2 item diamond_tool_materials
+n 1.21.4 1.21.4 block bee_attractive
+n 1.21.4 1.21.4 item drowned_preferred_weapons
+n 1.21.4 1.21.4 item piglin_preferred_weapons
+n 1.21.2 1.21.4 block pale_oak_logs
+n 1.21.5 1.21.5 block camels_spawnable_on
+n 1.21.5 1.21.5 block edible_for_sheep
+n 1.21.5 1.21.5 item book_cloning_target
+n 1.21.5 1.21.5 item eggs
+n 1.21.6 1.21.6 block happy_ghast_avoids
+n 1.21.6 1.21.6 block triggers_ambient_desert_dry_vegetation_block_sounds
+n 1.21.6 1.21.6 entity_type can_equip_harness
+n 1.21.6 1.21.6 entity_type followable_friendly_mobs
+n 1.21.9 1.21.9 block bars
+n 1.21.9 1.21.9 block chains
+n 1.21.9 1.21.9 entity_type accepts_iron_golem_gift
+n 1.21.9 1.21.9 entity_type candidate_for_iron_golem_gift
+n 1.21.11 1.21.11 block can_glide_through
+n 1.21.11 1.21.11 entity_type burn_in_daylight
+n 1.21.11 1.21.11 entity_type can_float_while_ridden
+n 1.21.11 1.21.11 item camel_husk_food
+n 26.1 26.1 block supports_frogspawn
+n 26.1 26.1 entity_type cannot_be_age_locked
+n 26.1 26.1 fluid bubble_column_can_occupy
+n 26.1 26.1 fluid supports_frogspawn
+n 26.2 26.2 block causes_continuous_geyser_eruptions
+n 26.2 26.2 block causes_periodic_geyser_eruptions
+n 26.2 26.2 entity_type not_affected_by_geysers
+n 26.2 26.2 item concrete
+n 26.3 26.3 block blocks_dolphin_jump
+n 26.3 26.3 block blocks_fluid_flow
+n 26.3 26.3 entity_type cannot_be_dismounted_by_item_usage
+n 26.3 26.3 fluid axolotl_tries_to_find
+b badlands_plateau - - 1.17.1
+b bamboo_jungle_hills - - 1.17.1
+b birch_forest_hills - - 1.17.1
+b dark_forest_hills - - 1.17.1
+b deep_warm_ocean - - 1.17.1
+b desert_hills - - 1.17.1
+b dripstone_caves 1.17 1.17 -
+b lush_caves 1.17 1.17 -
+b frozen_peaks 1.18 1.18 -
+b grove 1.18 1.18 -
+b jagged_peaks 1.18 1.18 -
+b meadow 1.18 1.18 -
+b deep_dark 1.19 1.19 -
+b mangrove_swamp 1.19 1.19 -
+b cherry_grove 1.19.4 1.20 -
+b pale_garden 1.21.2 1.21.4 -
+b sulfur_caves 26.2 26.2 -
+b dappled_forest 26.3 26.3 -

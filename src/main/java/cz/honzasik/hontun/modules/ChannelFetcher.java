@@ -24,6 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ChannelFetcher extends Module {
     public static final Set<String> REGISTERED = Collections.synchronizedSet(new LinkedHashSet<>());
@@ -32,6 +33,11 @@ public class ChannelFetcher extends Module {
 
     private record Pending(Component msg, long dueMs) {}
     private static final Queue<Pending> PENDING = new ConcurrentLinkedQueue<>();
+    private static final int MAX_PENDING = 512;
+    private static final int MAX_PRINTS_PER_TICK = 20;
+    private static final int MAX_CHANNELS = 1024;
+    private static final AtomicInteger PENDING_COUNT = new AtomicInteger();
+    private static final AtomicInteger UNPRINTED = new AtomicInteger();
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
@@ -66,22 +72,33 @@ public class ChannelFetcher extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Post event) {
-        if (PENDING.isEmpty()) return;
+        if (PENDING.isEmpty()) {
+            PENDING_COUNT.set(0);
+            int unprinted = UNPRINTED.getAndSet(0);
+            if (unprinted > 0) info(HontunChat.dim(unprinted + " more channel messages were not printed, see .server"));
+            return;
+        }
         long now = System.currentTimeMillis();
+        int printed = 0;
         Pending p;
-        while ((p = PENDING.peek()) != null && p.dueMs() <= now) {
+        while (printed < MAX_PRINTS_PER_TICK && (p = PENDING.peek()) != null && p.dueMs() <= now) {
             PENDING.poll();
+            PENDING_COUNT.decrementAndGet();
             info(p.msg());
+            printed++;
         }
     }
 
     @Override
     public void onDeactivate() {
         PENDING.clear();
+        PENDING_COUNT.set(0);
+        UNPRINTED.set(0);
     }
 
     public static void onRawPayload(Identifier id, byte[] data) {
         cz.honzasik.hontun.utils.ServerSoftware.onRawPayload(id, data);
+        AnticheatDetect.onRawPayload(id, data);
         String channel = id.toString();
 
         if (channel.equals("minecraft:brand")) return;
@@ -92,7 +109,7 @@ public class ChannelFetcher extends Module {
         if (channel.equals("minecraft:register")) {
             for (String ch : new String(data, StandardCharsets.UTF_8).split("\0")) {
                 if (ch.isEmpty()) continue;
-                REGISTERED.add(ch);
+                if (REGISTERED.size() < MAX_CHANNELS) REGISTERED.add(ch);
                 enqueue(HontunChat.light("Register").append(HontunChat.punct(":")).append(Component.literal(" "))
                     .append(HontunChat.value(ch)));
             }
@@ -105,7 +122,7 @@ public class ChannelFetcher extends Module {
             return;
         }
 
-        boolean firstSight = SEEN.add(channel);
+        boolean firstSight = SEEN.size() < MAX_CHANNELS ? SEEN.add(channel) : !SEEN.contains(channel);
         if (!firstSight && isIgnored(channel)) return;
 
         enqueue(HontunChat.light("Channel").append(HontunChat.punct(":")).append(Component.literal(" "))
@@ -130,8 +147,13 @@ public class ChannelFetcher extends Module {
     private static void enqueue(MutableComponent msg) {
         ChannelFetcher self = Modules.get().get(ChannelFetcher.class);
         if (self == null || !self.isActive() || !self.printToChat.get()) return;
+        if (PENDING_COUNT.get() >= MAX_PENDING) {
+            UNPRINTED.incrementAndGet();
+            return;
+        }
         int delayTicks = self.printDelay.get();
         PENDING.add(new Pending(msg, System.currentTimeMillis() + delayTicks * 50L));
+        PENDING_COUNT.incrementAndGet();
     }
 
     private static String readableData(byte[] data) {
@@ -169,6 +191,8 @@ public class ChannelFetcher extends Module {
             REGISTERED.clear();
             SEEN.clear();
             PENDING.clear();
+            PENDING_COUNT.set(0);
+            UNPRINTED.set(0);
             cz.honzasik.hontun.utils.VersionKeeper.clear();
             cz.honzasik.hontun.utils.WorldInfo.clear();
             cz.honzasik.hontun.utils.ResourcePackInfo.clear();

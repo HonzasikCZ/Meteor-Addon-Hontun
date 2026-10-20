@@ -1,0 +1,410 @@
+package cz.honzasik.hontun.gui.screen;
+
+import cz.honzasik.hontun.gui.api.icons.HontunIcons;
+import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.api.text.RichText;
+import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
+import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.Metrics;
+import cz.honzasik.hontun.gui.theme.style.WindowKind;
+import cz.honzasik.hontun.gui.theme.widgets.WHontunLabel;
+import cz.honzasik.hontun.gui.theme.widgets.container.WHontunWindow;
+import cz.honzasik.hontun.gui.widget.WGuiTexture;
+import cz.honzasik.hontun.gui.util.search.results.ModuleSearchResult;
+import cz.honzasik.hontun.gui.util.search.SearchUtils;
+import meteordevelopment.meteorclient.gui.GuiTheme;
+import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
+import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
+import meteordevelopment.meteorclient.gui.tabs.TabScreen;
+import meteordevelopment.meteorclient.gui.tabs.Tabs;
+import meteordevelopment.meteorclient.gui.utils.Cell;
+import meteordevelopment.meteorclient.gui.widgets.containers.WContainer;
+import meteordevelopment.meteorclient.gui.widgets.containers.WSection;
+import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
+import meteordevelopment.meteorclient.gui.widgets.containers.WWindow;
+import meteordevelopment.meteorclient.gui.widgets.WLabel;
+import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.gui.widgets.input.WTextBox;
+import meteordevelopment.meteorclient.systems.config.Config;
+import meteordevelopment.meteorclient.systems.modules.Category;
+import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.systems.modules.Modules;
+import meteordevelopment.meteorclient.utils.Utils;
+import meteordevelopment.meteorclient.utils.misc.NbtUtils;
+import meteordevelopment.meteorclient.utils.render.color.Color;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static meteordevelopment.meteorclient.MeteorClient.mc;
+import static meteordevelopment.meteorclient.utils.Utils.getWindowHeight;
+import static meteordevelopment.meteorclient.utils.Utils.getWindowWidth;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.util.Util;
+
+import net.minecraft.client.input.KeyEvent;
+
+import org.jspecify.annotations.NonNull;
+
+public class HontunModulesScreen extends TabScreen {
+    private final HontunGuiTheme theme;
+    private WCategoryController controller;
+
+    private boolean showGrid = false;
+    private float gridFade;
+    private long gridFadeAt = -1;
+    private boolean shouldSnap;
+    private int gridSize;
+
+    public HontunModulesScreen(GuiTheme theme) {
+        super(theme, Tabs.get().getFirst());
+        this.theme = (HontunGuiTheme) theme;
+    }
+
+    @Override
+    public void initWidgets() {
+        shouldSnap = theme.snapModuleCategories.get();
+        gridSize = theme.snappingGridSize.get() * Math.max(1, (int) Math.round(mc.getWindow().getGuiScale()));
+
+        Cell<WCategoryController> controllerCell = add(new WCategoryController());
+        if (theme.style().metrics().categoryStartY > 0) controllerCell.top();
+        controller = controllerCell.widget();
+
+        if (!theme.modulesHelpText.get()) return;
+
+        WVerticalList help = add(theme.verticalList()).pad(4).bottom().widget();
+
+        if (theme.hontunSearchScreen.get())
+            help.add(helpLabel("Ctrl + F", " - Open search"));
+
+        help.add(helpLabel("Left click", " - Toggle module"));
+        help.add(helpLabel("Right click", " - Open module settings"));
+    }
+
+    private WLabel helpLabel(String key, String text) {
+        WHelpLabel label = new WHelpLabel(key, text);
+        label.theme = theme;
+        return label;
+    }
+
+    @Override
+    protected void init() {
+        super.init();
+        controller.refresh();
+    }
+
+    @Override
+    public void extractBackground(@NonNull GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks) {
+        super.extractBackground(context, mouseX, mouseY, deltaTicks);
+
+        long now = System.currentTimeMillis();
+        float step = gridFadeAt < 0 ? 0f : (now - gridFadeAt) / 140f;
+        gridFadeAt = now;
+        gridFade = showGrid ? Math.min(1f, gridFade + step) : Math.max(0f, gridFade - step);
+        if (gridFade > 0f && mc.level != null) {
+            int a = Math.round(0xE0 * gridFade);
+            context.fill(0, 0, width, height, (a << 24) | (theme.style().snapScrim() & 0xFFFFFF));
+        }
+
+        if (!showGrid) return;
+
+        theme.style().paintSnapGrid(context, gridSize);
+    }
+
+    @Override
+    public boolean keyPressed(@NonNull KeyEvent input) {
+        super.keyPressed(input);
+
+        if (!theme.hontunSearchScreen.get()) return false;
+
+        int keyCode = input.key();
+        int modifiers = input.modifiers() & (InputConstants.MOD_SHIFT | InputConstants.MOD_CONTROL | InputConstants.MOD_ALT | InputConstants.MOD_SUPER);
+        int wanted = Util.getPlatform() == Util.OS.OSX ? InputConstants.MOD_SUPER : InputConstants.MOD_CONTROL;
+
+        boolean control = modifiers != 0 && (modifiers & ~wanted) == 0;
+
+        if (control && keyCode == InputConstants.KEY_F) {
+            mc.gui.setScreen(new HontunSearchScreen(theme));
+            return true;
+        }
+
+        return false;
+    }
+
+    protected WWindow createCategory(WContainer c, Category category, List<Module> moduleList) {
+        ClickStyle style = theme.style();
+        Metrics m = style.metrics();
+
+        WGuiTexture icon = theme.categoryIcons()
+                ? theme.texture(getIconForCategory(category), theme.textHeight())
+                : null;
+
+        WHontunWindow w = (WHontunWindow) theme.window(style.windowIcon(theme, WindowKind.CATEGORY, category, icon), category.name);
+        w.id = windowId(style, category.name);
+        w.padding = m.windowPad;
+        w.spacing = 0;
+
+        if (shouldSnap) w.initSnapping(this, gridSize);
+
+        c.add(w);
+        w.view.scrollOnlyWhenMouseOver = true;
+        w.view.hasScrollBar = false;
+        w.view.spacing = m.viewSpacing;
+        w.view.maxHeight -= m.categoryViewInset;
+
+        for (Module module : moduleList) {
+            w.add(theme.module(module)).expandX();
+        }
+
+        return w;
+    }
+
+    protected void createSearchW(WContainer w, String text) {
+        if (!text.isEmpty()) {
+            int limit = Config.get().moduleSearchCount.get();
+
+            List<ModuleSearchResult> modules = SearchUtils.searchModules(text, 50);
+
+            if (!modules.isEmpty()) {
+                WSection section = w.add(theme.section("Modules")).expandX().widget();
+                section.spacing = 0;
+
+                for (int i = 0; i < Math.min(modules.size(), limit); i++) {
+                    ModuleSearchResult result = modules.get(i);
+                    section.add(theme.module(result.module(), result.title())).expandX();
+                }
+            }
+
+            List<Module> settingModules = Modules.get().searchSettingTitles(text).stream().toList();
+
+            if (!settingModules.isEmpty()) {
+                WSection section = w.add(theme.section("Settings")).expandX().widget();
+                section.spacing = 0;
+
+                for (int i = 0; i < Math.min(settingModules.size(), limit); i++) {
+                    section.add(theme.module(settingModules.get(i))).expandX();
+                }
+            }
+        }
+    }
+
+    protected WWindow createSearch(WContainer c) {
+        ClickStyle style = theme.style();
+
+        WHontunWindow w = (WHontunWindow) theme.window(
+                style.windowIcon(theme, WindowKind.SEARCH, null, theme.texture(HontunBuiltinIcons.SEARCH.texture(), theme.textHeight())),
+                "Search"
+        );
+
+        w.id = windowId(style, "search");
+
+        if (shouldSnap) w.initSnapping(this, gridSize);
+
+        c.add(w);
+        w.view.scrollOnlyWhenMouseOver = true;
+        w.view.hasScrollBar = false;
+        w.view.maxHeight -= style.metrics().searchViewInset;
+
+        WVerticalList l = theme.verticalList();
+
+        WTextBox text = w.add(theme.textBox("", "Search modules...")).expandX().padBottom(4).widget();
+        text.setFocused(true);
+        text.action = () -> {
+            l.clear();
+            createSearchW(l, text.get());
+        };
+
+        w.add(l).expandX();
+        createSearchW(l, text.get());
+
+        return w;
+    }
+
+    protected Cell<WWindow> createFavorites(WContainer c) {
+        boolean hasFavorites = Modules.get().getAll().stream().anyMatch(module -> module.favorite);
+        if (!hasFavorites) return null;
+
+        ClickStyle style = theme.style();
+
+        WHontunWindow w = (WHontunWindow) theme.window(
+                style.windowIcon(theme, WindowKind.FAVORITES, null, theme.texture(HontunBuiltinIcons.BOOKMARK_YES.texture(), theme.textHeight())),
+                "Favorites"
+        );
+
+        w.id = windowId(style, "favorites");
+        w.padding = 0;
+        w.spacing = 0;
+
+        if (shouldSnap) w.initSnapping(this, gridSize);
+
+        Cell<WWindow> cell = c.add(w);
+        w.view.scrollOnlyWhenMouseOver = true;
+        w.view.hasScrollBar = false;
+        w.view.spacing = style.metrics().viewSpacing;
+
+        createFavoritesW(w);
+        return cell;
+    }
+
+    protected boolean createFavoritesW(WWindow w) {
+        List<Module> modules = new ArrayList<>();
+
+        for (Module module : Modules.get().getAll()) {
+            if (module.favorite) {
+                modules.add(module);
+            }
+        }
+
+        modules.sort((o1, o2) -> String.CASE_INSENSITIVE_ORDER.compare(o1.name, o2.name));
+
+        for (Module module : modules) {
+            w.add(theme.module(module)).expandX();
+        }
+
+        return !modules.isEmpty();
+    }
+
+    private String windowId(ClickStyle style, String base) {
+        String id = style.windowId(base);
+        theme.seedWindowConfig(base, id);
+        return id;
+    }
+
+    @Override
+    public boolean toClipboard() {
+        return NbtUtils.toClipboard(Modules.get());
+    }
+
+    @Override
+    public boolean fromClipboard() {
+        return NbtUtils.fromClipboard(Modules.get());
+    }
+
+    @Override
+    public void reload() {}
+
+    protected class WCategoryController extends WContainer {
+        public final List<WWindow> windows = new ArrayList<>();
+        private Cell<WWindow> favorites;
+
+        @Override
+        public void init() {
+            for (Category category : Modules.loopCategories()) {
+                List<Module> modules = Modules.get().getGroup(category);
+
+                modules = modules.stream()
+                        .filter(m -> !Config.get().hiddenModules.get().contains(m))
+                        .toList();
+
+                if (!modules.isEmpty()) {
+                    windows.add(createCategory(this, category, modules));
+                }
+            }
+
+            refresh();
+
+            HontunGuiTheme hontunTheme = (HontunGuiTheme) theme;
+
+            if (!hontunTheme.hontunSearchScreen.get())
+                windows.add(createSearch(this));
+        }
+
+        protected void refresh() {
+            if (favorites == null) {
+                favorites = createFavorites(this);
+                if (favorites != null) windows.add(favorites.widget());
+            }
+            else {
+                favorites.widget().clear();
+
+                if (!createFavoritesW(favorites.widget())) {
+                    remove(favorites);
+                    windows.remove(favorites.widget());
+                    favorites = null;
+                }
+            }
+        }
+
+        @Override
+        protected void onCalculateWidgetPositions() {
+            Metrics m = ((HontunGuiTheme) theme).style().metrics();
+            double pad = theme.scale(m.categoryGapX);
+            double h = theme.scale(m.categoryRowStep);
+
+            double x = this.x + theme.scale(m.categoryStartX);
+            double y = this.y + theme.scale(m.categoryStartY);
+
+            for (Cell<?> cell : cells) {
+                double windowWidth = getWindowWidth();
+                double windowHeight = getWindowHeight();
+
+                if (x + cell.width > windowWidth) {
+                    x = x + pad;
+                    y += h;
+                }
+
+                if (x > windowWidth) {
+                    x = windowWidth / 2.0 - cell.width / 2.0;
+                    if (x < 0) x = 0;
+                }
+                if (y > windowHeight) {
+                    y = windowHeight / 2.0 - cell.height / 2.0;
+                    if (y < 0) y = 0;
+                }
+
+                cell.x = x;
+                cell.y = y;
+
+                cell.width = cell.widget().width;
+                cell.height = cell.widget().height;
+
+                cell.alignWidget();
+
+                x += cell.width + pad;
+            }
+        }
+    }
+
+    private GuiTexture getIconForCategory(Category category) {
+        GuiTexture icon = HontunIcons.getCategoryIcon(category.name);
+        return icon != null ? icon : HontunBuiltinIcons.QUESTION_MARK.texture();
+    }
+
+    private static class WHelpLabel extends WHontunLabel {
+        private final RichText key;
+        private final RichText text;
+
+        WHelpLabel(String key, String text) {
+            super(RichText.of(key + text));
+            this.key = RichText.of(key);
+            this.text = RichText.of(text);
+        }
+
+        @Override
+        public void drawLabel(GuiRenderer renderer, double mouseX, double mouseY) {
+            if (hidden) return;
+
+            ClickStyle style = style();
+            Color keyColor = style.helpKeyColor(theme());
+            Color textColor = style.helpTextColor(theme());
+
+            if (keyColor.getPacked() == textColor.getPacked()) {
+                renderer().text(richText, x, y, textColor);
+                return;
+            }
+
+            renderer().text(key, x, y, keyColor);
+            renderer().text(text, x + theme().textWidth(key), y, textColor);
+        }
+    }
+
+    public void showGrid(boolean show) {
+        showGrid = show;
+    }
+
+    public boolean showGrid() {
+        return showGrid;
+    }
+}

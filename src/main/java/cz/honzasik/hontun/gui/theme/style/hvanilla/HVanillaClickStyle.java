@@ -71,6 +71,8 @@ public class HVanillaClickStyle extends ClickStyle {
     private static final int WHITE = 0xFFFFFF;
     private static final int ON_LIGHT = 0xE6E8EC;
     private static final int ON_DARK = 0x0C0D0F;
+    private static final double RIM_MIN = 0.11;
+    private static final double RIM_MAX = 0.17;
     private static final int TIP_FILL = 0x0C0D0F;
     private static final int BOX_FILL = 0xFF000000;
     private static final int BOX_TEXT = 0xFFE0E0E0;
@@ -95,7 +97,9 @@ public class HVanillaClickStyle extends ClickStyle {
     private int surface0, surface1, surface2;
     private int overlay0, overlay1, overlay2;
     private int text, subtext1, textDim;
-    private int accent, accentHi, accentLo, accentCorr, accentEdge, rowOn;
+    private int accent, accentHi, accentLo, accentEdge, rowOn;
+    private int accentText, accentHiText, accentLine, accentHiLine, accentLoLine, accentBar, accentHiBar;
+    private boolean faint;
     private int barFill, barHover;
     private int green, red;
     private int bevel, barLit, rowEdge, rowSeam, hot, rowHot, rim, tint, tabTint;
@@ -115,7 +119,7 @@ public class HVanillaClickStyle extends ClickStyle {
     public HVanillaClickStyle() {
         StylePalette seed = new StylePalette();
         super.palette(seed, false, null);
-        capture(seed, false);
+        capture(seed, false, 0);
     }
 
     @Override
@@ -256,10 +260,15 @@ public class HVanillaClickStyle extends ClickStyle {
     @Override
     public void palette(StylePalette out, boolean light, HontunGuiTheme t) {
         super.palette(out, light, t);
-        capture(out, light);
+        capture(out, light, light ? lightBody(out, t) : 0);
     }
 
-    private void capture(StylePalette p, boolean light) {
+    @Override
+    protected int roleBackground(StylePalette out, int body, HontunGuiTheme t) {
+        return HontunLightPalette.darkest(body, out.surface2);
+    }
+
+    private void capture(StylePalette p, boolean light, int body) {
         this.light = light;
 
         crust = p.crust;
@@ -278,24 +287,32 @@ public class HVanillaClickStyle extends ClickStyle {
         accent = p.accent;
         accentHi = p.accentHi;
         accentLo = p.accentLo;
-        accentCorr = p.accent;
+        accentText = p.accentText;
+        accentHiText = p.accentHiText;
+        accentLine = p.accentLine;
+        accentHiLine = p.accentHiLine;
+        accentLoLine = p.accentLoLine;
+        accentBar = p.accentBar;
+        accentHiBar = p.accentHiBar;
+        faint = p.accentFaint;
         green = p.green;
         red = p.red;
 
-        barFill = clampBrightness(accentLo, 0.48f);
+        barFill = light ? accentLo : clampBrightness(accentLo, 0.48f);
         barHover = HontunTheme.lerp(barFill, accent, 0.35f);
-        accentEdge = HontunTheme.darken(light ? accentCorr : accentLo, 0.6f);
-        rowOn = light ? HontunTheme.darken(accentCorr, 0.9f) : accentLo;
+        accentEdge = light ? HontunLightPalette.darkest(HontunTheme.darken(accent, 0.6f), accentLine) : HontunTheme.darken(accentLo, 0.6f);
+        rowOn = light ? HontunTheme.darken(accent, 0.9f) : accentLo;
+        hot = accentHi;
+        rowHot = accent;
 
         if (light) {
             bevel = brighten(p.userAccent, accent, 2.5);
             barLit = bevel;
             barHover = HontunTheme.lerp(barFill, bevel, 0.35f);
-            rowEdge = brighten(p.userAccentHi, rowOn, 3.0);
+            boolean rowFaint = faint || HontunLightPalette.faint(rowOn, body, p.crust, p.mantle, p.base, p.surface0, p.surface1, p.surface2);
+            rowEdge = rowFaint ? accentLine : brighten(p.userAccentHi, rowOn, 3.0);
             rowSeam = HontunTheme.darken(rowOn, 0.2f);
-            hot = hotFill(accent, p.userAccent, bevel, WHITE);
-            rowHot = hotFill(rowOn, p.userAccent, bevel, WHITE);
-            rim = rimTone(p.userAccent);
+            rim =HontunLightPalette.luminanceBand(p.userAccent, RIM_MIN, RIM_MAX);
             tint = HontunTheme.lerp(base, p.userAccent, 0.22f);
             tabTint = HontunTheme.lerp(surface1, p.userAccent, 0.3f);
             dimInk = readable(textDim, surface1, 4.5);
@@ -319,8 +336,6 @@ public class HVanillaClickStyle extends ClickStyle {
             barLit = accent;
             rowEdge = accentHi;
             rowSeam = accentEdge;
-            hot = accentHi;
-            rowHot = accent;
             rim = accent;
             tint = accentLo;
             tabTint = surface2;
@@ -349,6 +364,14 @@ public class HVanillaClickStyle extends ClickStyle {
 
     private int outline() {
         return light ? opaque(rim) : argb(0xCC, accent);
+    }
+
+    private int onInk(int fill) {
+        return light ? HontunLightPalette.readableInk(fill, fill, ON_DARK, ON_LIGHT) : onColor(fill);
+    }
+
+    private int tickInk(int fill) {
+        return light ? opaque(HontunLightPalette.readableInk(fill, fill, ON_DARK, WHITE)) : checkInk(fill);
     }
 
     @Override
@@ -393,7 +416,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
     @Override
     public Color labelColor(HontunGuiTheme t, boolean title) {
-        return title ? t.accentHiColor() : subtext1Color;
+        return title ? t.accentHiTextColor() : subtext1Color;
     }
 
     @Override
@@ -411,7 +434,7 @@ public class HVanillaClickStyle extends ClickStyle {
     @Override
     public Color favoriteColor(WHontunFavorite f) {
         HontunGuiTheme t = f.theme();
-        if (f.checked) return f.mouseOver ? t.accentHiColor() : t.accentColor();
+        if (f.checked) return f.mouseOver ? t.accentHiLineColor() : t.accentLineColor();
         return f.mouseOver ? t.textColor() : t.textSecondaryColor();
     }
 
@@ -553,8 +576,8 @@ public class HVanillaClickStyle extends ClickStyle {
         if (dragging) PixelCanvas.sunk(bx, by, bw, bh, opaque(accentEdge), opaque(barLit));
         else PixelCanvas.raised(bx, by, bw, bh, opaque(barLit), opaque(accentEdge));
 
-        int on = onColor(fill);
-        boolean shadow = on == ON_LIGHT;
+        int on = onInk(fill);
+        boolean shadow = HontunLightPalette.luminance(on) > 0.5;
 
         String title = windowTitle(w.titleText());
         if (title != null && !title.isEmpty()) {
@@ -583,10 +606,10 @@ public class HVanillaClickStyle extends ClickStyle {
     void paintHeaderIcon(WHVanillaIcon icon, GuiRenderer renderer) {
         int p = unit();
         int x = snap(icon.x), y = snap(icon.y);
-        int on = onColor(barFill);
+        int on = onInk(barFill);
         PixelGlyph glyph = glyphFor(icon.texture());
 
-        if (glyph != null) glyphIn(glyph, x, y, 8 * p, 8 * p, opaque(on), on == ON_LIGHT);
+        if (glyph != null) glyphIn(glyph, x, y, 8 * p, 8 * p, opaque(on), HontunLightPalette.luminance(on) > 0.5);
         else renderer.quad(x, y, 8 * p, 8 * p, icon.texture(), color(opaque(on)));
     }
 
@@ -617,8 +640,8 @@ public class HVanillaClickStyle extends ClickStyle {
         if (selected) {
             PixelCanvas.fill(x, y, w, h, opaque(barFill));
             PixelCanvas.sunk(x, y, w, h, opaque(accentEdge), opaque(barLit));
-            content = onColor(barFill);
-            shadow = content == ON_LIGHT;
+            content = onInk(barFill);
+            shadow = HontunLightPalette.luminance(content) > 0.5;
         } else if (hover) {
             PixelCanvas.fill(x, y, w, h, opaque(tabTint));
             content = text;
@@ -666,9 +689,9 @@ public class HVanillaClickStyle extends ClickStyle {
                     | (next ? 0 : PixelCanvas.BOTTOM);
             PixelCanvas.frame(x, y, w, h, opaque(rowEdge), sides);
 
-            int c = onColor(fill);
+            int c = onInk(fill);
             ink = opaque(c);
-            shadow = c == ON_LIGHT;
+            shadow = HontunLightPalette.luminance(c) > 0.5;
         } else if (hover) {
             PixelCanvas.fill(x, y, w, h, light ? argb(0x80, WHITE) : argb(0x1A, text));
             PixelCanvas.frame(x, y, w, h, opaque(overlay2));
@@ -717,7 +740,7 @@ public class HVanillaClickStyle extends ClickStyle {
         boolean hover = h.mouseOver;
         strip(x, y, w, hh, hover);
 
-        PixelCanvas.text(s.titleText(), x + 4 * p, y + 2 * p, opaque(light ? accentCorr : accentHi), !light);
+        PixelCanvas.text(s.titleText(), x + 4 * p, y + 2 * p, opaque(accentHiText), !light);
 
         if (h.openIndicator() == null) return;
 
@@ -745,7 +768,7 @@ public class HVanillaClickStyle extends ClickStyle {
         int tx = x + snap((w - tw) / 2.0);
         int ty = snap(s.y + (s.height - 9 * p) / 2.0);
         int ry = ty + 3 * p;
-        int rule = argb(0x99, accent);
+        int rule = argb(light ? 0xFF : 0x99, accentLine);
 
         int leftEnd = tx - 4 * p;
         int rightStart = tx + tw + 3 * p;
@@ -759,7 +782,7 @@ public class HVanillaClickStyle extends ClickStyle {
         if (leftEnd > x) PixelCanvas.hline(x, ry, leftEnd - x, rule);
         if (x + w > rightStart) PixelCanvas.hline(rightStart, ry, x + w - rightStart, rule);
 
-        PixelCanvas.text(s.richText(), tx, ty, opaque(light ? accentCorr : accentHi), !light);
+        PixelCanvas.text(s.richText(), tx, ty, opaque(accentHiText), !light);
     }
 
     @Override
@@ -857,7 +880,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         if (listening) {
             double tw = t.textWidth(LISTEN);
-            PixelCanvas.text(LISTEN, x + snap((w - tw) / 2), ty, opaque(accentHi), !light);
+            PixelCanvas.text(LISTEN, x + snap((w - tw) / 2), ty, opaque(accentHiText), !light);
             return;
         }
 
@@ -899,13 +922,13 @@ public class HVanillaClickStyle extends ClickStyle {
             int recess = opaque(light ? overlay0 : VOID);
             PixelCanvas.hline(x + p, y + p, s - 2 * p, recess);
             PixelCanvas.vline(x + p, y + 2 * p, sy - 3 * p, recess);
-            PixelCanvas.frame(x, y, s, sy, opaque(hover || pressed ? accentHi : stroke));
+            PixelCanvas.frame(x, y, s, sy, opaque(hover || pressed ? accentHiLine : stroke));
         } else {
             int fill = hover ? hot : accent;
             PixelCanvas.fill(x, y, s, sy, opaque(fill));
             if (pressed) PixelCanvas.sunk(x, y, s, sy, opaque(accentEdge), opaque(bevel));
             else PixelCanvas.raised(x, y, s, sy, opaque(bevel), opaque(accentEdge));
-            PixelCanvas.glyph(HVanillaGlyphs.CHECK, x + 2 * p, y + (pressed ? 4 : 3) * p, p, checkInk(fill), false);
+            PixelCanvas.glyph(HVanillaGlyphs.CHECK, x + 2 * p, y + (pressed ? 4 : 3) * p, p, tickInk(fill), false);
         }
 
         syncCheckLabel(c);
@@ -936,7 +959,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         if (color.a < 255) PixelCanvas.checker(x + p, y + p, w - 2 * p, h - 2 * p, 2 * p, opaque(surface2), opaque(overlay0));
         PixelCanvas.fill(x + p, y + p, w - 2 * p, h - 2 * p, color.getPacked());
-        PixelCanvas.frame(x, y, w, h, opaque(hover ? accentHi : stroke));
+        PixelCanvas.frame(x, y, w, h, opaque(hover ? accentHiLine : stroke));
 
         if (hover) {
             int dy = pk.isPressed() ? p : 0;
@@ -1021,11 +1044,11 @@ public class HVanillaClickStyle extends ClickStyle {
         boolean shadow;
 
         if (inTitleBar(f)) {
-            int on = onColor(barFill);
+            int on = onInk(barFill);
             ink = f.checked || f.mouseOver ? opaque(on) : argb(0x99, on);
-            shadow = on == ON_LIGHT;
+            shadow = HontunLightPalette.luminance(on) > 0.5;
         } else {
-            ink = f.checked ? opaque(f.mouseOver ? accentHi : accent) : opaque(f.mouseOver ? text : textDim);
+            ink = f.checked ? opaque(f.mouseOver ? accentHiLine : accentLine) : opaque(f.mouseOver ? text : textDim);
             shadow = !light;
         }
 
@@ -1057,7 +1080,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         int ty = y + 3 * p;
         PixelCanvas.fill(x, ty, w, 5 * p, opaque(light ? surface0 : crust));
-        PixelCanvas.frame(x, ty, w, 5 * p, s.mouseOver || dragging ? argb(0xAA, accent) : opaque(light ? overlay2 : overlay0));
+        PixelCanvas.frame(x, ty, w, 5 * p, s.mouseOver || dragging ? argb(light ? 0xFF : 0xAA, accentLine) : opaque(light ? overlay2 : overlay0));
 
         double range = s.max() - s.min();
         double t = range == 0 ? 0 : Math.clamp((s.value() - s.min()) / range, 0.0, 1.0);
@@ -1097,10 +1120,10 @@ public class HVanillaClickStyle extends ClickStyle {
             cx += (int) Math.round(title) + 4 * p;
         }
 
-        PixelCanvas.fill(cx, y + 6 * p + dy, 2 * p, 2 * p, opaque(accent));
+        PixelCanvas.fill(cx, y + 6 * p + dy, 2 * p, 2 * p, opaque(accentBar));
         cx += 5 * p;
 
-        PixelCanvas.text(d.valueText(), cx, y + 3 * p + dy, opaque(accentHi), !light);
+        PixelCanvas.text(d.valueText(), cx, y + 3 * p + dy, opaque(accentHiText), !light);
 
         PixelGlyph tri = open ? HVanillaGlyphs.TRI_UP : HVanillaGlyphs.TRI_DOWN;
         PixelCanvas.glyph(tri, x + w - 9 * p, y + 5 * p + dy, p, ink, !light);
@@ -1146,15 +1169,15 @@ public class HVanillaClickStyle extends ClickStyle {
 
         if (hover) {
             PixelCanvas.fill(x, y, w, h, argb(0xCC, accentLo));
-            int c = onColor(accentLo);
+            int c = onInk(light ? HontunTheme.lerp(base, accentLo, 0xCC / 255f) : accentLo);
             ink = opaque(c);
-            shadow = c == ON_LIGHT;
+            shadow = HontunLightPalette.luminance(c) > 0.5;
         } else {
-            ink = opaque(selected ? accentHi : subtext1);
+            ink = opaque(selected ? accentHiText : subtext1);
             shadow = !light;
         }
 
-        if (selected) PixelCanvas.fill(x + 3 * p, y + snap((h - 2 * p) / 2.0), 2 * p, 2 * p, opaque(accentHi));
+        if (selected) PixelCanvas.fill(x + 3 * p, y + snap((h - 2 * p) / 2.0), 2 * p, 2 * p, light ? (hover ? ink : opaque(accentBar)) : opaque(accentHiBar));
 
         PixelCanvas.text(v.valueName(), x + 7 * p, y + snap((h - 9 * p) / 2.0), ink, shadow);
     }
@@ -1195,12 +1218,12 @@ public class HVanillaClickStyle extends ClickStyle {
                 PixelCanvas.frame(x, y, w, h, frame);
             }
         } else if (custom != null && hover) {
-            PixelCanvas.hline(x, y + 11 * p, w, argb(0x66, accent));
+            PixelCanvas.hline(x, y + 11 * p, w, argb(light ? 0xFF : 0x66, accentLine));
         }
 
         int ink;
         if (framed) ink = custom != null ? custom.getPacked() : focused ? BOX_TEXT : BOX_TEXT_IDLE;
-        else ink = custom != null ? opaque(accentHi) : opaque(ON_LIGHT);
+        else ink = custom != null ? opaque(accentHiText) : opaque(ON_LIGHT);
 
         double textX = b.x + b.padding() - b.overflow();
         int textY = y + 3 * p;
@@ -1271,9 +1294,9 @@ public class HVanillaClickStyle extends ClickStyle {
 
         if (item.isSelected()) {
             PixelCanvas.fill(x, y, w, h, argb(0xCC, accentLo));
-            int c = onColor(accentLo);
+            int c = onInk(light ? HontunTheme.lerp(base, accentLo, 0xCC / 255f) : accentLo);
             ink = opaque(c);
-            shadow = c == ON_LIGHT;
+            shadow = HontunLightPalette.luminance(c) > 0.5;
         } else {
             ink = opaque(subtext1);
             shadow = !light;
@@ -1397,7 +1420,7 @@ public class HVanillaClickStyle extends ClickStyle {
         int cy = snap(y + (h - size) / 2);
         int rgb = packed(c);
 
-        PixelCanvas.fill(cx + p, cy + p, size - 2 * p, size - 2 * p, argb(0x30, rgb));
+        PixelCanvas.fill(cx + p, cy + p, size - 2 * p, size - 2 * p, light ? opaque(HontunTheme.lerp(base, rgb, 0x30 / 255f)) : argb(0x30, rgb));
         PixelCanvas.frame(cx, cy, size, size, opaque(rgb));
     }
 
@@ -1415,13 +1438,13 @@ public class HVanillaClickStyle extends ClickStyle {
             if (!(cell.widget() instanceof WLabel label)) continue;
 
             if (labels == 0) {
-                label.color = light ? t.accentColor() : t.accentHiColor();
+                label.color = t.accentHiTextColor();
             } else {
                 int lx = snap(label.x) - 2 * p, ly = snap(label.y) - p;
                 int lw = snap(label.x + label.width) - snap(label.x) + 4 * p;
                 PixelCanvas.fill(lx + p, ly + p, lw - 2 * p, 9 * p, opaque(surface1));
                 PixelCanvas.frame(lx, ly, lw, 11 * p, opaque(chipEdge));
-                label.color = t.accentHiColor();
+                label.color = t.accentHiTextColor();
             }
 
             labels++;
@@ -1505,7 +1528,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         PixelCanvas.fill(x + p, y + p, w - 2 * p, h - 2 * p, opaque(surface1));
         PixelCanvas.frame(x, y, w, h, opaque(light ? overlay1 : overlay0));
-        PixelCanvas.text(l.label(), x + snap(l.offsetX()), snap(l.y + l.offsetY()), opaque(accentHi), !light);
+        PixelCanvas.text(l.label(), x + snap(l.offsetX()), snap(l.y + l.offsetY()), opaque(accentHiText), !light);
     }
 
     @Override
@@ -1575,7 +1598,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         if (light) {
             fill = opaque(pressed ? surface2 : hover ? tint : surface1);
-            frame = opaque(pressed ? accentCorr : hover ? rim : accentEdge);
+            frame = opaque(pressed ? accentLine : hover ? rim : accentLoLine);
         } else if (pressed) {
             fill = opaque(accentEdge);
             frame = opaque(accentHi);
@@ -1726,27 +1749,6 @@ public class HVanillaClickStyle extends ClickStyle {
         int c = rgb & 0xFFFFFF;
         for (int i = 0; i < 24 && HontunLightPalette.contrast(c, against) < min; i++) c = HontunTheme.lerp(c, WHITE, 0.1f);
         return c;
-    }
-
-    private static int rimTone(int rgb) {
-        int c = rgb & 0xFFFFFF;
-        for (int i = 0; i < 48 && HontunLightPalette.luminance(c) > 0.17; i++) c = HontunTheme.darken(c, 0.95f);
-        for (int i = 0; i < 24 && HontunLightPalette.luminance(c) < 0.11; i++) c = HontunTheme.lerp(c, WHITE, 0.06f);
-        return c;
-    }
-
-    private static int hotFill(int fill, int... targets) {
-        int best = fill;
-        for (int target : targets) {
-            for (int step = 20; step > 0; step--) {
-                int c = HontunTheme.lerp(fill, target, step / 20f);
-                if (HontunLightPalette.contrast(ON_LIGHT, c) < 4.5) continue;
-                if (HontunLightPalette.contrast(c, fill) >= 1.35) return c;
-                best = c;
-                break;
-            }
-        }
-        return best;
     }
 
     private static int clampBrightness(int rgb, float max) {

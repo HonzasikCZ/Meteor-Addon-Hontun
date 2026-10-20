@@ -660,6 +660,42 @@ public class HontunGuiTheme extends GuiTheme {
         return colorCache.get(HontunColor.AccentLo);
     }
 
+    public Color accentTextColor() {
+        return colorCache.get(HontunColor.AccentText);
+    }
+
+    public Color accentHiTextColor() {
+        return colorCache.get(HontunColor.AccentHiText);
+    }
+
+    public Color accentLineColor() {
+        return colorCache.get(HontunColor.AccentLine);
+    }
+
+    public Color accentHiLineColor() {
+        return colorCache.get(HontunColor.AccentHiLine);
+    }
+
+    public Color accentLoLineColor() {
+        return colorCache.get(HontunColor.AccentLoLine);
+    }
+
+    public Color accentBarColor() {
+        return colorCache.get(HontunColor.AccentBar);
+    }
+
+    public Color accentHiBarColor() {
+        return colorCache.get(HontunColor.AccentHiBar);
+    }
+
+    public Color accentLoBarColor() {
+        return colorCache.get(HontunColor.AccentLoBar);
+    }
+
+    public Color onAccentColor() {
+        return colorCache.get(HontunColor.OnAccent);
+    }
+
     public Color greenColor() {
         return colorCache.get(HontunColor.Green);
     }
@@ -839,6 +875,15 @@ public class HontunGuiTheme extends GuiTheme {
         put(HontunColor.Flamingo,  p.accentHi);
         put(HontunColor.Rosewater, p.text);
         put(HontunColor.AccentLo,  p.accentLo);
+        put(HontunColor.AccentText,   p.accentText);
+        put(HontunColor.AccentHiText, p.accentHiText);
+        put(HontunColor.AccentLine,   p.accentLine);
+        put(HontunColor.AccentHiLine, p.accentHiLine);
+        put(HontunColor.AccentLoLine, p.accentLoLine);
+        put(HontunColor.AccentBar,    p.accentBar);
+        put(HontunColor.AccentHiBar,  p.accentHiBar);
+        put(HontunColor.AccentLoBar,  p.accentLoBar);
+        put(HontunColor.OnAccent,     p.onAccent);
 
         for (HontunColor color : HontunColor.values()) {
             colorCache.putIfAbsent(color, HontunTheme.color(p.accent).toSetting());

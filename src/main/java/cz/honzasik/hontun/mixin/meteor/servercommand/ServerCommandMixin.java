@@ -1,14 +1,17 @@
 package cz.honzasik.hontun.mixin.meteor.servercommand;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import cz.honzasik.hontun.commands.AnticheatProbe;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.commands.SoftwareProbe;
 import cz.honzasik.hontun.mixin.network.custompayload.ClientListenerConnectionAccessor;
+import cz.honzasik.hontun.modules.AnticheatDetect;
 import cz.honzasik.hontun.modules.ChannelFetcher;
 import net.minecraft.network.Connection;
 import cz.honzasik.hontun.utils.HontunChat;
 import cz.honzasik.hontun.utils.HontunTheme;
+import cz.honzasik.hontun.utils.RealVersion;
 import cz.honzasik.hontun.utils.ResourcePackInfo;
 import cz.honzasik.hontun.utils.ServerSoftware;
 import cz.honzasik.hontun.utils.VersionKeeper;
@@ -84,11 +87,20 @@ public abstract class ServerCommandMixin {
             self.info("Software: %s", SoftwareProbe.summary(ServerSoftware.detect()));
         } catch (Throwable ignored) {
         }
+        try {
+            self.info("Anticheat: %s", AnticheatProbe.summary(AnticheatDetect.COLLECTOR.evaluate(AnticheatDetect.address())));
+        } catch (Throwable ignored) {
+        }
         self.info("Motd: %s", server.motd != null ? server.motd.getString() : "unknown");
         self.info("Version: %s", server.version != null ? server.version.getString() : "unknown");
-        if (!"unknown".equals(VersionKeeper.version)) {
-            self.info("Real version: %s", VersionKeeper.version);
+        String realVersion = null;
+        try {
+            RealVersion.Result resolved = RealVersion.resolve(ServerSoftware.realVersionSnapshot());
+            if (resolved != null) realVersion = resolved.text();
+        } catch (Throwable ignored) {
         }
+        if (realVersion == null && !"unknown".equals(VersionKeeper.version)) realVersion = VersionKeeper.version + " (core pack)";
+        if (realVersion != null) self.info("Real version: %s", realVersion);
         self.info("Protocol version: %d", server.protocol);
 
         List<String> packs = new ArrayList<>();
@@ -210,6 +222,9 @@ public abstract class ServerCommandMixin {
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("software")
             .executes(c -> { SoftwareProbe.INSTANCE.run(); return 1; }));
+
+        builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("anticheat")
+            .executes(c -> { AnticheatProbe.run(); return 1; }));
     }
 
     private void hontun$printChannels() {

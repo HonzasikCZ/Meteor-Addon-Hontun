@@ -1,0 +1,171 @@
+{
+  "classes": "abcdefghijklmnopqrstuvwxyz0123456789",
+  "blank": 36,
+  "input": [
+    1,
+    128,
+    128
+  ],
+  "preprocess": {
+    "gray": [
+      0.299,
+      0.587,
+      0.114
+    ],
+    "scale": 0.00392156862745098,
+    "bias": -0.5
+  },
+  "ops": [
+    {
+      "type": "conv",
+      "in": 1,
+      "out": 32,
+      "kh": 3,
+      "kw": 3,
+      "ph": 1,
+      "pw": 1,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 0,
+      "bOffset": 288
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "type": "maxpool",
+      "kh": 2,
+      "kw": 2,
+      "sh": 2,
+      "sw": 2
+    },
+    {
+      "type": "conv",
+      "in": 32,
+      "out": 64,
+      "kh": 3,
+      "kw": 3,
+      "ph": 1,
+      "pw": 1,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 320,
+      "bOffset": 18752
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "type": "maxpool",
+      "kh": 2,
+      "kw": 2,
+      "sh": 2,
+      "sw": 2
+    },
+    {
+      "type": "conv",
+      "in": 64,
+      "out": 128,
+      "kh": 3,
+      "kw": 3,
+      "ph": 1,
+      "pw": 1,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 18816,
+      "bOffset": 92544
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "type": "maxpool",
+      "kh": 2,
+      "kw": 2,
+      "sh": 2,
+      "sw": 2
+    },
+    {
+      "type": "conv",
+      "in": 128,
+      "out": 128,
+      "kh": 3,
+      "kw": 3,
+      "ph": 1,
+      "pw": 1,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 92672,
+      "bOffset": 240128
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "type": "maxpool",
+      "kh": 2,
+      "kw": 1,
+      "sh": 2,
+      "sw": 1
+    },
+    {
+      "type": "conv",
+      "in": 128,
+      "out": 128,
+      "kh": 3,
+      "kw": 3,
+      "ph": 1,
+      "pw": 1,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 240256,
+      "bOffset": 387712
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "type": "maxpool",
+      "kh": 2,
+      "kw": 1,
+      "sh": 2,
+      "sw": 1
+    },
+    {
+      "type": "conv",
+      "in": 128,
+      "out": 128,
+      "kh": 3,
+      "kw": 3,
+      "ph": 1,
+      "pw": 1,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 387840,
+      "bOffset": 535296
+    },
+    {
+      "type": "relu"
+    },
+    {
+      "type": "maxpool",
+      "kh": 4,
+      "kw": 1,
+      "sh": 4,
+      "sw": 1
+    },
+    {
+      "type": "conv",
+      "in": 128,
+      "out": 37,
+      "kh": 1,
+      "kw": 1,
+      "ph": 0,
+      "pw": 0,
+      "sh": 1,
+      "sw": 1,
+      "wOffset": 535424,
+      "bOffset": 540160
+    }
+  ]
+}

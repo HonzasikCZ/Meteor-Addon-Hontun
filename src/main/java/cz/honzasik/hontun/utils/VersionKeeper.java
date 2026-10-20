@@ -12,13 +12,19 @@ public class VersionKeeper {
     public static final List<String> knownPacks = Collections.synchronizedList(new ArrayList<>());
 
     public static void gotPacket(ClientboundSelectKnownPacks packet) {
-        knownPacks.clear();
+        String core = "unknown";
+        List<String> packs = new ArrayList<>();
         for (KnownPack pack : packet.knownPacks()) {
             if (pack.isVanilla() && "core".equals(pack.id())) {
-                version = pack.version();
+                core = pack.version();
             }
-            knownPacks.add(pack.namespace() + ":" + pack.id() + " (v" + pack.version() + ")");
+            packs.add(pack.namespace() + ":" + pack.id() + " (v" + pack.version() + ")");
         }
+        synchronized (knownPacks) {
+            knownPacks.clear();
+            knownPacks.addAll(packs);
+        }
+        version = core;
     }
 
     public static void clear() {

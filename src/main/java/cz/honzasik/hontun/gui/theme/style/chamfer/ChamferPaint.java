@@ -95,7 +95,7 @@ final class ChamferPaint {
     }
 
     static Color edgeText(HontunGuiTheme t) {
-        return t.light() ? t.accentColor() : t.accentHiColor();
+        return t.accentHiTextColor();
     }
 
     static int backdropBracket(HontunGuiTheme t) {
@@ -107,11 +107,7 @@ final class ChamferPaint {
     }
 
     static Color onAccent(HontunGuiTheme t) {
-        if (t.light()) return t.baseColor();
-        int accent = rgb(t.accentColor());
-        double crust = HontunLightPalette.contrast(rgb(t.crustColor()), accent);
-        double base = HontunLightPalette.contrast(rgb(t.baseColor()), accent);
-        return crust >= base ? t.crustColor() : t.baseColor();
+        return t.onAccentColor();
     }
 
     static int cutFor(int h, int u) {
@@ -139,11 +135,6 @@ final class ChamferPaint {
     static void glow(HontunShapes.Fill g, HontunGuiTheme t, int x0, int y0, int x1, int y1,
                      int cutTL, int cutBR, int u, int rings, int base) {
         if (rings <= 0 || base <= 0) return;
-        if (t.light()) {
-            HontunShapes.outlineClipped(g, x0 - u, y0 - u, (x1 - x0) + 2 * u, (y1 - y0) + 2 * u,
-                    cutTL, cutBR, u, argb(2 * base, t.accentHiColor()));
-            return;
-        }
         HontunShapes.glow(g, x0, y0, x1 - x0, y1 - y0, cutTL, cutBR, u, rings, argb(base, t.accentColor()));
     }
 
@@ -178,18 +169,18 @@ final class ChamferPaint {
     static void divider(HontunShapes.Fill g, HontunGuiTheme t, int x0, int x1, int y, int u) {
         if (x1 <= x0) return;
         int head = Math.min(x1, x0 + 4 * u);
-        rect(g, x0, y, head, y + u, argb(0xFF, t.accentHiColor()));
+        rect(g, x0, y, head, y + u, argb(0xFF, t.accentHiLineColor()));
         int start = head + u;
         if (x1 <= start) return;
-        if (t.light()) g.hgradient(start, y, x1, y + u, argb(0xFF, t.accentLoColor()), argb(0xFF, t.overlay1Color()));
-        else g.hgradient(start, y, x1, y + u, argb(0xA0, t.accentLoColor()), argb(0x60, t.overlay0Color()));
+        if (t.light()) g.hgradient(start, y, x1, y + u, argb(0xFF, t.accentLoLineColor()), argb(0xFF, t.overlay1Color()));
+        else g.hgradient(start, y, x1, y + u, argb(0xA0, t.accentLoLineColor()), argb(0x60, t.overlay0Color()));
     }
 
     static void scan(HontunShapes.Fill g, HontunGuiTheme t, int x0, int x1, int y, int u, double p) {
         double f = Math.sin(Math.PI * Math.clamp(p, 0, 1));
         int a = mul(0xD0, f);
         if (a <= 0) return;
-        rect(g, x0, y, x1, y + u, argb(a, t.accentHiColor()));
+        rect(g, x0, y, x1, y + u, argb(a, t.accentHiLineColor()));
     }
 
     static void bracketGlyph(HontunShapes.Fill g, int x, int y, int h, int u, boolean open, int argb) {

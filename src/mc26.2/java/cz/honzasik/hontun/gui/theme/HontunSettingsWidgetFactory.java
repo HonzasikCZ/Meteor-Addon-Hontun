@@ -649,7 +649,7 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
 
         title(list, setting).padLeft(gap());
 
-        if (addCount) list.add(new WSelectedCountLabel(setting).color(theme.accentColor())).expandCellX();
+        if (addCount) list.add(new WSelectedCountLabel(setting).color(theme.accentTextColor())).expandCellX();
 
         reset(list, setting, null, () -> list.mouseOver);
     }

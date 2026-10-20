@@ -339,6 +339,7 @@ public class SmogClickStyle extends ClickStyle {
         HontunTheme.Ramp backdrop = HontunTheme.ramp(id());
         SmogPaint.set(backdropHelpKey, boost ? backdrop.text() : backdrop.subtext1(), 255);
         SmogPaint.set(backdropHelpText, boost ? backdrop.subtext1() : backdrop.textDim(), 0xCC);
+        out.copyRoles();
     }
 
     @Override

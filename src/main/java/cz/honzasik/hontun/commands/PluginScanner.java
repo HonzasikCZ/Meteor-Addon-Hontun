@@ -20,9 +20,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Consumer;
 
 public class PluginScanner {
     public static final PluginScanner INSTANCE = new PluginScanner();
@@ -45,7 +48,8 @@ public class PluginScanner {
 
         "antispoof", "lpx", "exploitfixer", "coffeeprotect", "pl-hide-pro", "plhidepro",
         "antihealthindicator", "sonar", "foxgate", "foxgateplus",
-        "polarloader", "fairplay", "cultac", "cult", "angleguard", "totemguard", "realac");
+        "polarloader", "fairplay", "cultac", "angleguard", "totemguard", "realac",
+        "karhu", "karhuac", "verus", "grizzly");
 
     private static final int SENDS_PER_TICK = 3;
     private static final int TIMEOUT_TICKS = 120;
@@ -60,12 +64,35 @@ public class PluginScanner {
 
     private final Set<String> onlinePlayers = ConcurrentHashMap.newKeySet();
 
+    private final List<Consumer<List<String>>> finishListeners = new CopyOnWriteArrayList<>();
+
     private volatile boolean active = false;
     private volatile boolean fallbackBypass = false;
     private volatile long deadlineTick = 0;
     private volatile long lastActivityTick = 0;
 
     private PluginScanner() {}
+
+    public void onFinish(Consumer<List<String>> listener) {
+        finishListeners.add(listener);
+    }
+
+    public List<String> anticheats() {
+        List<String> out = new ArrayList<>();
+        synchronized (found) {
+            for (String p : found) {
+                if (ANTICHEAT.contains(p.toLowerCase(Locale.ROOT))) out.add(p);
+            }
+        }
+        return out;
+    }
+
+    private void complete() {
+        active = false;
+        print();
+        List<String> anticheats = anticheats();
+        for (Consumer<List<String>> listener : finishListeners) listener.accept(anticheats);
+    }
 
     public void run(boolean namespace, boolean version, boolean bypass, boolean fallbackBypass) {
         ClientPacketListener conn = MCUtil.getPlayNetHandler();
@@ -187,7 +214,7 @@ public class PluginScanner {
         if (found.isEmpty() && fallbackBypass) {
             fallbackBypass = false;
             ClientPacketListener conn = MCUtil.getPlayNetHandler();
-            if (conn == null) { active = false; print(); return; }
+            if (conn == null) { complete(); return; }
             versionPending.clear();
             enumPending.clear();
             enumQueue.clear();
@@ -199,8 +226,7 @@ public class PluginScanner {
             ChatUtils.warning("Default scan found nothing — trying the plugin hider bypass...");
             return;
         }
-        active = false;
-        print();
+        complete();
     }
 
     @EventHandler

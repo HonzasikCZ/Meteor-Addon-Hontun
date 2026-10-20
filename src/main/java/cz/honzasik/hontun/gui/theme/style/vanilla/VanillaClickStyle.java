@@ -287,6 +287,7 @@ public class VanillaClickStyle extends ClickStyle {
             out.green = 0x55FF55;
             out.yellow = 0xFFFF55;
             out.red = 0xFF5555;
+            out.copyRoles();
             return;
         }
 
@@ -308,6 +309,7 @@ public class VanillaClickStyle extends ClickStyle {
         out.green = 0x006000;
         out.yellow = 0x704A00;
         out.red = 0xAA0000;
+        out.copyRoles();
     }
 
     @Override

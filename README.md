@@ -16,6 +16,8 @@ picker is simply hidden and everything else works unchanged.
 
 ## 🧩 MODULES
 
+- `Anticheat Detect` Tells you which anticheat the server runs when you join, then turns itself off.
+  It only reads what the server sends anyway: commands, plugin channels, ping IDs and setbacks.
 - `Anti-Exploit` Cancels incoming packets that would crash or freeze your client, with an optional
   per-type debug log of exactly what was blocked.
 - `Channel Fetcher` Records the plugin channels a server uses.
@@ -35,16 +37,18 @@ picker is simply hidden and everything else works unchanged.
 - `.reconnect` Rejoins the current server (alias `.rejoin`).
 - `.toggletab` Locks the player list (tab) visible so you do not have to hold the key.
 - `.server` `info` Meteor's server info plus backend version, world, channels and resource pack.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`anticheat` Shows the detected anticheat and what it is based on, without sending anything.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`channels` Lists the plugin channels captured so far.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins` Scans the server's plugins, falls back to `bypass` when nothing shows up.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins default` The same scan without the `bypass` fallback.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins bypass` Only the tab-completion tricks that get past plugin hiders.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`players` Finds the real online roster and flags players hidden from the tab list.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`software` Guesses the server software and any proxy in front, without sending anything.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, DivineMC, Pufferfish, Pluto, UniverseSpigot, Leaves,<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;CraftBukkit, Spigot, Vanilla, Fabric, Quilt, Forge, NeoForge, Sponge, Youer, Arclight,<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Minestom, PicoLimbo, NanoLimbo, LOOHP Limbo, QuasarMC.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxies: Velocity, Velocity-CTD, BungeeCord, Gate, ViaProxy.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, DivineMC, Pufferfish, Pluto, UniverseSpigot, Leaves, ShreddedPaper,<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;CraftBukkit, Spigot, Vanilla, Fabric, Quilt, Forge, NeoForge, Sponge, Youer, Arclight, Mohist, Magma, Ketting, Banner,<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Minestom, Pumpkin, SteelMC, FerrumC, QuasarMC, PicoLimbo, NanoLimbo, LOOHP Limbo.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxies: Velocity, Velocity-CTD, VeloFlame, BungeeCord, Gate, ViaProxy.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxy limbos: LimboAPI, Sonar and VeloFlame verification worlds.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Behind server-side ViaVersion it reads the real backend version.
 
 ## 🎨 THEMES
@@ -229,3 +233,5 @@ The jar lands in `build/libs/`.
 - [Meteor Rejects](https://github.com/AntiCope/meteor-rejects) by Cloudburst - `Gamemode Notify`
 - [AntiP2W-Addon](https://github.com/AntiP2WDevelopment/AntiP2W-Addon) by 0x06 - `Free Interact`, `Anti-Exploit`
 - [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X) by SpigotRCE - `.toggletab`
+- [LiquidBounce](https://github.com/CCBlueX/LiquidBounce) by CCBlueX - `Anticheat Detect`
+- [FDPClient](https://github.com/SkidderMC/FDPClient) by SkidderMC - `Anticheat Detect`

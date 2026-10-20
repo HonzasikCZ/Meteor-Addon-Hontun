@@ -47,7 +47,7 @@ public class WHontunReadout extends WWidget implements HontunWidget {
         double x0 = Math.round(x);
         double y0 = Math.round(y);
 
-        ChamferPaint.drawText(activeText, x0, y0, t.accentColor());
+        ChamferPaint.drawText(activeText, x0, y0, t.accentTextColor());
         ChamferPaint.drawText(totalText, x0 + t.textWidth(activeText), y0, t.light() ? ChamferPaint.subtext1(t) : t.textSecondaryColor());
     }
 

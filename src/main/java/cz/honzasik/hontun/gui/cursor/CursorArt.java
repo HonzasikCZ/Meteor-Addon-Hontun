@@ -2,10 +2,8 @@ package cz.honzasik.hontun.gui.cursor;
 
 import cz.honzasik.hontun.utils.HontunTheme;
 
-import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
-import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.Shape;
@@ -16,8 +14,9 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.awt.image.ConvolveOp;
-import java.awt.image.Kernel;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public final class CursorArt {
     public enum Kind { ARROW, HAND, IBEAM, CROSSHAIR, RESIZE_NS, RESIZE_EW, RESIZE_ALL, NOT_ALLOWED }
@@ -25,6 +24,12 @@ public final class CursorArt {
     public record Art(BufferedImage image, int hotX, int hotY) {}
 
     private enum Look { PIXEL, FLAT, CHAMFER, SMOG }
+
+    private enum Role { MAIN, ACTIVE, RING, LINE }
+
+    private record Part(List<Shape> pieces, Area sil, Area body, Role role, double rim) {}
+
+    private static final double AXIS = Math.toRadians(43);
 
     private CursorArt() {}
 
@@ -51,409 +56,597 @@ public final class CursorArt {
         return smooth(kind, look, s);
     }
 
-    private static Shape shape(Kind kind) {
-        return switch (kind) {
-            case ARROW -> arrow();
-            case HAND -> hand();
-            case IBEAM -> ibeam();
-            case CROSSHAIR -> cross();
-            case RESIZE_NS -> rotate(doubleArrow(), Math.PI / 2, 0, 0);
-            case RESIZE_EW -> doubleArrow();
-            case RESIZE_ALL -> fourWay();
-            case NOT_ALLOWED -> notAllowed();
-        };
+    private static int npx(double v, double u) {
+        return (int) Math.max(1, Math.round(v * u));
     }
 
-    private static double[] hot(Kind kind) {
-        return switch (kind) {
-            case ARROW -> new double[]{0, 0};
-            case HAND -> new double[]{3.6, 0};
-            default -> new double[]{0, 0};
-        };
+    private static double px(double v, double u) {
+        return npx(v, u) / u;
     }
 
-    private static Path2D arrow() {
+    private static double par(double v, double u, boolean odd) {
+        long p = Math.max(1, Math.round(v * u));
+        if ((p % 2 == 1) != odd) p = v * u > p || p == 1 ? p + 1 : p - 1;
+        return p / u;
+    }
+
+    private static BasicStroke pen(double w, boolean ch) {
+        return ch ? new BasicStroke((float) w, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER, 2.2f)
+                : new BasicStroke((float) w, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+    }
+
+    private static Area shrink(Shape s, double d, boolean ch) {
+        Area a = new Area(s);
+        a.subtract(new Area(pen(2 * d, ch).createStrokedShape(s)));
+        return a;
+    }
+
+    private static Shape rot(Shape s, double a) {
+        return AffineTransform.getRotateInstance(a).createTransformedShape(s);
+    }
+
+    private static Path2D poly(double[] p, double[] r, boolean ch) {
+        int n = p.length / 2;
+        Path2D path = new Path2D.Double();
+        for (int i = 0; i < n; i++) {
+            int a = (i + n - 1) % n, c = (i + 1) % n;
+            double x = p[2 * i], y = p[2 * i + 1];
+            double ax = p[2 * a] - x, ay = p[2 * a + 1] - y, cx = p[2 * c] - x, cy = p[2 * c + 1] - y;
+            double la = Math.hypot(ax, ay), lc = Math.hypot(cx, cy);
+            double k = Math.min(r[i], Math.min(la, lc) * 0.45);
+            double x1 = x + ax / la * k, y1 = y + ay / la * k, x2 = x + cx / lc * k, y2 = y + cy / lc * k;
+            if (i == 0) path.moveTo(x1, y1);
+            else path.lineTo(x1, y1);
+            if (ch) path.lineTo(x2, y2);
+            else path.quadTo(x, y, x2, y2);
+        }
+        path.closePath();
+        return path;
+    }
+
+    private static double[] dartPts() {
+        double l = Math.toRadians(23), r = Math.toRadians(63);
+        return new double[]{0, 0, 17.0 * Math.sin(l), 17.0 * Math.cos(l),
+                11.7 * Math.sin(AXIS), 11.7 * Math.cos(AXIS), 16.0 * Math.sin(r), 16.0 * Math.cos(r)};
+    }
+
+    private static Area dart(boolean ch) {
+        if (ch) return new Area(poly(dartPts(), new double[]{0, 1.4, 0.9, 1.4}, true));
+        return new Area(poly(dartPts(), new double[]{0.25, 1.9, 1.4, 1.9}, false));
+    }
+
+    private static List<Shape> burst(double u, boolean ch, boolean flat, double k) {
+        double bw = px(flat || ch ? 1.15 : 0.8, u), r1 = (ch ? 4.4 : 3.9) * k, r2 = (ch ? 7.6 : 7.5) * k;
+        double sh = ch && Math.round(bw * u) % 2 == 1 ? 0.5 / u : 0;
+        double mid = ch ? -0.75 * Math.PI : -Math.PI / 2 - AXIS, fan = ch ? Math.PI / 4 : Math.toRadians(55);
+        List<Shape> out = new ArrayList<>();
+        for (int i = -1; i <= 1; i++) out.add(rot(bar(r1, -bw / 2 + sh, r2 - r1, bw, ch), mid + i * fan));
+        return out;
+    }
+
+    private static Shape octagon(double r) {
+        double c = r / Math.cos(Math.PI / 8);
         Path2D p = new Path2D.Double();
-        p.moveTo(0, 0);
-        p.lineTo(0, 14.2);
-        p.lineTo(3.5, 10.9);
-        p.lineTo(5.9, 16.2);
-        p.lineTo(8.1, 15.2);
-        p.lineTo(5.8, 10.1);
-        p.lineTo(10.4, 10.1);
+        for (int i = 0; i < 8; i++) {
+            double t = Math.PI / 8 + i * Math.PI / 4;
+            if (i == 0) p.moveTo(c * Math.cos(t), c * Math.sin(t));
+            else p.lineTo(c * Math.cos(t), c * Math.sin(t));
+        }
         p.closePath();
         return p;
     }
 
-    private static Shape hand() {
-        Area a = new Area(new RoundRectangle2D.Double(2.4, 0, 2.6, 9.5, 2.6, 2.6));
-        a.add(new Area(new RoundRectangle2D.Double(5.0, 5.0, 2.5, 5.5, 2.4, 2.4)));
-        a.add(new Area(new RoundRectangle2D.Double(7.5, 5.6, 2.5, 5.2, 2.4, 2.4)));
-        a.add(new Area(new RoundRectangle2D.Double(10.0, 6.4, 2.3, 4.8, 2.2, 2.2)));
-        a.add(new Area(new RoundRectangle2D.Double(2.4, 7.6, 9.9, 6.8, 3.6, 3.6)));
-        Path2D thumb = new Path2D.Double();
-        thumb.moveTo(2.6, 8.2);
-        thumb.lineTo(0.4, 7.0);
-        thumb.quadTo(-0.6, 7.6, 0.0, 8.8);
-        thumb.lineTo(2.8, 12.6);
-        thumb.closePath();
-        a.add(new Area(thumb));
-        return a;
+    private static Shape bar(double x, double y, double w, double h, boolean ch) {
+        if (ch) return new Rectangle2D.Double(x, y, w, h);
+        double m = Math.min(w, h);
+        return new RoundRectangle2D.Double(x, y, w, h, m, m);
     }
 
-    private static Shape ibeam() {
-        Area a = new Area(new Rectangle2D.Double(-0.6, -6.5, 1.2, 13));
-        a.add(new Area(new Rectangle2D.Double(-3.0, -7.3, 6.0, 1.3)));
-        a.add(new Area(new Rectangle2D.Double(-3.0, 6.0, 6.0, 1.3)));
-        return a;
-    }
-
-    private static Shape cross() {
-        Area a = new Area(new Rectangle2D.Double(-0.6, -7, 1.2, 5));
-        a.add(new Area(new Rectangle2D.Double(-0.6, 2, 1.2, 5)));
-        a.add(new Area(new Rectangle2D.Double(-7, -0.6, 5, 1.2)));
-        a.add(new Area(new Rectangle2D.Double(2, -0.6, 5, 1.2)));
-        return a;
-    }
-
-    private static Path2D doubleArrow() {
+    private static Shape dot(double d, boolean ch) {
+        if (!ch) return new Ellipse2D.Double(-d / 2, -d / 2, d, d);
+        double k = d * 0.62;
         Path2D p = new Path2D.Double();
-        p.moveTo(-8, 0);
-        p.lineTo(-4.4, -3.6);
-        p.lineTo(-4.4, -1.2);
-        p.lineTo(4.4, -1.2);
-        p.lineTo(4.4, -3.6);
-        p.lineTo(8, 0);
-        p.lineTo(4.4, 3.6);
-        p.lineTo(4.4, 1.2);
-        p.lineTo(-4.4, 1.2);
-        p.lineTo(-4.4, 3.6);
+        p.moveTo(0, -k);
+        p.lineTo(k, 0);
+        p.lineTo(0, k);
+        p.lineTo(-k, 0);
         p.closePath();
         return p;
     }
 
-    private static Shape fourWay() {
-        Area a = new Area(doubleArrow());
-        a.add(new Area(rotate(doubleArrow(), Math.PI / 2, 0, 0)));
-        return a;
+    private static Shape chev(double v, double a, double cw, boolean ch) {
+        Path2D p = new Path2D.Double();
+        p.moveTo(v - a, -a);
+        p.lineTo(v, 0);
+        p.lineTo(v - a, a);
+        BasicStroke st = ch ? new BasicStroke((float) cw, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 4f)
+                : new BasicStroke((float) cw, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND);
+        return st.createStrokedShape(p);
     }
 
-    private static Shape notAllowed() {
-        Area ring = new Area(new Ellipse2D.Double(-6.5, -6.5, 13, 13));
-        ring.subtract(new Area(new Ellipse2D.Double(-4.6, -4.6, 9.2, 9.2)));
-        Shape bar = rotate(new Rectangle2D.Double(-5.4, -0.95, 10.8, 1.9), Math.PI / 4, 0, 0);
-        ring.add(new Area(bar));
-        return ring;
+    private static List<Part> build(Kind kind, boolean ch, boolean flat, double u, double o, double od, boolean[] half) {
+        List<Part> out = new ArrayList<>();
+        List<Shape> ps = new ArrayList<>();
+        double k = u < 1.2 ? 1.25 : 1.0;
+        switch (kind) {
+            case ARROW -> {
+                Area s = dart(ch);
+                out.add(new Part(null, s, shrink(s, od, ch), Role.MAIN, 0));
+            }
+            case HAND -> {
+                out.add(new Part(burst(u, ch, flat, k), null, null, Role.RING, flat ? 0 : o));
+                Area s = dart(ch);
+                out.add(new Part(null, s, shrink(s, o, ch), Role.ACTIVE, 0));
+            }
+            case IBEAM -> {
+                half[0] = npx(1.15, u) % 2 == 1;
+                double bw = par(1.15, u, half[0]), h = 13.4, sw = 4.8;
+                ps.add(bar(-bw / 2, -h / 2, bw, h, ch));
+                ps.add(bar(-sw / 2, -h / 2, sw, bw, ch));
+                ps.add(bar(-sw / 2, h / 2 - bw, sw, bw, ch));
+                out.add(new Part(ps, null, null, Role.LINE, o));
+            }
+            case CROSSHAIR -> {
+                half[0] = npx(1.0, u) % 2 == 1;
+                double bw = par(1.0, u, half[0]), r1 = 3.3 * k, r2 = 7.2 * k;
+                for (int i = 0; i < 4; i++) ps.add(rot(bar(-bw / 2, -r2, bw, r2 - r1, ch), i * Math.PI / 2));
+                ps.add(dot(par(1.8, u, half[0]), ch));
+                out.add(new Part(ps, null, null, Role.LINE, o));
+            }
+            case RESIZE_EW, RESIZE_NS -> {
+                half[0] = npx(2.2, u) % 2 == 1;
+                double cw = px(1.35, u), t = kind == Kind.RESIZE_NS ? Math.PI / 2 : 0;
+                ps.add(rot(chev(6.2 * k, 2.6 * k, cw, ch), t));
+                ps.add(rot(chev(6.2 * k, 2.6 * k, cw, ch), t + Math.PI));
+                ps.add(dot(par(2.2, u, half[0]), ch));
+                out.add(new Part(ps, null, null, Role.LINE, o));
+            }
+            case RESIZE_ALL -> {
+                half[0] = npx(2.2, u) % 2 == 1;
+                double cw = px(1.35, u);
+                for (int i = 0; i < 4; i++) ps.add(rot(chev(7.8 * k, 2.2 * k, cw, ch), i * Math.PI / 2));
+                ps.add(dot(par(2.2, u, half[0]), ch));
+                out.add(new Part(ps, null, null, Role.LINE, o));
+            }
+            case NOT_ALLOWED -> {
+                half[0] = true;
+                double bw = px(1.45, u), r = 5.3 * k;
+                Shape circle = ch ? octagon(r) : new Ellipse2D.Double(-r, -r, 2 * r, 2 * r);
+                ps.add(new BasicStroke((float) bw, BasicStroke.CAP_BUTT, ch ? BasicStroke.JOIN_MITER : BasicStroke.JOIN_ROUND, 4f).createStrokedShape(circle));
+                ps.add(rot(new Rectangle2D.Double(-r, -bw / 2, 2 * r, bw), Math.PI / 4));
+                out.add(new Part(ps, null, null, Role.LINE, o));
+            }
+        }
+        return out;
     }
 
-    private static Shape rotate(Shape s, double a, double cx, double cy) {
-        return AffineTransform.getRotateInstance(a, cx, cy).createTransformedShape(s);
+    private static double luma(int rgb) {
+        return (0.299 * ((rgb >> 16) & 255) + 0.587 * ((rgb >> 8) & 255) + 0.114 * (rgb & 255)) / 255.0;
+    }
+
+    private static int[] colors(Look look, Role role) {
+        int acc = HontunTheme.accent();
+        return switch (look) {
+            case FLAT -> {
+                int ink = luma(acc) > 0.68 ? 0x15171C : 0xFFFFFF;
+                yield role == Role.ACTIVE ? new int[]{acc, ink} : role == Role.RING ? new int[]{acc, acc} : new int[]{ink, acc};
+            }
+            case CHAMFER -> {
+                int core = HontunTheme.lerp(0x0A0D13, acc, 0.10f);
+                yield role == Role.MAIN ? new int[]{acc, core} : new int[]{0x0A0D13, acc};
+            }
+            default -> role == Role.ACTIVE ? new int[]{0xFFFFFF, 0x0B0B0D} : new int[]{0x0B0B0D, 0xFFFFFF};
+        };
+    }
+
+    private static int facet(Look look, Role role, int bodyRgb, boolean light) {
+        int acc = HontunTheme.accent(), hi = HontunTheme.accentHi();
+        if (light) return HontunTheme.lerp(bodyRgb, look == Look.SMOG ? 0x8E949C : acc, 0.15f);
+        return switch (look) {
+            case FLAT -> HontunTheme.lerp(bodyRgb, role == Role.ACTIVE ? acc : hi, role == Role.ACTIVE ? 0.22f : 0.42f);
+            case CHAMFER -> role == Role.ACTIVE ? HontunTheme.lerp(bodyRgb, hi, 0.38f) : HontunTheme.lerp(bodyRgb, acc, 0.16f);
+            default -> 0x2A2B30;
+        };
     }
 
     private static Color c(int rgb, int a) {
         return new Color((rgb >> 16) & 0xFF, (rgb >> 8) & 0xFF, rgb & 0xFF, Math.max(0, Math.min(255, a)));
     }
 
-    private static Art smooth(Kind kind, Look look, int s) {
-        double u = s * 0.72;
-        Shape base = shape(kind);
-        double[] hs = hot(kind);
-        boolean centered = kind != Kind.ARROW && kind != Kind.HAND;
-        Rectangle2D b = base.getBounds2D();
-        double pad = 3.0 * u;
-        int w = (int) Math.ceil(b.getWidth() * u + pad * 2), h = (int) Math.ceil(b.getHeight() * u + pad * 2);
-        double ox = pad - b.getX() * u, oy = pad - b.getY() * u;
-        AffineTransform at = new AffineTransform(u, 0, 0, u, ox, oy);
-        Shape sh = at.createTransformedShape(base);
+    private static void sil(Graphics2D g, Part p, double extra, boolean ch) {
+        if (p.sil() != null) {
+            g.fill(p.sil());
+            if (extra > 0) {
+                g.setStroke(pen(2 * extra, ch));
+                g.draw(p.sil());
+            }
+            return;
+        }
+        double w = p.rim() + extra;
+        if (w > 0) g.setStroke(pen(2 * w, ch));
+        for (Shape s : p.pieces()) {
+            g.fill(s);
+            if (w > 0) g.draw(s);
+        }
+    }
 
-        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+    private static void body(Graphics2D g, Part p) {
+        if (p.body() != null) g.fill(p.body());
+        else for (Shape s : p.pieces()) g.fill(s);
+    }
+
+    private static Graphics2D gfx(BufferedImage img, AffineTransform at) {
         Graphics2D g = img.createGraphics();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g.setRenderingHint(RenderingHints.KEY_STROKE_CONTROL, RenderingHints.VALUE_STROKE_PURE);
+        g.transform(at);
+        return g;
+    }
 
-        shadow(img, sh, u, look == Look.SMOG ? 0x60 : 0x48);
-
-        int acc = HontunTheme.accent(), hi = HontunTheme.accentHi(), lo = HontunTheme.accentLo();
-        float stroke = (float) Math.max(1.0, 0.9 * u);
-        switch (look) {
-            case SMOG -> {
-                g.setColor(c(0xFFFFFF, 255));
-                g.fill(sh);
-                g.setStroke(new BasicStroke(stroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g.setColor(c(0x0B0B0D, 255));
-                g.draw(sh);
+    private static Art smooth(Kind kind, Look look, int s) {
+        double u = s == 1 ? 1.0 : s * 0.72;
+        boolean ch = look == Look.CHAMFER;
+        double o = px(0.62, u);
+        double od = ch ? px(1.05, u) : o;
+        boolean[] half = {false};
+        List<Part> parts = build(kind, ch, look == Look.FLAT, u, o, od, half);
+        double grow = ch ? 2.2 * o : o;
+        Rectangle2D b = null;
+        for (Part p : parts) {
+            if (p.sil() != null) {
+                b = b == null ? p.sil().getBounds2D() : b.createUnion(p.sil().getBounds2D());
+                continue;
             }
-            case FLAT -> {
-                Rectangle2D sb = sh.getBounds2D();
-                g.setPaint(new GradientPaint((float) sb.getX(), (float) sb.getY(), c(hi, 255),
-                        (float) sb.getX(), (float) sb.getMaxY(), c(acc, 255)));
-                g.fill(sh);
-                g.setStroke(new BasicStroke(stroke, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-                g.setColor(c(0xFFFFFF, 0xF0));
-                g.draw(sh);
+            for (Shape sh : p.pieces()) {
+                Rectangle2D r = sh.getBounds2D();
+                r = new Rectangle2D.Double(r.getX() - grow, r.getY() - grow, r.getWidth() + 2 * grow, r.getHeight() + 2 * grow);
+                b = b == null ? r : b.createUnion(r);
             }
-            case CHAMFER -> {
-                glow(img, sh, acc, u);
-                g.setColor(c(0x0C1018, 0xF2));
-                g.fill(sh);
-                g.setStroke(new BasicStroke(stroke, BasicStroke.CAP_SQUARE, BasicStroke.JOIN_MITER));
-                g.setColor(c(acc, 255));
-                g.draw(sh);
-                if (kind == Kind.ARROW) {
-                    Path2D tip = new Path2D.Double();
-                    tip.moveTo(0, 0);
-                    tip.lineTo(0, 5.2);
-                    tip.lineTo(3.7, 3.7);
-                    tip.closePath();
-                    g.setColor(c(hi, 255));
-                    g.fill(at.createTransformedShape(tip));
-                } else {
-                    g.setColor(c(hi, 0xC0));
-                    g.setStroke(new BasicStroke((float) Math.max(1.0, 0.5 * u)));
-                    Area inner = new Area(sh);
-                    g.setClip(inner);
-                    g.draw(AffineTransform.getTranslateInstance(0, 0.6 * u).createTransformedShape(sh));
-                    g.setClip(null);
+        }
+        double pad = 3.0 * u;
+        int ax = (int) Math.ceil(-b.getMinX() * u + pad), ay = (int) Math.ceil(-b.getMinY() * u + pad);
+        double sh = half[0] ? 0.5 : 0;
+        double ox = ax + sh, oy = ay + sh;
+        int w = (int) Math.ceil(ox + b.getMaxX() * u + pad), h = (int) Math.ceil(oy + b.getMaxY() * u + pad);
+        AffineTransform at = new AffineTransform(u, 0, 0, u, ox, oy);
+        int[] buf = new int[w * h];
+        AffineTransform drop = AffineTransform.getTranslateInstance(0.25 * u, 0.8 * u);
+        drop.concatenate(at);
+        over(buf, blur(mask(w, h, drop, parts, ch), w, h, 0.85 * u), 0x000000, look == Look.SMOG ? 0.5 : 0.42);
+        if (ch) over(buf, blur(mask(w, h, at, parts, ch), w, h, 1.1 * u), HontunTheme.accent(), kind == Kind.HAND ? 0.8 : 0.55);
+        BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        img.setRGB(0, 0, w, h, buf, 0, w);
+        Graphics2D g = gfx(img, at);
+        if (look == Look.FLAT) {
+            g.setColor(c(HontunTheme.lerp(HontunTheme.accentLo(), 0x000000, 0.55f), 0xDC));
+            for (Part p : parts) sil(g, p, px(0.5, u), false);
+        }
+        for (Part p : parts) {
+            int[] col = colors(look, p.role());
+            g.setColor(c(col[0], 255));
+            sil(g, p, 0, ch);
+            g.setColor(c(col[1], 255));
+            body(g, p);
+            if (p.body() != null) {
+                double[] d = dartPts();
+                Path2D f = new Path2D.Double();
+                f.moveTo(0, 0);
+                f.lineTo(d[4], d[5]);
+                f.lineTo(d[6] * 1.3, d[7] * 1.3);
+                f.lineTo(d[6] * 1.3, -2);
+                f.closePath();
+                Area fold = new Area(f);
+                fold.intersect(p.body());
+                boolean light = luma(col[1]) > 0.85;
+                if (light) {
+                    Area rest = new Area(p.body());
+                    rest.subtract(fold);
+                    fold = rest;
                 }
-            }
-            default -> {
+                g.setColor(c(facet(look, p.role(), col[1], light), 255));
+                g.fill(fold);
             }
         }
-        g.dispose();
-        int hx = (int) Math.round(centered ? ox : hs[0] * u + ox);
-        int hy = (int) Math.round(centered ? oy : hs[1] * u + oy);
-        return new Art(img, Math.max(0, Math.min(w - 1, hx)), Math.max(0, Math.min(h - 1, hy)));
-    }
-
-    private static void shadow(BufferedImage dst, Shape sh, double u, int alpha) {
-        int w = dst.getWidth(), h = dst.getHeight();
-        BufferedImage tmp = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = tmp.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setColor(new Color(0, 0, 0, alpha));
-        g.fill(AffineTransform.getTranslateInstance(0.5 * u, 0.9 * u).createTransformedShape(sh));
-        g.dispose();
-        BufferedImage blurred = blur(tmp, Math.max(1, (int) Math.round(u)));
-        Graphics2D d = dst.createGraphics();
-        d.setComposite(AlphaComposite.SrcOver);
-        d.drawImage(blurred, 0, 0, null);
-        d.dispose();
-    }
-
-    private static void glow(BufferedImage dst, Shape sh, int rgb, double u) {
-        int w = dst.getWidth(), h = dst.getHeight();
-        BufferedImage tmp = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g = tmp.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setStroke(new BasicStroke((float) (1.6 * u)));
-        g.setColor(c(rgb, 0x70));
-        g.draw(sh);
-        g.dispose();
-        BufferedImage blurred = blur(tmp, Math.max(1, (int) Math.round(1.2 * u)));
-        Graphics2D d = dst.createGraphics();
-        d.drawImage(blurred, 0, 0, null);
-        d.dispose();
-    }
-
-    private static BufferedImage blur(BufferedImage src, int radius) {
-        int n = radius * 2 + 1;
-        float[] k = new float[n];
-        double sigma = Math.max(0.6, radius / 2.0), sum = 0;
-        for (int i = 0; i < n; i++) {
-            double x = i - radius;
-            k[i] = (float) Math.exp(-x * x / (2 * sigma * sigma));
-            sum += k[i];
+        if (ch && kind == Kind.ARROW) {
+            Path2D t = new Path2D.Double();
+            t.moveTo(0, 0);
+            t.lineTo(0, 5.0);
+            t.lineTo(3.6, 3.6);
+            t.closePath();
+            Area spark = new Area(t);
+            spark.intersect(parts.get(0).sil());
+            spark.subtract(parts.get(0).body());
+            g.setColor(c(HontunTheme.accentHi(), 255));
+            g.fill(spark);
         }
-        for (int i = 0; i < n; i++) k[i] /= (float) sum;
-        BufferedImage a = new ConvolveOp(new Kernel(n, 1, k), ConvolveOp.EDGE_NO_OP, null).filter(src, null);
-        return new ConvolveOp(new Kernel(1, n, k), ConvolveOp.EDGE_NO_OP, null).filter(a, null);
+        g.dispose();
+        return new Art(img, Math.max(0, Math.min(w - 1, ax)), Math.max(0, Math.min(h - 1, ay)));
     }
 
-    private static final String[] PX_ARROW = {
-            "B..........",
-            "BB.........",
-            "BhB........",
-            "BhfB.......",
-            "BhffB......",
-            "BhfffB.....",
-            "BhffffB....",
-            "BhfffffB...",
-            "BhffffffB..",
-            "BhfffffffB.",
-            "BhffffBBBBB",
-            "BhffBfB....",
-            "BhfBBfB....",
-            "BfB..BfB...",
-            "BB...BfB...",
-            "B.....BfB..",
-            "......BBB..",
-    };
+    private static float[] mask(int w, int h, AffineTransform at, List<Part> parts, boolean ch) {
+        BufferedImage m = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = gfx(m, at);
+        g.setColor(Color.WHITE);
+        for (Part p : parts) sil(g, p, 0, ch);
+        g.dispose();
+        int[] px = m.getRGB(0, 0, w, h, null, 0, w);
+        float[] a = new float[w * h];
+        for (int i = 0; i < a.length; i++) a[i] = (px[i] >>> 24) / 255f;
+        return a;
+    }
 
-    private static final String[] PX_HAND = {
-            "...BB.......",
-            "..BhfB......",
-            "..BhfB......",
-            "..BhfB......",
-            "..BhfBBB....",
-            "..BhfBhfBB..",
-            "BBBhfBhfBhB.",
-            "BhBhfffffhfB",
-            "BhfBfffffffB",
-            ".BhffffffffB",
-            ".BhffffffffB",
-            "..BffffffffB",
-            "..BfffffffB.",
-            "...BffffffB.",
-            "...BffffffB.",
-            "...BBBBBBBB.",
+    private static float[] blur(float[] a, int w, int h, double sigma) {
+        int r = Math.max(1, (int) Math.ceil(sigma * 2.5));
+        float[] k = new float[2 * r + 1];
+        float sum = 0;
+        for (int i = -r; i <= r; i++) {
+            k[i + r] = (float) Math.exp(-i * i / (2 * sigma * sigma));
+            sum += k[i + r];
+        }
+        for (int i = 0; i < k.length; i++) k[i] /= sum;
+        float[] t = new float[w * h], o = new float[w * h];
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                float v = 0;
+                for (int i = -r; i <= r; i++) {
+                    int xx = x + i;
+                    if (xx >= 0 && xx < w) v += a[y * w + xx] * k[i + r];
+                }
+                t[y * w + x] = v;
+            }
+        }
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                float v = 0;
+                for (int i = -r; i <= r; i++) {
+                    int yy = y + i;
+                    if (yy >= 0 && yy < h) v += t[yy * w + x] * k[i + r];
+                }
+                o[y * w + x] = v;
+            }
+        }
+        return o;
+    }
+
+    private static void over(int[] buf, float[] a, int rgb, double k) {
+        int sr = (rgb >> 16) & 255, sg = (rgb >> 8) & 255, sb = rgb & 255;
+        for (int i = 0; i < buf.length; i++) {
+            double sa = Math.min(1, a[i] * k);
+            if (sa <= 0.002) continue;
+            int d = buf[i];
+            double da = (d >>> 24) / 255.0;
+            double f = da * (1 - sa);
+            double oa = sa + f;
+            int r = (int) Math.round((sr * sa + ((d >> 16) & 255) * f) / oa);
+            int g = (int) Math.round((sg * sa + ((d >> 8) & 255) * f) / oa);
+            int bl = (int) Math.round((sb * sa + (d & 255) * f) / oa);
+            buf[i] = ((int) Math.round(oa * 255) << 24) | (r << 16) | (g << 8) | bl;
+        }
+    }
+
+    private static final String[] PX_DART = {
+            "BB...........",
+            "BhBB.........",
+            ".BhhBB.......",
+            ".BhfhhBB.....",
+            "..BhflhhBB...",
+            "..BhffllhhBB.",
+            "...BhfflllhhB",
+            "...BhfffddddB",
+            "....BhfdBBBB.",
+            "....BhfdB....",
+            ".....BhdB....",
+            ".....BhdB....",
+            "......BB.....",
     };
 
     private static final String[] PX_IBEAM = {
-            "BBB.BBB",
-            "BhfBfhB",
-            "BBBfBBB",
-            "..BfB..",
-            "..BfB..",
-            "..BfB..",
-            "..BfB..",
-            "..BfB..",
-            "..BfB..",
-            "..BfB..",
-            "BBBfBBB",
-            "BhfBfhB",
-            "BBB.BBB",
+            "hffff",
+            "..f..",
+            "..f..",
+            "..f..",
+            "..f..",
+            "..f..",
+            "..f..",
+            "..f..",
+            "..f..",
+            "..f..",
+            "hffff",
     };
 
     private static final String[] PX_CROSS = {
-            "....BBB....",
-            "....BfB....",
-            "....BfB....",
-            "....BBB....",
-            "BBBB...BBBB",
-            "BffB...BffB",
-            "BBBB...BBBB",
-            "....BBB....",
-            "....BfB....",
-            "....BfB....",
-            "....BBB....",
+            ".....f.....",
+            ".....f.....",
+            "...........",
+            "...........",
+            "...........",
+            "ff...h...ff",
+            "...........",
+            "...........",
+            "...........",
+            ".....f.....",
+            ".....f.....",
     };
 
     private static final String[] PX_EW = {
-            "...B.......B...",
-            "..BhB.....BfB..",
-            ".BhfBBBBBBBffB.",
-            "BhfffffffffffhB",
-            ".BffBBBBBBBffB.",
-            "..BfB.....BfB..",
-            "...B.......B...",
+            "..h.......h..",
+            ".hf.......fh.",
+            "hff...h...fff",
+            ".df.......fd.",
+            "..d.......d..",
     };
 
-    private static String[] notAllowedGrid() {
+    private static final int[][] PX_RAYS = {{0, -4}, {0, -5}, {-4, 0}, {-5, 0}, {-3, -3}, {-4, -4}};
+
+    private static final String[] PX_HEAD = {
+            "..h",
+            ".hf",
+            "hff",
+            ".df",
+            "..d",
+    };
+
+    private static char[][] grid(String[] rows) {
+        char[][] g = new char[rows.length][];
+        for (int i = 0; i < rows.length; i++) g[i] = rows[i].toCharArray();
+        return g;
+    }
+
+    private static boolean solid(char ch) {
+        return ch != '.' && ch != 'B';
+    }
+
+    private static char[][] blank(int w, int h) {
+        char[][] g = new char[h][w];
+        for (char[] row : g) Arrays.fill(row, '.');
+        return g;
+    }
+
+    private static char[][] edge(char[][] g) {
+        int h = g.length, w = g[0].length;
+        char[][] o = new char[h][w];
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                o[y][x] = g[y][x];
+                if (g[y][x] != '.') continue;
+                boolean n = (x > 0 && solid(g[y][x - 1])) || (x < w - 1 && solid(g[y][x + 1]))
+                        || (y > 0 && solid(g[y - 1][x])) || (y < h - 1 && solid(g[y + 1][x]));
+                if (n) o[y][x] = 'B';
+            }
+        }
+        return o;
+    }
+
+    private static char[][] outline(char[][] f) {
+        char[][] g = blank(f[0].length + 2, f.length + 2);
+        for (int y = 0; y < f.length; y++) System.arraycopy(f[y], 0, g[y + 1], 1, f[y].length);
+        return edge(g);
+    }
+
+    private static char[][] transpose(char[][] g) {
+        int h = g.length, w = g[0].length;
+        char[][] o = new char[w][h];
+        for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) o[x][y] = g[y][x];
+        return o;
+    }
+
+    private static char[][] fourWay() {
+        int n = 15;
+        char[][] g = blank(n, n);
+        for (int y = 0; y < PX_HEAD.length; y++) {
+            for (int x = 0; x < PX_HEAD[y].length(); x++) {
+                char t = PX_HEAD[y].charAt(x);
+                if (t == '.') continue;
+                char flip = t == 'h' ? 'd' : t == 'd' ? 'h' : t;
+                g[y + 5][x] = t;
+                g[y + 5][n - 1 - x] = t;
+                g[x][y + 5] = t;
+                g[n - 1 - x][y + 5] = flip;
+            }
+        }
+        g[7][7] = 'h';
+        return outline(g);
+    }
+
+    private static char[][] noGrid() {
         int n = 13;
         double c = (n - 1) / 2.0;
-        char[][] g = new char[n][n];
+        char[][] g = blank(n, n);
         for (int y = 0; y < n; y++) {
             for (int x = 0; x < n; x++) {
                 double d = Math.hypot(x - c, y - c);
-                boolean ring = d >= 3.6 && d <= 5.4;
-                boolean bar = Math.abs(x - y) <= 0 && d < 4.2;
-                g[y][x] = ring || bar ? 'f' : '.';
+                boolean ring = d >= 4.4 && d <= 6.2;
+                boolean bar = x == y && d < 4.4;
+                if (!ring && !bar) continue;
+                g[y][x] = x + y < n - 1 ? 'h' : 'f';
+                if (ring && x + y > n + 3) g[y][x] = 'd';
             }
         }
-        char[][] o = new char[n][n];
-        for (int y = 0; y < n; y++) {
-            for (int x = 0; x < n; x++) {
-                o[y][x] = g[y][x];
-                if (g[y][x] != '.') continue;
-                for (int dy = -1; dy <= 1 && o[y][x] == '.'; dy++) {
-                    for (int dx = -1; dx <= 1; dx++) {
-                        int xx = x + dx, yy = y + dy;
-                        if (xx >= 0 && yy >= 0 && xx < n && yy < n && g[yy][xx] == 'f') {
-                            o[y][x] = 'B';
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-        String[] rows = new String[n];
-        for (int y = 0; y < n; y++) rows[y] = new String(o[y]);
-        return rows;
+        return outline(g);
     }
 
     private static Art pixel(Kind kind, int s) {
-        String[] rows;
-        int hx, hy;
-        boolean rotate = false;
+        char[][] g;
         switch (kind) {
-            case HAND -> { rows = PX_HAND; hx = 3; hy = 0; }
-            case IBEAM -> { rows = PX_IBEAM; hx = 3; hy = 6; }
-            case CROSSHAIR -> { rows = PX_CROSS; hx = 5; hy = 5; }
-            case RESIZE_EW -> { rows = PX_EW; hx = 7; hy = 3; }
-            case RESIZE_NS -> { rows = PX_EW; hx = 3; hy = 7; rotate = true; }
-            case RESIZE_ALL -> { return pixelFourWay(s); }
-            case NOT_ALLOWED -> { rows = notAllowedGrid(); hx = 6; hy = 6; }
-            default -> { rows = PX_ARROW; hx = 0; hy = 0; }
+            case ARROW -> {
+                return paintGrid(grid(PX_DART), s, 0, 0);
+            }
+            case HAND -> {
+                return pixelHand(s);
+            }
+            case IBEAM -> g = outline(grid(PX_IBEAM));
+            case CROSSHAIR -> g = outline(grid(PX_CROSS));
+            case RESIZE_EW -> g = outline(grid(PX_EW));
+            case RESIZE_NS -> g = transpose(outline(grid(PX_EW)));
+            case RESIZE_ALL -> g = fourWay();
+            default -> g = noGrid();
         }
-        if (rotate) rows = transpose(rows);
-        return paintGrid(rows, s, hx, hy);
+        return paintGrid(g, s, g[0].length / 2, g.length / 2);
     }
 
-    private static Art pixelFourWay(int s) {
-        String[] ew = PX_EW;
-        String[] ns = transpose(PX_EW);
-        int n = Math.max(ew[0].length(), ns.length);
-        char[][] grid = new char[n][n];
-        for (char[] row : grid) java.util.Arrays.fill(row, '.');
-        overlay(grid, ew, (n - ew[0].length()) / 2, (n - ew.length) / 2);
-        overlay(grid, ns, (n - ns[0].length()) / 2, (n - ns.length) / 2);
-        String[] rows = new String[n];
-        for (int i = 0; i < n; i++) rows[i] = new String(grid[i]);
-        return paintGrid(rows, s, n / 2, n / 2);
-    }
-
-    private static void overlay(char[][] grid, String[] rows, int ox, int oy) {
-        for (int y = 0; y < rows.length; y++) {
-            for (int x = 0; x < rows[y].length(); x++) {
-                char ch = rows[y].charAt(x);
-                if (ch == '.') continue;
-                char cur = grid[oy + y][ox + x];
-                if (cur == '.' || ch != 'B') grid[oy + y][ox + x] = ch;
+    private static Art pixelHand(int s) {
+        char[][] d = grid(PX_DART);
+        for (char[] row : d) {
+            for (int x = 0; x < row.length; x++) {
+                row[x] = switch (row[x]) {
+                    case 'h' -> 'W';
+                    case 'f' -> 'w';
+                    case 'd' -> 'g';
+                    case 'l' -> 'W';
+                    default -> row[x];
+                };
             }
         }
-    }
-
-    private static String[] transpose(String[] rows) {
-        int h = rows.length, w = rows[0].length();
-        String[] out = new String[w];
-        for (int x = 0; x < w; x++) {
-            StringBuilder sb = new StringBuilder();
-            for (int y = 0; y < h; y++) sb.append(rows[y].charAt(x));
-            out[x] = sb.toString();
+        int m = 7, dw = d[0].length, dh = d.length;
+        int gw = dw + m, gh = dh + m;
+        char[][] g = blank(gw, gh);
+        for (int[] c : PX_RAYS) g[m + c[1]][m + c[0]] = 'f';
+        char[][] o = edge(g);
+        for (int y = 0; y < dh; y++) {
+            for (int x = 0; x < dw; x++) {
+                if (d[y][x] != '.') o[y + m][x + m] = d[y][x];
+            }
         }
-        return out;
+        int minX = gw, minY = gh;
+        for (int y = 0; y < gh; y++) {
+            for (int x = 0; x < gw; x++) {
+                if (o[y][x] != '.') {
+                    minX = Math.min(minX, x);
+                    minY = Math.min(minY, y);
+                }
+            }
+        }
+        char[][] cut = new char[gh - minY][gw - minX];
+        for (int y = minY; y < gh; y++) System.arraycopy(o[y], minX, cut[y - minY], 0, gw - minX);
+        return paintGrid(cut, s, m - minX, m - minY);
     }
 
-    private static Art paintGrid(String[] rows, int s, int hx, int hy) {
-        int gw = rows[0].length(), gh = rows.length;
+    private static Art paintGrid(char[][] rows, int s, int hx, int hy) {
+        int gw = rows[0].length, gh = rows.length;
         int sh = Math.max(1, s / 2);
         BufferedImage img = new BufferedImage(gw * s + sh, gh * s + sh, BufferedImage.TYPE_INT_ARGB);
-        int fill = 0xFF000000 | HontunTheme.accent();
+        int acc = HontunTheme.accent();
+        int fill = 0xFF000000 | acc;
         int light = 0xFF000000 | HontunTheme.accentHi();
+        int dark = 0xFF000000 | HontunTheme.lerp(acc, HontunTheme.accentLo(), 0.55f);
         int edge = 0xFF000000;
         for (int y = 0; y < gh; y++) {
             for (int x = 0; x < gw; x++) {
-                if (rows[y].charAt(x) == '.') continue;
+                if (rows[y][x] == '.') continue;
                 rect(img, x * s + sh, y * s + sh, s, s, 0x55000000, true);
             }
         }
         for (int y = 0; y < gh; y++) {
             for (int x = 0; x < gw; x++) {
-                char ch = rows[y].charAt(x);
-                int col = switch (ch) {
+                int col = switch (rows[y][x]) {
                     case 'B' -> edge;
                     case 'h' -> light;
                     case 'f' -> fill;
+                    case 'd' -> dark;
+                    case 'l' -> 0xFF000000 | HontunTheme.lerp(acc, HontunTheme.accentHi(), 0.5f);
+                    case 'W' -> 0xFFFFFFFF;
+                    case 'w' -> 0xFFE9EAEE;
+                    case 'g' -> 0xFFB2B4BC;
                     default -> 0;
                 };
                 if (col != 0) rect(img, x * s, y * s, s, s, col, false);

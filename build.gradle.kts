@@ -25,6 +25,13 @@ loom {
     accessWidenerPath = file("src/main/resources/hontun.accesswidener")
 }
 
+sourceSets {
+    main {
+        java.srcDir("src/mc${properties["minecraft_version"] as String}/java")
+        resources.srcDir("src/mc${properties["minecraft_version"] as String}/resources")
+    }
+}
+
 dependencies {
     // 26.x se distribuuje DEOBFUSKOVANĚ (jména v jaru jsou už čitelná), takže se
     // NEDEKLARUJE žádný mappings() - proto ho template nemá a officialMojangMappings()
@@ -39,7 +46,7 @@ dependencies {
 tasks {
     processResources {
         val propertyMap = mapOf(
-            "version" to project.version,
+            "version" to "${project.version}+${project.property("minecraft_version")}",
             "mc_version" to project.property("minecraft_version"),
         )
 
@@ -53,6 +60,7 @@ tasks {
     }
 
     jar {
+        archiveVersion = "${project.version}-${project.property("minecraft_version")}"
         val licenseSuffix = project.base.archivesName.get()
         from("LICENSE") {
             rename { "${it}_${licenseSuffix}" }

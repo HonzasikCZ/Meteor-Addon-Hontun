@@ -1,6 +1,7 @@
 package cz.honzasik.hontun.mixin.network.software;
 
 import cz.honzasik.hontun.utils.ServerSoftware;
+import cz.honzasik.hontun.utils.VersionKeeper;
 import net.minecraft.client.multiplayer.ClientConfigurationPacketListenerImpl;
 import net.minecraft.network.protocol.configuration.ClientboundRegistryDataPacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -13,6 +14,7 @@ public abstract class SoftwareConfigMixin {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void hontun$reset(CallbackInfo ci) {
         ServerSoftware.resetConfig();
+        VersionKeeper.clear();
     }
 
     @Inject(method = "handleRegistryData", at = @At("HEAD"))

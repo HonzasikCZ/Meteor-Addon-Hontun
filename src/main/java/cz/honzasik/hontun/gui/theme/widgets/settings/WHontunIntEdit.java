@@ -49,7 +49,7 @@ public class WHontunIntEdit extends WVerticalList implements HontunWidget {
 
         textBox = (WHontunTextBox) list.add(theme().textBox(Integer.toString(value), this::filter, 0)).expandX().widget();
         textBox.shouldRenderBackground(false);
-        textBox.color(() -> theme().accentColor());
+        textBox.color(() -> theme().accentTextColor());
 
         WidgetUtils.reset(list, setting, () -> set(setting.get()), this::showReset);
 

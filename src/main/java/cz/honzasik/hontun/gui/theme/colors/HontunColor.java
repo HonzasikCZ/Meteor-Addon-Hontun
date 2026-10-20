@@ -27,5 +27,14 @@ public enum HontunColor {
     Base,
     Mantle,
     Crust,
-    AccentLo;
+    AccentLo,
+    AccentText,
+    AccentHiText,
+    AccentLine,
+    AccentHiLine,
+    AccentLoLine,
+    AccentBar,
+    AccentHiBar,
+    AccentLoBar,
+    OnAccent;
 }

@@ -189,18 +189,32 @@ public abstract class ClickStyle {
             out.green = HontunTheme.green();
             out.yellow = HontunTheme.yellow();
             out.red = HontunTheme.red();
+            out.copyRoles();
             return;
         }
 
         HontunTheme.Ramp lightRamp = HontunLightPalette.ramp(m);
         fillRamp(out, lightRamp);
-        int body = HontunLightPalette.body(dark, lightRamp, windowAlpha(t.windowOpacity.get(), true));
-        out.accent = smog ? HontunLightPalette.SMOG_ACCENT : HontunLightPalette.accentFor(out.userAccent, body);
-        out.accentHi = smog ? HontunLightPalette.SMOG_ACCENT_HI : HontunLightPalette.accentFor(out.userAccentHi, body);
-        out.accentLo = smog ? lightRamp.textDim() : HontunLightPalette.accentFor(out.userAccentLo, body);
+        out.accent = smog ? HontunLightPalette.SMOG_ACCENT : out.userAccent;
+        out.accentHi = smog ? HontunLightPalette.SMOG_ACCENT_HI : out.userAccentHi;
+        out.accentLo = smog ? lightRamp.textDim() : out.userAccentLo;
         out.green = HontunLightPalette.green();
         out.yellow = HontunLightPalette.yellow();
         out.red = HontunLightPalette.red();
+        if (smog) {
+            out.copyRoles();
+            return;
+        }
+        int body = lightBody(out, t);
+        out.lightRoles(roleBackground(out, body, t), body);
+    }
+
+    protected int lightBody(StylePalette out, HontunGuiTheme t) {
+        return HontunLightPalette.body(HontunTheme.ramp(id()), HontunLightPalette.ramp(id()), windowAlpha(t.windowOpacity.get(), true));
+    }
+
+    protected int roleBackground(StylePalette out, int body, HontunGuiTheme t) {
+        return HontunLightPalette.darkest(body, HontunTheme.lerp(body, out.accent, HontunLightPalette.ROW_TINT));
     }
 
     protected static void fillRamp(StylePalette out, HontunTheme.Ramp ramp) {

@@ -73,7 +73,7 @@ public class WHontunDoubleEdit extends WVerticalList implements HontunWidget {
 
         textBox = (WHontunTextBox) list.add(theme().textBox(valueString(), this::filter, 0)).expandX().widget();
         textBox.shouldRenderBackground(false);
-        textBox.color(() -> theme().accentColor());
+        textBox.color(() -> theme().accentTextColor());
 
         if (setting != null) WidgetUtils.reset(list, setting, () -> set(setting.get()), this::showReset);
 

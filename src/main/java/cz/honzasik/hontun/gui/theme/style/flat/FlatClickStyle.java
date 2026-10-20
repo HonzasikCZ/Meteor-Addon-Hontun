@@ -103,8 +103,11 @@ public class FlatClickStyle extends ClickStyle {
     private int cSub1 = 0xCACDD4, cSub0 = 0x9CA0A8;
     private int cA = 0x3E8CFF, cAH = 0x5AC8FF, cAL = 0x2E63B8;
     private int cRawA = 0x3E8CFF;
-    private int cAt = 0x3E8CFF, cAtHi = 0x5AC8FF, cAtLo = 0x2E63B8;
-    private int cTint, cTintHot, cOnA = 0x08090B;
+    private int cLA = 0x3E8CFF, cLAH = 0x5AC8FF, cTA = 0x3E8CFF;
+    private int cBA = 0x3E8CFF, cBAH = 0x5AC8FF, cBAL = 0x2E63B8;
+    private boolean cFaint = false;
+    private int cOnA = 0x08090B, cOnAH = 0x08090B, cOnAL = 0x08090B;
+    private int cTint, cTintHot;
     private int cEdge = 0x646670;
     private int cGreen = 0x5EE0A0, cRed = 0xFF6B7A;
 
@@ -281,22 +284,26 @@ public class FlatClickStyle extends ClickStyle {
         cSub0 = out.subtext0;
 
         cRawA = out.userAccent;
-        cA = out.userAccent;
-        cAH = out.userAccentHi;
-        cAL = out.userAccentLo;
-        cAt = out.accent;
-        cAtHi = out.accentHi;
-        cAtLo = out.accentLo;
+        cA = out.accent;
+        cAH = out.accentHi;
+        cAL = out.accentLo;
+        cLA = out.accentLine;
+        cLAH = out.accentHiLine;
+        cTA = out.accentText;
+        cBA = out.accentBar;
+        cBAH = out.accentHiBar;
+        cBAL = out.accentLoBar;
+        int restMid = mix(out.accent, mix(out.accent, out.accentLo, 0.35), 0.5), hoverMid = mix(out.accentHi, out.accent, 0.5);
+        cOnA = light ? HontunLightPalette.readableInk(restMid, restMid, out.text, out.base) : out.onAccent;
+        cOnAH = light ? HontunLightPalette.readableInk(hoverMid, hoverMid, out.text, out.base) : out.onAccent;
+        cOnAL = light ? HontunLightPalette.readableInk(out.accentLo, out.accentLo, out.text, out.base) : out.onAccent;
+        cFaint = out.accentFaint;
         cEdge = cO2;
 
         cTint = mix(cS1, cRawA, light ? LIGHT_TINT : 0.18);
         cTintHot = mix(cS1, cRawA, light ? LIGHT_TINT_HOT : 0.26);
 
         if (light) {
-            int stroke = darker(body, cTint);
-            cA = atLeast(cA, stroke, LIGHT_STROKE);
-            cAH = atLeast(cAH, stroke, LIGHT_STROKE);
-            cAL = atLeast(cAL, stroke, LIGHT_STROKE);
             cEdge = atLeast(cO2, body, LIGHT_STROKE);
 
             out.green = atLeast(out.green, body, LIGHT_STATUS);
@@ -307,26 +314,29 @@ public class FlatClickStyle extends ClickStyle {
         cGreen = out.green;
         cRed = out.red;
 
-        int onFill = light ? cAt : cA;
-        cOnA = HontunLightPalette.contrast(cCrust, onFill) >= HontunLightPalette.contrast(cBase, onFill) ? cCrust : cBase;
-
         FlatPaint.set(sub1, cSub1);
         FlatPaint.set(sub0, cSub0);
     }
 
-    private int lightBody(StylePalette out, HontunGuiTheme t) {
+    @Override
+    protected int lightBody(StylePalette out, HontunGuiTheme t) {
         double wa = t != null ? windowAlpha(t.windowOpacity.get(), true) : 1;
         return HontunTheme.lerp(HontunTheme.ramp(id()).base(), out.surface0, (float) clamp01(0xF4 / 255.0 * wa));
+    }
+
+    @Override
+    protected int roleBackground(StylePalette out, int body, HontunGuiTheme t) {
+        double wa = windowAlpha(t.windowOpacity.get(), true);
+        int search = mix(HontunTheme.ramp(id()).base(), out.surface1, alpha(255 * Math.max(0.85, wa)) / 255.0);
+        int chip = mix(body, out.accent, 0x22 / 255.0);
+        int rows = HontunLightPalette.darkest(HontunLightPalette.darkest(body, mix(out.surface1, out.accent, LIGHT_TINT)), out.surface2);
+        return HontunLightPalette.darkest(rows, HontunLightPalette.darkest(search, chip));
     }
 
     private static int atLeast(int rgb, int bg, double ratio) {
         int c = rgb & 0xFFFFFF;
         for (int i = 0; i < 64 && HontunLightPalette.contrast(c, bg) < ratio; i++) c = HontunTheme.darken(c, 0.95f);
         return c;
-    }
-
-    private static int darker(int a, int b) {
-        return HontunLightPalette.luminance(a) <= HontunLightPalette.luminance(b) ? a : b;
     }
 
     private int lightHover(int darkRgb) {
@@ -356,7 +366,7 @@ public class FlatClickStyle extends ClickStyle {
     public WWidget windowIcon(HontunGuiTheme t, WindowKind kind, Category category, WWidget fallback) {
         if (!(fallback instanceof WGuiTexture icon)) return fallback;
 
-        return t.texture(icon.texture, Math.round(0.9 * t.textHeight())).color(t.accentColor());
+        return t.texture(icon.texture, Math.round(0.9 * t.textHeight())).color(t.accentLineColor());
     }
 
     @Override
@@ -389,7 +399,7 @@ public class FlatClickStyle extends ClickStyle {
     @Override
     public Color favoriteColor(WHontunFavorite f) {
         HontunGuiTheme t = f.theme();
-        if (f.checked) return f.mouseOver ? col(light ? cAtHi : cAH, 255) : t.accentColor();
+        if (f.checked) return f.mouseOver ? col(cLAH, 255) : t.accentLineColor();
         return f.mouseOver ? t.textColor() : t.textSecondaryColor();
     }
 
@@ -607,7 +617,7 @@ public class FlatClickStyle extends ClickStyle {
             bottom = cS0;
             topA = 0xF0;
             bottomA = 0xF0;
-            outline = light ? cAt : cA;
+            outline = cLA;
             outlineA = 0xC0;
             lightC = light ? 0xFFFFFF : cO2;
             lightA = light ? 0x80 : 0x2E;
@@ -617,7 +627,7 @@ public class FlatClickStyle extends ClickStyle {
             bottom = mix(cS0, mix(cS0, cRawA, 0.18), hp);
             topA = 0xFF;
             bottomA = 0xFF;
-            outline = mix(cO1, cAt, hp);
+            outline = mix(cO1, cLA, hp);
             outlineA = alpha(lerp(0xC0, 0xFF, hp));
             lightC = 0xFFFFFF;
             lightA = 0x80;
@@ -703,7 +713,7 @@ public class FlatClickStyle extends ClickStyle {
 
         edges(x0, y0, x0 + w, y0 + h)
                 .radius(w / 2)
-                .vgradient(col(cAH, 255), col(cAL, 255))
+                .vgradient(col(cBAH, 255), col(cBAL, 255))
                 .render();
     }
 
@@ -759,7 +769,7 @@ public class FlatClickStyle extends ClickStyle {
 
         edges(x0, y0, x1, Math.max(fy1, y1))
                 .radius(R)
-                .hgradient(col(cAL, 255), col(cAH, 255))
+                .hgradient(col(cBAL, 255), col(cBAH, 255))
                 .clip(x0, y0, x1 - x0, h2(t))
                 .render();
 
@@ -850,7 +860,7 @@ public class FlatClickStyle extends ClickStyle {
             if (gw >= 1) {
                 box(gx, uy, gw, h2)
                         .radius(h2 / 2)
-                        .hgradient(col(cAL, 255), col(cAH, 255))
+                        .hgradient(col(cBAL, 255), col(cBAH, 255))
                         .render();
             }
 
@@ -858,7 +868,7 @@ public class FlatClickStyle extends ClickStyle {
         }
 
         Color fg = selected ? t.textColor() : t.textSecondaryColor();
-        Color iconColor = selected ? t.accentColor() : t.textSecondaryColor();
+        Color iconColor = selected ? t.accentLineColor() : t.textSecondaryColor();
 
         double x = rd(cx - contentWidth / 2);
 
@@ -910,8 +920,8 @@ public class FlatClickStyle extends ClickStyle {
         if (ap > 0) {
             int n = Math.max(1, m.runLength());
             int i = Math.clamp(m.runIndex(), 0, n - 1);
-            int top = mix(cAH, cAL, (double) i / n);
-            int bottom = mix(cAH, cAL, (double) (i + 1) / n);
+            int top = mix(cBAH, cBAL, (double) i / n);
+            int bottom = mix(cBAH, cBAL, (double) (i + 1) / n);
             leftBar(x0, y0, x1, y1, r, corners, h3(t), top, bottom, ap);
         }
 
@@ -1011,8 +1021,8 @@ public class FlatClickStyle extends ClickStyle {
         }
 
         Color thumb = light
-                ? mix(mix(col(cO2, 0xE0), col(cSub0, 0xE0), hv), col(cAt, 0xF0), dg)
-                : mix(mix(col(cO1, 0x90), col(cO2, 0xC0), hv), col(cAt, 0xE0), dg);
+                ? mix(mix(col(cO2, 0xE0), col(cSub0, 0xE0), hv), col(cBA, 0xF0), dg)
+                : mix(mix(col(cO1, 0x90), col(cO2, 0xC0), hv), col(cBA, 0xE0), dg);
 
         edges(x, v.barY(), right, v.barY() + v.barHeight())
                 .radius(width / 2)
@@ -1030,7 +1040,7 @@ public class FlatClickStyle extends ClickStyle {
 
         if (b.parent instanceof WHontunKeybind k) {
             face(t, x0, y0, x1, y1, hp, pressed);
-            underline(x0, y0, x1, y1, rSmall(t), h2(t), cA, cAH, k.isListening() ? 0xFF : underlineAlpha(hp));
+            underline(x0, y0, x1, y1, rSmall(t), h2(t), cBA, cBAH, k.isListening() ? 0xFF : underlineAlpha(hp));
 
             RichText label = b.displayText();
             if (label != null) {
@@ -1048,7 +1058,7 @@ public class FlatClickStyle extends ClickStyle {
         }
 
         face(t, x0, y0, x1, y1, hp, pressed);
-        underline(x0, y0, x1, y1, rSmall(t), h2(t), cA, cAH, underlineAlpha(hp));
+        underline(x0, y0, x1, y1, rSmall(t), h2(t), cBA, cBAH, underlineAlpha(hp));
 
         double ty = rd(y0 + (y1 - y0 - T) / 2) + (pressed ? h1(t) : 0);
         text().text(label, rd(x0 + (x1 - x0 - t.textWidth(label)) / 2), ty, t.textColor());
@@ -1076,7 +1086,7 @@ public class FlatClickStyle extends ClickStyle {
 
         if (p < 1) {
             int fill = pressed ? cS2 : hover ? cS1 : light ? cBase : cS0;
-            int outline = hover ? cAH : light ? cEdge : cO1;
+            int outline = hover ? cLAH : light ? cEdge : cO1;
 
             edges(x0, y0, x1, y1)
                     .radius(r)
@@ -1087,9 +1097,9 @@ public class FlatClickStyle extends ClickStyle {
 
         if (p <= 0) return;
 
-        int base = light ? cAt : cA;
-        int hi = light ? cAtHi : cAH;
-        int lo = light ? cAtLo : cAL;
+        int base = cA;
+        int hi = cAH;
+        int lo = cAL;
         int top, bottom;
 
         if (pressed) {
@@ -1107,13 +1117,14 @@ public class FlatClickStyle extends ClickStyle {
 
         int a = alpha(255 * p);
 
-        edges(x0, y0, x1, y1)
+        RoundedRect fill = edges(x0, y0, x1, y1)
                 .radius(r)
-                .vgradient(col(top, a), col(bottom, a))
-                .render();
+                .vgradient(col(top, a), col(bottom, a));
+        if (cFaint) fill.outline(col(cLA, a), (float) h1(t));
+        fill.render();
 
         double tick = Math.round(0.7 * (x1 - x0)) * (0.8 + 0.2 * p);
-        icon(renderer, x0, y0, x1, y1, tick, HontunBuiltinIcons.TICK.texture(), col(cOnA, a));
+        icon(renderer, x0, y0, x1, y1, tick, HontunBuiltinIcons.TICK.texture(), col(pressed ? cOnAL : hover ? cOnAH : cOnA, a));
     }
 
     @Override
@@ -1132,7 +1143,7 @@ public class FlatClickStyle extends ClickStyle {
         edges(x0, y0, x1, y1)
                 .radius(r)
                 .color(CLEAR)
-                .outline(p.mouseOver ? col(cAH, light ? 0xFF : 0xC0) : light ? col(cEdge, 0xB0) : col(cO1, 0xA0), (float) h1(t))
+                .outline(p.mouseOver ? col(cLAH, light ? 0xFF : 0xC0) : light ? col(cEdge, 0xB0) : col(cO1, 0xA0), (float) h1(t))
                 .render();
 
         if (p.mouseOver) icon(renderer, x0, y0, x1, y1, t.textHeight(), p.overlay(), pickerIconTint(color));
@@ -1155,7 +1166,7 @@ public class FlatClickStyle extends ClickStyle {
             }
 
             face(t, x0, y0, x1, y1, hp, pressed);
-            underline(x0, y0, x1, y1, r, h2(t), cA, cAH, underlineAlpha(hp));
+            underline(x0, y0, x1, y1, r, h2(t), cBA, cBAH, underlineAlpha(hp));
 
             double ty = rd(y0 + (y1 - y0 - T) / 2) + (pressed ? h1(t) : 0);
             text().text(RichText.of(label), rd(x0 + (x1 - x0 - t.textWidth(label)) / 2), ty, t.textColor());
@@ -1218,8 +1229,8 @@ public class FlatClickStyle extends ClickStyle {
         HontunGuiTheme t = f.theme();
         double hp = FlatAnim.tween(f, HOVER, f.mouseOver, anim(AnimRole.FAVORITE));
 
-        Color rest = f.checked ? t.accentColor() : t.textSecondaryColor();
-        Color hover = f.checked ? col(light ? cAtHi : cAH, 255) : t.textColor();
+        Color rest = f.checked ? t.accentLineColor() : t.textSecondaryColor();
+        Color hover = f.checked ? col(cLAH, 255) : t.textColor();
 
         renderer.quad(
                 rd(f.x),
@@ -1266,9 +1277,9 @@ public class FlatClickStyle extends ClickStyle {
         double x0 = rd(x1 - keycapWidth(t, k));
         double y0 = rd(b.y + (b.height - h) / 2);
 
-        Color outline = listening ? col(cAt, 255 * pulse) : col(cO1, light ? 0xD0 : 0x90);
+        Color outline = listening ? col(cLA, 255 * pulse) : col(cO1, light ? 0xD0 : 0x90);
         Color fg = listening
-                ? col(cAt, 255 * pulse)
+                ? col(cTA, 255 * pulse)
                 : k.keybind().isSet() ? t.textColor() : t.textSecondaryColor();
 
         keycap(t, x0, y0, x1, y0 + h, RichText.of(listening ? LISTENING : key), fg, outline);
@@ -1297,7 +1308,7 @@ public class FlatClickStyle extends ClickStyle {
         if (fillEnd > tx0) {
             edges(tx0, ty0, fillEnd, ty1)
                     .radius(track / 2)
-                    .hgradient(col(cAL, 255), col(cA, 255))
+                    .hgradient(col(cBAL, 255), col(cBA, 255))
                     .render();
         }
 
@@ -1311,7 +1322,7 @@ public class FlatClickStyle extends ClickStyle {
         RoundedRect knob = edges(kx0, ky0, kx0 + d, ky0 + d).radius(d / 2);
         if (light) knob.color(col(cBase, 255));
         else knob.vgradient(col(cO0, 255), col(cS2, 255));
-        knob.outline(light ? mix(col(cEdge, 255), col(cAH, 255), hv) : mix(col(cO1, 0xA0), col(cAH, 0xC0), hv), (float) h1(t)).render();
+        knob.outline(light ? mix(col(cEdge, 255), col(cLAH, 255), hv) : mix(col(cO1, 0xA0), col(cLAH, 0xC0), hv), (float) h1(t)).render();
 
         double dot = rd(lerp(lerp(px(t, 7), px(t, 9), hv), px(t, 5), dg));
         if (dot > 0) {
@@ -1319,7 +1330,7 @@ public class FlatClickStyle extends ClickStyle {
             double dy0 = rd(ky0 + (d - dot) / 2);
             edges(dx0, dy0, dx0 + dot, dy0 + dot)
                     .radius(dot / 2)
-                    .color(col(mix(cA, cAH, hv), 255))
+                    .color(col(mix(cBA, cBAH, hv), 255))
                     .render();
         }
     }
@@ -1336,7 +1347,7 @@ public class FlatClickStyle extends ClickStyle {
         double x0 = rd(d.x), y0 = rd(d.y), x1 = rd(d.x + d.width), y1 = rd(d.y + d.height);
 
         face(t, x0, y0, x1, y1, hp, d.isPressed());
-        underline(x0, y0, x1, y1, rSmall(t), lerp(h1, h2(t), act), cA, cAH, alpha(lerp(light ? 0xF0 : 0x60, 0xFF, act)));
+        underline(x0, y0, x1, y1, rSmall(t), lerp(h1, h2(t), act), cBA, cBAH, alpha(lerp(light ? 0xF0 : 0x60, 0xFF, act)));
 
         double ty = rd(y0 + (y1 - y0 - T) / 2);
         double x = x0 + px(t, 10);
@@ -1390,7 +1401,7 @@ public class FlatClickStyle extends ClickStyle {
 
         if (selected) {
             edges(x0, y0, x1, y1).radius(rc).color(col(mix(cTint, cTintHot, hp), 255)).render();
-            leftBar(x0, y0, x1, y1, rc, Corners.ALL, h3(t), cAH, cAL, 1);
+            leftBar(x0, y0, x1, y1, rc, Corners.ALL, h3(t), cBAH, cBAL, 1);
         }
         else if (hp > 0) {
             edges(x0, y0, x1, y1).radius(rc).color(col(light ? cS2 : cS1, 0xC0 * hp)).render();
@@ -1445,15 +1456,15 @@ public class FlatClickStyle extends ClickStyle {
             edges(ux, y0, x1, y1)
                     .radius(r)
                     .color(CLEAR)
-                    .outline(mix(idle, col(cAt, 255), fp), (float) h1)
+                    .outline(mix(idle, col(cLA, 255), fp), (float) h1)
                     .render();
 
-            underline(ux, y0, x1, y1, r, lerp(h1, h2, fp), cAL, cAH, alpha(lerp(light ? 0xB0 : 0x50, 0xFF, fp)));
+            underline(ux, y0, x1, y1, r, lerp(h1, h2, fp), cBAL, cBAH, alpha(lerp(light ? 0xB0 : 0x50, 0xFF, fp)));
         }
         else if (fp > 0) {
             edges(x0, y0, x1, y1)
                     .radius(r)
-                    .color(col(cAt, 255 * fp))
+                    .color(col(cBA, 255 * fp))
                     .clip(x0, y1 - h2, x1 - x0, h2)
                     .render();
         }
@@ -1502,14 +1513,14 @@ public class FlatClickStyle extends ClickStyle {
 
     @Override
     public void paintTextSelection(WHontunTextBox b, GuiRenderer renderer, double x0, double x1, double y, double h) {
-        edges(x0, y, x1, y + Math.round(h)).color(col(cAt, light ? 0x40 : 0x55)).render();
+        edges(x0, y, x1, y + Math.round(h)).color(col(cA, light ? 0x40 : 0x55)).render();
     }
 
     @Override
     public void paintCaret(WHontunTextBox b, GuiRenderer renderer, double x, double y, double h, double alpha) {
         HontunGuiTheme t = b.theme();
         double cx = rd(x);
-        edges(cx, y, cx + h1(t), y + Math.round(h)).color(col(cAt, 255 * clamp01(alpha))).render();
+        edges(cx, y, cx + h1(t), y + Math.round(h)).color(col(cLA, 255 * clamp01(alpha))).render();
     }
 
     @Override
@@ -1567,7 +1578,7 @@ public class FlatClickStyle extends ClickStyle {
 
         edges(px0, py0, px1, Math.max(py1, y1))
                 .radius(R)
-                .hgradient(col(cAL, 255), col(cAH, 255))
+                .hgradient(col(cBAL, 255), col(cBAH, 255))
                 .clip(px0, py0, px1 - px0, h2(t))
                 .render();
 
@@ -1589,7 +1600,7 @@ public class FlatClickStyle extends ClickStyle {
         }
 
         boolean query = box != null && !box.get().isEmpty();
-        if (searchIcon != null) searchIcon.color = query ? t.accentColor() : t.textSecondaryColor();
+        if (searchIcon != null) searchIcon.color = query ? t.accentLineColor() : t.textSecondaryColor();
 
         if (esc != null) {
             esc.hidden = true;
@@ -1669,7 +1680,7 @@ public class FlatClickStyle extends ClickStyle {
         if (row.isPressed()) edges(x0, y0, x1, y1).radius(r).color(col(lightHover(cS2), light ? 0xB0 : 0xC0)).render();
         else if (hp > 0) edges(x0, y0, x1, y1).radius(r).color(col(lightHover(cS1), (light ? 0x70 : 0xA0) * hp)).render();
 
-        leftBar(x0, y0, x1, y1, r, Corners.ALL, h3(t), cAH, cAL, row.isPressed() ? 1 : hp);
+        leftBar(x0, y0, x1, y1, r, Corners.ALL, h3(t), cBAH, cBAL, row.isPressed() ? 1 : hp);
     }
 
     @Override
@@ -1777,7 +1788,7 @@ public class FlatClickStyle extends ClickStyle {
         double tw = t.textWidth(label);
         double th = t.textHeight(label);
 
-        text().text(label, rd(x0 + (x1 - x0 - tw) / 2), rd(y0 + (ph - th) / 2), t.accentColor());
+        text().text(label, rd(x0 + (x1 - x0 - tw) / 2), rd(y0 + (ph - th) / 2), t.accentTextColor());
     }
 
     @Override
@@ -1804,7 +1815,7 @@ public class FlatClickStyle extends ClickStyle {
         int step = gridSize;
         while ((long) (windowWidth / step + 1) * (windowHeight / step + 1) > GRID_DOT_LIMIT) step += gridSize;
 
-        int core = light ? col(cA, 0xA8).getPacked() : col(mix(cO2, cAH, 0.3), 0xA0).getPacked();
+        int core = light ? col(cLA, 0xA8).getPacked() : col(mix(cO2, cAH, 0.3), 0xA0).getPacked();
         int halo = light ? col(0xFFFFFF, 0x70).getPacked() : col(cCrust, 0x60).getPacked();
 
         Matrix3x2fStack pose = g.pose();

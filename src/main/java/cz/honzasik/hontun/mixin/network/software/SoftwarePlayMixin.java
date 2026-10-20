@@ -5,6 +5,9 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.network.protocol.game.ClientboundChunkBatchStartPacket;
 import net.minecraft.network.protocol.game.ClientboundCommandsPacket;
 import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
+import net.minecraft.network.protocol.game.ClientboundLoginPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import org.objectweb.asm.Opcodes;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,6 +26,27 @@ public abstract class SoftwarePlayMixin {
             shift = At.Shift.AFTER))
     private void hontun$chunk(ClientboundLevelChunkWithLightPacket packet, CallbackInfo ci) {
         ServerSoftware.onChunk();
+    }
+
+    @Inject(method = "handleLogin", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V",
+            shift = At.Shift.AFTER))
+    private void hontun$login(ClientboundLoginPacket packet, CallbackInfo ci) {
+        ServerSoftware.onPositionApplied();
+    }
+
+    @Inject(method = "handleRespawn", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V",
+            shift = At.Shift.AFTER))
+    private void hontun$respawn(ClientboundRespawnPacket packet, CallbackInfo ci) {
+        ServerSoftware.onPositionApplied();
+    }
+
+    @Inject(method = "handleMovePlayer", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/network/protocol/PacketUtils;ensureRunningOnSameThread(Lnet/minecraft/network/protocol/Packet;Lnet/minecraft/network/PacketListener;Lnet/minecraft/network/PacketProcessor;)V",
+            shift = At.Shift.AFTER))
+    private void hontun$position(ClientboundPlayerPositionPacket packet, CallbackInfo ci) {
+        ServerSoftware.onPositionApplied();
     }
 
     @Inject(method = "handleCommands", at = @At(value = "FIELD",

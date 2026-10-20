@@ -8,6 +8,8 @@ import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.Reconnect;
 import cz.honzasik.hontun.commands.SoftwareProbe;
 import cz.honzasik.hontun.commands.ToggleTab;
+import cz.honzasik.hontun.modules.AnticheatDetect;
+import cz.honzasik.hontun.modules.CaptchaSolver;
 import cz.honzasik.hontun.modules.AntiExploit;
 import cz.honzasik.hontun.modules.ChannelFetcher;
 import cz.honzasik.hontun.modules.ChannelSender;
@@ -41,6 +43,8 @@ public class Hontun extends MeteorAddon {
         addModules();
 
         MeteorClient.EVENT_BUS.subscribe(new ChannelFetcher.Cleaner());
+        MeteorClient.EVENT_BUS.subscribe(AnticheatDetect.COLLECTOR);
+        PluginScanner.INSTANCE.onFinish(AnticheatDetect.COLLECTOR::onPluginScan);
 
         MeteorClient.EVENT_BUS.subscribe(PluginScanner.INSTANCE);
         MeteorClient.EVENT_BUS.subscribe(PlayerRoster.INSTANCE);
@@ -83,9 +87,11 @@ public class Hontun extends MeteorAddon {
 
         modules.add(new ChannelSender());
         modules.add(new ChannelFetcher());
+        modules.add(new AnticheatDetect());
         modules.add(new AntiExploit());
         modules.add(new FreeInteract());
         modules.add(new GamemodeNotify());
+        modules.add(new CaptchaSolver());
     }
 
     @Override

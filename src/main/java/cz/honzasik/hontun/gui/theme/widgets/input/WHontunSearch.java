@@ -161,7 +161,7 @@ public class WHontunSearch extends WSearch implements HontunWidget {
             private Color getColor() {
                 return switch (result) {
                     case ModuleSearchResult r -> r.hasAlias() ? theme().yellowColor() : theme().greenColor();
-                    case SettingSearchResult ignored -> theme().blueColor();
+                    case SettingSearchResult ignored -> theme().accentLineColor();
                     default -> theme().textSecondaryColor();
                 };
             }

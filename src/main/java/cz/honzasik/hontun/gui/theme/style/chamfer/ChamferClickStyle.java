@@ -99,7 +99,8 @@ public class ChamferClickStyle extends ClickStyle {
     private static final int ACTIVE_IN = 280;
     private static final int ACTIVE_OUT = 160;
     private static final int BLINK = 530;
-    private static final double LIGHT_LO_CONTRAST = 3.5;
+    private static final float LIGHT_PLATE_TINT = 0x2A / 255f;
+    private static final float LIGHT_ACTIVE_TINT = 0x18 / 255f;
     private static final long HELP_SHADOW_NS = 5_000_000L;
 
     private static final String ESC_HINT = "ESC to close";
@@ -231,23 +232,23 @@ public class ChamferClickStyle extends ClickStyle {
     public void palette(StylePalette out, boolean light, HontunGuiTheme t) {
         super.palette(out, light, t);
 
-        if (light) {
-            out.accentHi = HontunTheme.darken(out.accent, 0.78f) & 0xFFFFFF;
-            out.accentLo = lightAccentLo(out, t);
-            return;
-        }
+        if (light) return;
 
         float[] hsb = java.awt.Color.RGBtoHSB((out.accentLo >> 16) & 0xFF, (out.accentLo >> 8) & 0xFF, out.accentLo & 0xFF, null);
         if (hsb[2] < 0.35f) out.accentLo = java.awt.Color.HSBtoRGB(hsb[0], hsb[1], 0.35f) & 0xFFFFFF;
+        out.copyRoles();
     }
 
-    private int lightAccentLo(StylePalette out, HontunGuiTheme t) {
-        int body = HontunLightPalette.body(HontunTheme.ramp(id()), HontunLightPalette.ramp(id()), windowAlpha(t.windowOpacity.get(), true));
-        for (int i = 9; i > 0; i--) {
-            int c = HontunTheme.lerp(out.accent, out.surface0, i * 0.05f) & 0xFFFFFF;
-            if (HontunLightPalette.contrast(c, body) >= LIGHT_LO_CONTRAST) return c;
-        }
-        return out.accent & 0xFFFFFF;
+    @Override
+    protected int roleBackground(StylePalette out, int body, HontunGuiTheme t) {
+        double wa = windowAlpha(t.windowOpacity.get(), true);
+        int back = HontunTheme.ramp(id()).base();
+        int header = HontunTheme.lerp(back, out.crust, Math.max(0xC8, mul(0xF4, wa)) / 255f);
+        int bar = HontunTheme.lerp(back, out.crust, 0xF0 / 255f);
+        int under = HontunLightPalette.darkest(body, bar);
+        int plates = HontunLightPalette.darkest(HontunTheme.lerp(under, out.accent, LIGHT_ACTIVE_TINT), HontunTheme.lerp(under, out.accent, LIGHT_PLATE_TINT));
+        int n = HontunLightPalette.darkest(HontunLightPalette.darkest(body, header), HontunLightPalette.darkest(bar, out.surface2));
+        return HontunLightPalette.darkest(n, plates);
     }
 
     @Override
@@ -322,8 +323,8 @@ public class ChamferClickStyle extends ClickStyle {
     @Override
     public Color favoriteColor(WHontunFavorite f) {
         HontunGuiTheme t = f.theme();
-        if (f.checked) return t.accentHiColor();
-        return f.mouseOver ? t.accentColor() : t.textSecondaryColor();
+        if (f.checked) return t.accentHiLineColor();
+        return f.mouseOver ? t.accentLineColor() : t.textSecondaryColor();
     }
 
     @Override
@@ -420,9 +421,9 @@ public class ChamferClickStyle extends ClickStyle {
         if (geo.body) divider(g, t, geo.x0 + u, geo.x1 - u, geo.hy - u, u);
 
         int frame;
-        if (dialog) frame = argb(0xC0, t.accentColor());
-        else if (w.isDragging()) frame = argb(0xFF, t.accentHiColor());
-        else frame = lerpArgb(ink(t, 0xC0), t.accentLoColor(), 0xFF, t.accentColor(), st.hover.getProgress());
+        if (dialog) frame = argb(ink(t, 0xC0), t.accentLineColor());
+        else if (w.isDragging()) frame = argb(0xFF, t.accentHiLineColor());
+        else frame = lerpArgb(ink(t, 0xC0), t.accentLoLineColor(), 0xFF, t.accentLineColor(), st.hover.getProgress());
         frame(g, geo.x0, geo.y0, geo.x1, geo.by, cut, cut, u, frame);
 
         int len = dialog ? 5 * u : u * (int) Math.round(4 + 2 * Math.max(0, st.lock.getProgress()));
@@ -430,7 +431,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (w.expandAnimating()) scan(g, t, geo.x0 + u, geo.x1 - cut - u, geo.by - 2 * u, u, w.expandProgress());
 
-        if (!dialog && w.icon instanceof WGuiTexture tex) tex.color = geo.body ? t.accentHiColor() : subtext1(t);
+        if (!dialog && w.icon instanceof WGuiTexture tex) tex.color = geo.body ? t.accentHiLineColor() : subtext1(t);
 
         if (dialog) paintTitleChip(w, h, t, g, u, geo, st);
     }
@@ -461,10 +462,10 @@ public class ChamferClickStyle extends ClickStyle {
 
         glow(g, t, x0, y0, x1, y1, cut, cut, u, 2, 0x50);
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(0xFF, t.crustColor()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(0xFF, t.accentColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(0xFF, t.accentLineColor()));
 
         int mid = y0 + chipH / 2 - u / 2;
-        int dash = argb(0xFF, t.accentHiColor());
+        int dash = argb(0xFF, t.accentHiLineColor());
         rect(g, x0 + 3 * u, mid, x0 + 6 * u, mid + u, dash);
         rect(g, x1 - 6 * u, mid, x1 - 3 * u, mid + u, dash);
 
@@ -506,7 +507,7 @@ public class ChamferClickStyle extends ClickStyle {
             String up = plain.toUpperCase(Locale.ROOT);
             if (!plain.equals(up)) label.set(RichText.of(up));
 
-            label.color = box.checked ? t.accentHiColor() : subtext1(t);
+            label.color = box.checked ? t.accentHiTextColor() : subtext1(t);
         }
     }
 
@@ -520,7 +521,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         backdropGlow(g, t, x0, y0, x1, y1, cut, cut, u, 2, 0x40);
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(0xF0, t.crustColor()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xA0), t.accentLoColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xA0), t.accentLoLineColor()));
         brackets(g, x0, y0, x1, y1, 3 * u, u, ChamferPaint.backdropBracket(t));
 
         int line = argb(ink(t, 0x60), t.overlay0Color());
@@ -559,21 +560,21 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (selected) {
             plate(g, x0, y0, x1, y1, cut, cut, u, argb(pressed ? 0x40 : 0x2A, t.accentColor()));
-            frame(g, x0, y0, x1, y1, cut, cut, u, argb(0xFF, t.accentColor()));
+            frame(g, x0, y0, x1, y1, cut, cut, u, argb(0xFF, t.accentLineColor()));
 
             int steps = (int) Math.min(3, (now - lock) / 20);
             int off = (3 - steps) * u;
-            brackets(g, x0 - off, y0 - off, x1 + off, y1 + off, 3 * u, u, argb(0xFF, t.accentHiColor()));
+            brackets(g, x0 - off, y0 - off, x1 + off, y1 + off, 3 * u, u, argb(0xFF, t.accentHiLineColor()));
         } else {
             if (pressed) plate(g, x0, y0, x1, y1, cut, cut, u, argb(0x40, t.accentColor()));
 
             if (hover) {
                 double hp = q4(Math.min(1, (now - hoverStart) / 120.0));
-                if (hp > 0) brackets(g, x0, y0, x1, y1, 2 * u, u, argb(alpha(hp), t.accentHiColor()));
+                if (hp > 0) brackets(g, x0, y0, x1, y1, 2 * u, u, argb(alpha(hp), t.accentHiLineColor()));
             }
         }
 
-        Color color = selected ? t.accentHiColor() : hover ? t.textColor() : subtext1(t);
+        Color color = selected ? t.accentHiTextColor() : hover ? t.textColor() : subtext1(t);
         RichText label = upper(b.text().getPlainText(), false);
 
         double textWidth = t.textWidth(label);
@@ -638,7 +639,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (!active && hq > 0 && !pressed) {
             plate(g, x0, y0, x1, y1, c3, c3, u, argb(mul(0x50, hq), t.surface0Color()));
-            frame(g, x0, y0, x1, y1, c3, c3, u, argb(mul(ink(t, 0xC0), hq), t.accentLoColor()));
+            frame(g, x0, y0, x1, y1, c3, c3, u, argb(mul(ink(t, 0xC0), hq), t.accentLoLineColor()));
         }
 
         int cutTL = on && prev ? 0 : c3;
@@ -653,8 +654,8 @@ public class ChamferClickStyle extends ClickStyle {
         if (on && chrome > 0) {
             Color accent = t.accentColor();
             plate(g, x0, y0, x1, y1, cutTL, cutBR, u, argb(mul(light ? 0x18 : 0x10, chrome), accent));
-            HontunShapes.outlineRun(g, x0, y0, x1 - x0, y1 - y0, cutTL, cutBR, u, !prev, !next, argb(mul(0xFF, chrome), accent));
-            if (prev) rect(g, x0 + 6 * u, y0, x1 - u, y0 + u, argb(mul(0x30, chrome), accent));
+            HontunShapes.outlineRun(g, x0, y0, x1 - x0, y1 - y0, cutTL, cutBR, u, !prev, !next, argb(mul(0xFF, chrome), t.accentLineColor()));
+            if (prev) rect(g, x0 + 6 * u, y0, x1 - u, y0 + u, argb(mul(0x30, chrome), t.accentLineColor()));
 
             int cx0 = x0 + 2 * u;
             boolean slant = cutTL > 0;
@@ -665,8 +666,8 @@ public class ChamferClickStyle extends ClickStyle {
             if (cellH > 0 && ap > 0) {
                 int visible = ap >= 1 ? cellH : (int) Math.floor(ap * cellH / u) * u;
                 int visibleTop = bottom - visible;
-                int hi = argb(mul(0xFF, chrome), t.accentHiColor());
-                int lo = argb(mul(0xFF, chrome), accent);
+                int hi = argb(mul(0xFF, chrome), t.accentHiBarColor());
+                int lo = argb(mul(0xFF, chrome), t.accentBarColor());
                 if (slant) {
                     for (int i = 2 * u; i < cutTL; i += u) {
                         int cy = y0 + i + u;
@@ -679,11 +680,11 @@ public class ChamferClickStyle extends ClickStyle {
                 if (bottom > from) g.gradient(cx0, from, cx0 + 3 * u, bottom, hi, lo);
             }
 
-            if (active && m.mouseOver) brackets(g, x0 + u, y0 + u, x1 - u, y1 - u, 2 * u, u, argb(0xFF, t.accentHiColor()));
+            if (active && m.mouseOver) brackets(g, x0 + u, y0 + u, x1 - u, y1 - u, 2 * u, u, argb(0xFF, t.accentHiLineColor()));
         }
 
         Color off = lerpColor(subtext1(t), t.textColor(), active ? 0 : hq);
-        Color onColor = t.accentHiColor();
+        Color onColor = t.accentHiTextColor();
         Color color = active ? onColor : lerpColor(off, onColor, ap);
 
         double titleWidth = m.titleWidth();
@@ -744,7 +745,7 @@ public class ChamferClickStyle extends ClickStyle {
         }
 
         int[] used = count == 4 ? gaps : java.util.Arrays.copyOf(gaps, count);
-        int argb = h.mouseOver ? argb(ink(t, 0xC0), t.accentLoColor()) : argb(ink(t, 0x70), t.overlay0Color());
+        int argb = h.mouseOver ? argb(ink(t, 0xC0), t.accentLoLineColor()) : argb(ink(t, 0x70), t.overlay0Color());
         HontunShapes.groupBox(g, x0, yc, x1 - x0, by - yc, 3 * u, u, used, argb);
 
         if (s.expandAnimating()) scan(g, t, x0 + u, x1 - 4 * u, by - 2 * u, u, s.expandProgress());
@@ -761,7 +762,7 @@ public class ChamferClickStyle extends ClickStyle {
         if (!s.hasText()) {
             int ly = px(s.y) + s(t, 2);
             int head = Math.min(x1, x0 + 4 * u);
-            rect(g, x0, ly, head, ly + u, argb(ink(t, 0xC0), t.accentLoColor()));
+            rect(g, x0, ly, head, ly + u, argb(ink(t, 0xC0), t.accentLoLineColor()));
             rect(g, head, ly, x1, ly + u, rule);
             return;
         }
@@ -771,14 +772,14 @@ public class ChamferClickStyle extends ClickStyle {
         int tx0 = px(s.x + s.width / 2 - tw / 2);
         int tx1 = tx0 + px(tw);
         int mid = px(s.y + s.height / 2) - u / 2;
-        int dash = argb(0xFF, t.accentHiColor());
+        int dash = argb(0xFF, t.accentHiLineColor());
 
         rect(g, tx0 - 5 * u, mid, tx0 - 2 * u, mid + u, dash);
         rect(g, tx1 + 2 * u, mid, tx1 + 5 * u, mid + u, dash);
         rect(g, x0, mid, tx0 - 7 * u, mid + u, rule);
         rect(g, tx1 + 7 * u, mid, x1, mid + u, rule);
 
-        drawText(title, tx0, s.y + s.height / 2 - t.textHeight(title) / 2, t.accentHiColor());
+        drawText(title, tx0, s.y + s.height / 2 - t.textHeight(title) / 2, t.accentHiTextColor());
     }
 
     @Override
@@ -813,13 +814,13 @@ public class ChamferClickStyle extends ClickStyle {
         int y0 = px(ty), y1 = px(ty + thumb);
 
         plate(g, bx0, y0, bx1, y1, u, u, u, grip(t, hover, drag));
-        frame(g, bx0, y0, bx1, y1, u, u, u, argb(hover || drag ? 0xFF : ink(t, 0xC0), t.accentHiColor()));
+        frame(g, bx0, y0, bx1, y1, u, u, u, argb(hover || drag ? 0xFF : ink(t, 0xC0), t.accentHiLineColor()));
     }
 
     private static int grip(HontunGuiTheme t, boolean hover, boolean drag) {
-        if (drag) return argb(0xFF, t.light() ? t.accentHiColor() : t.accentColor());
-        if (hover && t.light()) return argb(0xFF, t.accentColor());
-        return argb(0xE0, t.accentLoColor());
+        if (drag) return argb(0xFF, t.light() ? t.accentHiBarColor() : t.accentBarColor());
+        if (hover && t.light()) return argb(0xFF, t.accentBarColor());
+        return argb(0xE0, t.accentLoBarColor());
     }
 
     @Override
@@ -852,7 +853,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         double ts = t.textHeight();
         renderer.quad(Math.round(b.x + b.width / 2 - ts / 2), Math.round(b.y + b.pad()) + dy, ts, ts, icon,
-                lerpColor(subtext1(t), t.accentHiColor(), hq));
+                lerpColor(subtext1(t), t.accentHiLineColor(), hq));
     }
 
     private void paintKeybind(WHontunKeybind k, WHontunButton b, HontunGuiTheme t, GuiFill g, int u,
@@ -865,8 +866,8 @@ public class ChamferClickStyle extends ClickStyle {
             double f = 0.5 + 0.5 * Math.sin(now * 2 * Math.PI / 1200.0);
             double bo = t.backgroundOpacity();
             plate(g, x0, y0, x1, y1, cut, cut, u, argb(mul(0xF0, bo), t.surface2Color()));
-            frame(g, x0, y0, x1, y1, cut, cut, u, argb(mix(0x60, 0xFF, f), t.accentColor()));
-            rect(g, x0 + 2 * u, y1 - 2 * u, x1 - cut - u, y1 - u, argb(0xFF, t.accentColor()));
+            frame(g, x0, y0, x1, y1, cut, cut, u, argb(mix(0x60, 0xFF, f), t.accentLineColor()));
+            rect(g, x0 + 2 * u, y1 - 2 * u, x1 - cut - u, y1 - u, argb(0xFF, t.accentLineColor()));
         } else {
             chrome(g, t, x0, y0, x1, y1, cut, u, hq, pressed, true);
         }
@@ -876,7 +877,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (listening) {
             drawText(LISTEN_TEXT, x, ty, subtext1(t));
-            if ((now / BLINK) % 2 == 0) drawText(CURSOR, x + t.textWidth(LISTEN_GAP), ty, t.accentHiColor());
+            if ((now / BLINK) % 2 == 0) drawText(CURSOR, x + t.textWidth(LISTEN_GAP), ty, t.accentHiTextColor());
             return;
         }
 
@@ -885,7 +886,7 @@ public class ChamferClickStyle extends ClickStyle {
         drawText(bind, x, ty + (th - t.textHeight(bind)) / 2, t.textSecondaryColor());
         x += t.textWidth(bind) + t.textWidth(SPACE);
 
-        int bracket = argb(0xFF, t.accentLoColor());
+        int bracket = argb(0xFF, t.accentLoLineColor());
         int by0 = px(ty);
         int bh = px(th);
         ChamferPaint.bracketGlyph(g, px(x), by0, bh, u, true, bracket);
@@ -893,7 +894,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         boolean none = !k.keybind().isSet();
         RichText key = RichText.of(keyText(k, k.keybind().toString()));
-        drawText(key, x, ty, none ? t.textSecondaryColor() : t.accentHiColor());
+        drawText(key, x, ty, none ? t.textSecondaryColor() : t.accentHiTextColor());
         x += t.textWidth(key) + t.textWidth(CLOSE);
 
         ChamferPaint.bracketGlyph(g, px(x), by0, bh, u, false, bracket);
@@ -917,12 +918,12 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (pressed) {
             plateArgb = ChamferPaint.pressedPlate(t);
-            frameArgb = argb(0xFF, t.accentColor());
-            lineArgb = argb(0xFF, t.accentColor());
+            frameArgb = argb(0xFF, t.accentLineColor());
+            lineArgb = argb(0xFF, t.accentLineColor());
         } else {
             plateArgb = lerpArgb(mul(0xD0, bo), t.surface0Color(), mul(0xF0, bo), t.surface2Color(), hq);
-            frameArgb = lerpArgb(ink(t, 0x90), t.accentLoColor(), 0xFF, t.accentHiColor(), hq);
-            lineArgb = argb(ink(t, mix(0xA0, 0xFF, hq)), t.accentColor());
+            frameArgb = lerpArgb(ink(t, 0x90), t.accentLoLineColor(), 0xFF, t.accentHiLineColor(), hq);
+            lineArgb = argb(ink(t, mix(0xA0, 0xFF, hq)), t.accentLineColor());
             if (decorated && hq > 0) glow(g, t, x0, y0, x1, y1, cut, cut, u, 2, mul(0x60, hq));
         }
 
@@ -981,7 +982,7 @@ public class ChamferClickStyle extends ClickStyle {
         if (icon == null) return;
 
         double ts = t.textHeight();
-        Color tint = armed ? t.textColor() : lerpColor(subtext1(t), t.accentHiColor(), hq);
+        Color tint = armed ? t.textColor() : lerpColor(subtext1(t), t.accentHiLineColor(), hq);
         renderer.quad(Math.round(b.x + b.width / 2 - ts / 2), Math.round(b.y + b.pad()) + dy, ts, ts, icon, tint);
     }
 
@@ -1055,8 +1056,8 @@ public class ChamferClickStyle extends ClickStyle {
                     ? ChamferPaint.pressedPlate(t)
                     : argb(mul(0xF0, bo), pressed ? t.surface2Color() : t.crustColor()));
             int edge;
-            if (light) edge = argb(0xFF, hover ? t.accentColor() : rim(t));
-            else edge = hover ? argb(0xFF, t.accentLoColor()) : argb(0x90, t.overlay0Color());
+            if (light) edge = argb(0xFF, hover ? t.accentLineColor() : rim(t));
+            else edge = hover ? argb(0xFF, t.accentLoLineColor()) : argb(0x90, t.overlay0Color());
             frame(g, x0, y0, x1, y1, cut, cut, u, edge);
         }
 
@@ -1067,7 +1068,7 @@ public class ChamferClickStyle extends ClickStyle {
             plate(g, x0 + inset, y0 + inset, x1 - inset, y1 - inset, cut, cut, u, argb(0xFF, t.accentColor()));
         }
 
-        if (p >= 1) frame(g, x0, y0, x1, y1, cut, cut, u, argb(hover ? 0xFF : ink(t, 0xC0), t.accentHiColor()));
+        if (p >= 1) frame(g, x0, y0, x1, y1, cut, cut, u, argb(hover ? 0xFF : ink(t, 0xC0), t.accentHiLineColor()));
 
         int strokes = (int) Math.ceil(p * 5);
         HontunIcons.pixelCheck(g, x0, y0, cell, strokes, argb(0xFF, ChamferPaint.onAccent(t)));
@@ -1094,7 +1095,7 @@ public class ChamferClickStyle extends ClickStyle {
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(color.a, color));
         frame(g, x0 + u, y0 + u, x1 - u, y1 - u, u, u, u, argb(0xFF, t.crustColor()));
         int edge;
-        if (p.mouseOver) edge = argb(0xFF, t.accentHiColor());
+        if (p.mouseOver) edge = argb(0xFF, t.accentHiLineColor());
         else edge = t.light() ? argb(0xFF, rim(t)) : argb(0xC0, t.overlay1Color());
         frame(g, x0, y0, x1, y1, cut, cut, u, edge);
 
@@ -1119,16 +1120,16 @@ public class ChamferClickStyle extends ClickStyle {
             if (p instanceof WHontunWindow.WHontunHeader h) {
                 WindowState st = state(h.window());
                 Color rest = t.light() ? subtext1(t) : t.textSecondaryColor();
-                return lerpColor(rest, t.accentHiColor(), st.hover.getProgress());
+                return lerpColor(rest, t.accentHiLineColor(), st.hover.getProgress());
             }
             if (p instanceof WHontunSection.WHontunHeader h) {
                 return h.section().isExpanded() ? edgeText(t) : t.textSecondaryColor();
             }
             if (p instanceof WHontunMultiSelect.WHontunHeader h) {
-                return h.mouseOver ? t.accentHiColor() : t.textSecondaryColor();
+                return h.mouseOver ? t.accentHiLineColor() : t.textSecondaryColor();
             }
         }
-        return tr.mouseOver ? t.accentHiColor() : t.textSecondaryColor();
+        return tr.mouseOver ? t.accentHiLineColor() : t.textSecondaryColor();
     }
 
     @Override
@@ -1145,17 +1146,17 @@ public class ChamferClickStyle extends ClickStyle {
         int ty1 = ty0 + 4 * u;
         plate(g, x0, ty0, x1, ty1, u, u, u, argb(mul(0xE0, bo), light ? t.surface2Color() : t.crustColor()));
         int edge;
-        if (light) edge = argb(0xFF, s.mouseOver ? t.accentColor() : rim(t));
-        else edge = s.mouseOver ? argb(0xC0, t.accentLoColor()) : argb(0x70, t.overlay0Color());
+        if (light) edge = argb(0xFF, s.mouseOver ? t.accentLineColor() : rim(t));
+        else edge = s.mouseOver ? argb(0xC0, t.accentLoLineColor()) : argb(0x70, t.overlay0Color());
         frame(g, x0, ty0, x1, ty1, u, u, u, edge);
 
         int cx = px(s.x + s.valueOffset() + hs / 2);
         if (cx > x0 + u) {
             g.gradient(x0 + u, ty0 + u, Math.min(cx, x1 - u), ty0 + 3 * u,
-                    argb(0xFF, t.accentHiColor()), argb(0xFF, t.accentColor()));
+                    argb(0xFF, t.accentHiBarColor()), argb(0xFF, t.accentBarColor()));
         }
 
-        int tickOn = argb(ink(t, 0xC0), t.accentLoColor());
+        int tickOn = argb(ink(t, 0xC0), t.accentLoLineColor());
         int tickOff = light ? argb(0xFF, t.overlay1Color()) : argb(0x90, t.overlay0Color());
         for (int i = 0; i <= 4; i++) {
             int tx = px(s.x + hs / 2 + (s.width - hs) * i / 4.0) - u / 2;
@@ -1173,7 +1174,7 @@ public class ChamferClickStyle extends ClickStyle {
         else if (knobHover) glow(g, t, kx0, ky0, kx1, ky1, u, u, u, 1, 0x60);
 
         plate(g, kx0, ky0, kx1, ky1, u, u, u, grip(t, knobHover, drag));
-        frame(g, kx0, ky0, kx1, ky1, u, u, u, argb(knobHover || drag ? 0xFF : ink(t, 0xC0), t.accentHiColor()));
+        frame(g, kx0, ky0, kx1, ky1, u, u, u, argb(knobHover || drag ? 0xFF : ink(t, 0xC0), t.accentHiLineColor()));
 
         int gx = kx0 + (3 * u) / 2;
         rect(g, gx, ky0 + 3 * u, gx + u, ky0 + 7 * u, light ? argb(0xFF, t.baseColor()) : argb(0x80, t.accentHiColor()));
@@ -1199,9 +1200,9 @@ public class ChamferClickStyle extends ClickStyle {
 
         int ledX = px(d.x + (titleWidth > 0 ? pad + titleWidth + pad : pad));
         int ledY = px(d.y + d.height / 2) - u + dy;
-        rect(g, ledX, ledY, ledX + 2 * u, ledY + 2 * u, argb(0xFF, t.accentColor()));
+        rect(g, ledX, ledY, ledX + 2 * u, ledY + 2 * u, argb(0xFF, t.accentBarColor()));
 
-        drawText(d.valueText(), ledX + 5 * u, d.y + pad + dy, t.accentColor());
+        drawText(d.valueText(), ledX + 5 * u, d.y + pad + dy, t.accentTextColor());
 
         renderer.rotatedQuad(
                 Math.round(d.x + d.width - pad - th),
@@ -1210,7 +1211,7 @@ public class ChamferClickStyle extends ClickStyle {
                 th,
                 180 * (1 - open),
                 HontunBuiltinIcons.ARROW.texture(),
-                d.isExpanded() || open > 0 ? t.accentHiColor() : t.textSecondaryColor()
+                d.isExpanded() || open > 0 ? t.accentHiLineColor() : t.textSecondaryColor()
         );
     }
 
@@ -1226,8 +1227,8 @@ public class ChamferClickStyle extends ClickStyle {
 
         glow(g, t, x0, y0, x1, y1, cut, cut, u, 2, 0x50);
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(Math.max(0xFC, mul(0xF4, 0.8 + 0.2 * t.backgroundOpacity())), t.crustColor()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(0xC0, t.accentColor()));
-        brackets(g, x0, y0, x1, y1, 3 * u, u, argb(0xFF, t.accentHiColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xC0), t.accentLineColor()));
+        brackets(g, x0, y0, x1, y1, 3 * u, u, argb(0xFF, t.accentHiLineColor()));
 
         double p = d.indicatorProgress();
         if (p > 0 && p < 1) scan(g, t, x0 + u, x1 - cut - u, px(root.y + root.height * p) - 2 * u, u, p);
@@ -1243,14 +1244,14 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (v.mouseOver) {
             plate(g, x0, y0, x1, y1, cut, cut, u, argb(0x26, t.accentColor()));
-            frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xA0), t.accentLoColor()));
+            frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xA0), t.accentLoLineColor()));
         }
 
         boolean selected = v.isSelectedValue();
-        if (selected) rect(g, x0 + 2 * u, y0 + 2 * u, x0 + 3 * u, y1 - 2 * u, argb(0xFF, t.accentColor()));
+        if (selected) rect(g, x0 + 2 * u, y0 + 2 * u, x0 + 3 * u, y1 - 2 * u, argb(0xFF, t.accentLineColor()));
 
         RichText label = v.valueName().boldIf(selected);
-        drawText(label, v.x + v.width / 2 - t.textWidth(label) / 2, v.y + v.pad(), selected ? t.accentHiColor() : t.textColor());
+        drawText(label, v.x + v.width / 2 - t.textWidth(label) / 2, v.y + v.pad(), selected ? t.accentHiTextColor() : t.textColor());
     }
 
     @Override
@@ -1271,7 +1272,7 @@ public class ChamferClickStyle extends ClickStyle {
         if (!borderless) {
             int fill = argb(mul(0xF0, bo), focused ? t.surface1Color() : t.crustColor());
             int frame;
-            if (focused) frame = argb(0xFF, t.accentColor());
+            if (focused) frame = argb(0xFF, t.accentLineColor());
             else if (light) frame = argb(0xFF, hover ? t.textSecondaryColor() : rim(t));
             else frame = argb(hover ? 0xA0 : 0x70, t.overlay0Color());
 
@@ -1286,7 +1287,7 @@ public class ChamferClickStyle extends ClickStyle {
                 if (focused) glow(g, t, tx0, y0, x1, y1, cut, cut, u, 2, 0x50);
                 plate(g, tx0, y0, x0, y1, cut, 0, u, argb(mul(0xF0, bo), t.surface0Color()));
                 plate(g, x0, y0, x1, y1, 0, cut, u, fill);
-                rect(g, x0 - u, y0 + u, x0, y1 - u, argb(ink(t, 0xA0), t.accentLoColor()));
+                rect(g, x0 - u, y0 + u, x0, y1 - u, argb(ink(t, 0xA0), t.accentLoLineColor()));
                 frame(g, tx0, y0, x1, y1, cut, cut, u, frame);
             } else {
                 if (focused) glow(g, t, x0, y0, x1, y1, cut, cut, u, 2, 0x50);
@@ -1294,9 +1295,9 @@ public class ChamferClickStyle extends ClickStyle {
                 frame(g, x0, y0, x1, y1, cut, cut, u, frame);
             }
 
-            if (focused) rect(g, x0 + 2 * u, y1 - 2 * u, x1 - 4 * u, y1 - u, argb(0xFF, t.accentColor()));
+            if (focused) rect(g, x0 + 2 * u, y1 - 2 * u, x1 - 4 * u, y1 - u, argb(0xFF, t.accentLineColor()));
         } else if (focused) {
-            rect(g, x0, y1 - u, x1, y1, argb(0xFF, t.accentColor()));
+            rect(g, x0, y1 - u, x1, y1, argb(0xFF, t.accentLineColor()));
         } else {
             HontunShapes.dashH(g, x0, x1, y1 - u, u, 2 * u, u, light ? argb(0xFF, t.overlay1Color()) : argb(0x80, t.overlay0Color()));
         }
@@ -1313,7 +1314,7 @@ public class ChamferClickStyle extends ClickStyle {
             Color custom = b.customColor();
             Color color;
             if (custom != null) color = custom;
-            else if (borderless) color = t.accentColor();
+            else if (borderless) color = t.accentTextColor();
             else if (focused) color = t.textColor();
             else color = light ? t.textSecondaryColor() : dimmedText(t);
             b.drawText(renderer, origin, ty, value, color);
@@ -1370,7 +1371,7 @@ public class ChamferClickStyle extends ClickStyle {
         HontunGuiTheme t = b.theme();
         int u = u(t);
         int cx = px(x), cy = px(y);
-        rect(GuiFill.of(renderer), cx, cy, cx + u, cy + px(h), argb(0xFF, t.accentHiColor()));
+        rect(GuiFill.of(renderer), cx, cy, cx + u, cy + px(h), argb(0xFF, t.accentHiLineColor()));
     }
 
     @Override
@@ -1383,8 +1384,8 @@ public class ChamferClickStyle extends ClickStyle {
 
         glow(g, t, x0, y0, x1, y1, cut, cut, u, 2, 0x50);
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(Math.max(0xFC, mul(0xF4, 0.8 + 0.2 * t.backgroundOpacity())), t.crustColor()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(0xC0, t.accentColor()));
-        brackets(g, x0, y0, x1, y1, 3 * u, u, argb(0xFF, t.accentHiColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xC0), t.accentLineColor()));
+        brackets(g, x0, y0, x1, y1, 3 * u, u, argb(0xFF, t.accentHiLineColor()));
     }
 
     @Override
@@ -1395,7 +1396,7 @@ public class ChamferClickStyle extends ClickStyle {
             int u = u(t);
             int x0 = px(item.x), y0 = px(item.y), x1 = px(item.x + item.width), y1 = px(item.y + item.height);
             rect(g, x0, y0, x1, y1, argb(0x26, t.accentColor()));
-            rect(g, x0, y0, x0 + u, y1, argb(0xFF, t.accentHiColor()));
+            rect(g, x0, y0, x0 + u, y1, argb(0xFF, t.accentHiLineColor()));
         }
 
         item.drawLabel(renderer, mouseX, mouseY);
@@ -1410,9 +1411,9 @@ public class ChamferClickStyle extends ClickStyle {
         int cut = 2 * u;
 
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(0xF4, t.crustColor()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xC0), t.accentLoColor()));
-        rect(g, x0 + u, y0 + 2 * u, x0 + 2 * u, y1 - 2 * u, argb(0xFF, t.accentColor()));
-        brackets(g, x0, y0, x1, y1, 2 * u, u, argb(0xFF, t.accentHiColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xC0), t.accentLoLineColor()));
+        rect(g, x0 + u, y0 + 2 * u, x0 + 2 * u, y1 - 2 * u, argb(0xFF, t.accentLineColor()));
+        brackets(g, x0, y0, x1, y1, 2 * u, u, argb(0xFF, t.accentHiLineColor()));
     }
 
     @Override
@@ -1450,7 +1451,7 @@ public class ChamferClickStyle extends ClickStyle {
                 int size = HontunIcons.SIZE * u;
                 int gx = px(tex.x + tex.width / 2) - size / 2;
                 int gy = px(tex.y + tex.height / 2) - size / 2;
-                HontunIcons.draw(g, HontunIcons.SEARCH, gx, gy, u, argb(0xFF, t.accentHiColor()));
+                HontunIcons.draw(g, HontunIcons.SEARCH, gx, gy, u, argb(0xFF, t.accentHiLineColor()));
             } else if (widget instanceof WHontunLabel label) {
                 String plain = label.richText().getPlainText();
                 if (ESC_HINT.equals(plain)) {
@@ -1466,13 +1467,13 @@ public class ChamferClickStyle extends ClickStyle {
     private static void paintHint(GuiFill g, HontunGuiTheme t, int u, WHontunLabel label) {
         double x = label.x;
         double y = label.y;
-        int bracket = argb(0xFF, t.accentLoColor());
+        int bracket = argb(0xFF, t.accentLoLineColor());
         int by0 = px(y);
         int bh = px(t.textHeight());
 
         ChamferPaint.bracketGlyph(g, px(x), by0, bh, u, true, bracket);
         x += t.textWidth(HINT_OPEN);
-        drawText(HINT_KEY, x, y, t.accentHiColor());
+        drawText(HINT_KEY, x, y, t.accentHiTextColor());
         x += t.textWidth(HINT_KEY) + t.textWidth(HINT_CLOSE);
         ChamferPaint.bracketGlyph(g, px(x), by0, bh, u, false, bracket);
         drawText(HINT_TAIL, x, y, t.textSecondaryColor());
@@ -1490,7 +1491,7 @@ public class ChamferClickStyle extends ClickStyle {
 
         if (c.parent instanceof WHontunSearch s) {
             int sx0 = px(s.x), sy0 = px(s.y), sx1 = px(s.x + s.width), sy1 = px(s.y + s.height);
-            frame(g, sx0, sy0, sx1, sy1, cut, cut, u, argb(0xC0, t.accentColor()));
+            frame(g, sx0, sy0, sx1, sy1, cut, cut, u, argb(ink(t, 0xC0), t.accentLineColor()));
             brackets(g, sx0, sy0, sx1, sy1, 5 * u, u, ChamferPaint.backdropBracket(t));
         }
 
@@ -1539,7 +1540,7 @@ public class ChamferClickStyle extends ClickStyle {
         }
 
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(0x50, t.surface0Color()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xC0), t.accentLoColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0xC0), t.accentLoLineColor()));
     }
 
     @Override
@@ -1569,8 +1570,8 @@ public class ChamferClickStyle extends ClickStyle {
 
         int by = open ? px(m.y + m.height) : hy1;
         int edge;
-        if (t.light()) edge = argb(0xFF, h.mouseOver ? t.accentColor() : rim(t));
-        else edge = h.mouseOver ? argb(0xC0, t.accentLoColor()) : argb(0x70, t.overlay0Color());
+        if (t.light()) edge = argb(0xFF, h.mouseOver ? t.accentLineColor() : rim(t));
+        else edge = h.mouseOver ? argb(0xC0, t.accentLoLineColor()) : argb(0x70, t.overlay0Color());
         frame(g, px(m.x), px(m.y), px(m.x + m.width), by, c3, c3, u, edge);
 
         if (!h.cells.isEmpty() && h.cells.getFirst().widget() instanceof WHontunLabel title) {
@@ -1580,11 +1581,11 @@ public class ChamferClickStyle extends ClickStyle {
         }
 
         if (h.cells.size() > 1 && h.cells.get(1).widget() instanceof WHontunLabel count) {
-            count.color = t.accentColor();
+            count.color = t.accentTextColor();
             int cx0 = px(count.x) - 2 * u, cx1 = px(count.x + count.width) + 2 * u;
             int cy0 = px(count.y) - u, cy1 = px(count.y + count.height) + u;
             plate(g, cx0, cy0, cx1, cy1, 2 * u, 2 * u, u, argb(0x26, t.accentColor()));
-            frame(g, cx0, cy0, cx1, cy1, 2 * u, 2 * u, u, argb(ink(t, 0x90), t.accentColor()));
+            frame(g, cx0, cy0, cx1, cy1, 2 * u, 2 * u, u, argb(ink(t, 0x90), t.accentLineColor()));
         }
     }
 
@@ -1611,7 +1612,7 @@ public class ChamferClickStyle extends ClickStyle {
         int cut = 2 * u;
 
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(0xE0, t.surface0Color()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0x80), t.accentLoColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0x80), t.accentLoLineColor()));
     }
 
     @Override
@@ -1639,9 +1640,9 @@ public class ChamferClickStyle extends ClickStyle {
         int cut = 2 * u;
 
         plate(g, x0, y0, x1, y1, cut, cut, u, argb(0x26, t.accentColor()));
-        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0x90), t.accentColor()));
+        frame(g, x0, y0, x1, y1, cut, cut, u, argb(ink(t, 0x90), t.accentLineColor()));
 
-        drawText(l.label(), l.x + l.offsetX(), l.y + l.offsetY(), t.accentColor());
+        drawText(l.label(), l.x + l.offsetX(), l.y + l.offsetY(), t.accentTextColor());
     }
 
     @Override
@@ -1657,8 +1658,8 @@ public class ChamferClickStyle extends ClickStyle {
                 ? ChamferPaint.pressedPlate(t)
                 : hovered ? argb(mul(0xF0, bo), t.surface2Color()) : argb(mul(0xD0, bo), t.surface0Color());
         int frameArgb = pressed
-                ? argb(0xFF, t.accentColor())
-                : hovered ? argb(0xFF, t.accentHiColor()) : argb(ink(t, 0x90), t.accentLoColor());
+                ? argb(0xFF, t.accentLineColor())
+                : hovered ? argb(0xFF, t.accentHiLineColor()) : argb(ink(t, 0x90), t.accentLoLineColor());
 
         plate(g, x0, y0, x1, y1, cut, cut, u, plateArgb);
         frame(g, x0, y0, x1, y1, cut, cut, u, frameArgb);
