@@ -20,6 +20,8 @@ picker is simply hidden and everything else works unchanged.
   It only reads what the server sends anyway: commands, plugin channels, ping IDs and setbacks.
 - `Anti-Exploit` Cancels incoming packets that would crash or freeze your client, with an optional
   per-type debug log of exactly what was blocked.
+- `Captcha Solver` Reads a map captcha (Sonar, LimboFilter and similar) and types the code for you,
+  or only suggests it if you prefer to type it yourself.
 - `Channel Fetcher` Records the plugin channels a server uses.
 - `Channel Sender` Sends a custom payload on any channel, even unregistered ones. The data can be
   plain text, hex bytes or a 4-byte number.
