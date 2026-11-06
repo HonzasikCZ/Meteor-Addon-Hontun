@@ -46,30 +46,32 @@ picker is simply hidden and everything else works unchanged.
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins bypass` Only the tab-completion tricks that get past plugin hiders.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`players` Finds the real online roster and flags players hidden from the tab list.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`software` Guesses the server software and any proxy in front, without sending anything.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, DivineMC, Pufferfish, Pluto, UniverseSpigot, Leaves, ShreddedPaper,<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, DivineMC, Pufferfish, Pluto, UniverseSpigot, Leaves, ShreddedPaper, GolemPaper,<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;CraftBukkit, Spigot, Vanilla, Fabric, Quilt, Forge, NeoForge, Sponge, Youer, Arclight, Mohist, Magma, Ketting, Banner,<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Minestom, Pumpkin, SteelMC, FerrumC, QuasarMC, PicoLimbo, NanoLimbo, LOOHP Limbo.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxies: Velocity, Velocity-CTD, VeloFlame, BungeeCord, Gate, ViaProxy.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxy limbos: LimboAPI, Sonar and VeloFlame verification worlds.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Behind server-side ViaVersion it reads the real backend version.
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Behind server-side ViaVersion it reads the real backend version.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`version` Works out the real backend version and shows every signal it rests on, without sending anything.
 
 ## 🎨 THEMES
 
 ✨ One color picker drives everything. Set `palette-color` and every accent, gradient and highlight
 follows it live - no restart, no rebuilding the GUI.
 
-Five looks, switchable in `ClickGUI -> GUI -> ui-mode`:
+Six looks, switchable in `ClickGUI -> GUI -> ui-mode`:
 
 | Mode | Look |
 |---|---|
 | `Vanilla` | Minecraft menus stay untouched. The ClickGUI is built from Minecraft's own buttons and panels. |
 | `HVanilla` | Minecraft's square shapes kept, drawn as translucent panels with a thin accent outline. |
-| `HModern1` | Flat panels, soft gradients, rounded corners. |
-| `HModern2` | Default. Chamfered corners, thin accent outlines with a soft glow, corner brackets, pixel icons next to labels. |
+| `Modern1` | Flat panels, soft gradients, rounded corners. |
+| `Modern2` | Default. Chamfered corners, thin accent outlines with a soft glow, corner brackets, pixel icons next to labels. |
 | `SmogClient` | Rounded black and white look from SmogClientPro, with the SF font and an animated particle background. Ignores `palette-color`. |
+| `Terminal` | Square black console look with a forced monospace font. `palette-color` tints the text, borders and caret. |
 
 Every mode also has its own ClickGUI. `click-gui` sits right under `ui-mode` and switches with it
-whenever you change the mode, but you can set it to any of the five. Window positions are shared,
+whenever you change the mode, but you can set it to any of the six. Window positions are shared,
 so switching never moves your windows.
 
 The ClickGUI also has a light mode. Tick `light-mode` in the same tab. Only the ClickGUI goes
@@ -80,7 +82,7 @@ light, Minecraft menus, chat, containers and the HUD stay dark.
 - `Title screen` The Hontun badge replaces the Minecraft wordmark, tinted by the palette with a
   soft glow. The vanilla splash text is hidden. `Vanilla` mode keeps the original title.
 - `Multiplayer` Session header with your skin head, the account you are logged in as, and whether a
-  proxy is active. In `HModern2` the server list is drawn as cards with the server icon, one MOTD
+  proxy is active. In `Modern2` the server list is drawn as cards with the server icon, one MOTD
   line, and a right-hand column of country flag, player count and ping.
 - `Country flags` The hosting country of each server, resolved lazily in the background. Lookups
   only start once a server has finished pinging, so they never compete with Minecraft for DNS.
@@ -98,8 +100,10 @@ light, Minecraft menus, chat, containers and the HUD stay dark.
   button included. The backdrop behind them is configurable (`container-background`).
 - `Sliders` FOV, volume and every other slider get a themed track and knob.
 - `Menu background` Animated gradient with accent particles instead of the panorama
-  (`menu-background`). SmogClient has its own animated background. Set `menu-scene` to
-  `BlockyHorizon` for a shader-drawn blocky night landscape behind every menu shown without a world.
+  (`menu-background`). `menu-scene` picks the scene: `BlockyParticles` (square particles, default),
+  `RoundedParticles` (SmogClient's soft round particles in your colours), `BlockyHorizon` (a
+  shader-drawn blocky night landscape) or `Matrix` (accent-tinted digital rain) behind every menu
+  shown without a world. SmogClient always keeps its black and white round particles.
 - `Lag Notifier` Meteor's own lag-notifier element is restyled in the active theme (themed panel and
   accent), and shows how long the server has gone without responding in both seconds and
   milliseconds.
@@ -109,45 +113,45 @@ Every screen is themed live by the palette colour. Pick the mode in
 `ClickGUI -> GUI -> ui-mode`, then click a theme below to expand its screenshots.
 
 <details open>
-<summary><b>HModern2</b> - chamfered corners, accent glow, corner brackets (default)</summary>
+<summary><b>Modern2</b> - chamfered corners, accent glow, corner brackets (default)</summary>
 <table>
 <tr>
-<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern2_main.png" alt="HModern2 title screen"></td>
-<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HModern2_multiplayer.png" alt="HModern2 server list"></td>
+<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern2_main.png" alt="Modern2 title screen"></td>
+<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HModern2_multiplayer.png" alt="Modern2 server list"></td>
 </tr>
 <tr>
-<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HModern2_multiplayer_drag.png" alt="HModern2 drag to reorder"></td>
-<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HModern2_accounts.png" alt="HModern2 accounts"></td>
+<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HModern2_multiplayer_drag.png" alt="Modern2 drag to reorder"></td>
+<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HModern2_accounts.png" alt="Modern2 accounts"></td>
 </tr>
 <tr>
-<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern2_versions.png" alt="HModern2 versions"></td>
-<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern2_proxies.png" alt="HModern2 proxies"></td>
+<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern2_versions.png" alt="Modern2 versions"></td>
+<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern2_proxies.png" alt="Modern2 proxies"></td>
 </tr>
 <tr>
-<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui.png" alt="HModern2 ClickGUI"></td>
-<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui_module.png" alt="HModern2 module settings"></td>
+<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui.png" alt="Modern2 ClickGUI"></td>
+<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui_module.png" alt="Modern2 module settings"></td>
 </tr>
 </table>
 </details>
 
 <details>
-<summary><b>HModern1</b> - flat panels, soft gradients, rounded corners</summary>
+<summary><b>Modern1</b> - flat panels, soft gradients, rounded corners</summary>
 <table>
 <tr>
-<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern1_main.png" alt="HModern1 title screen"></td>
-<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HModern1_multiplayer.png" alt="HModern1 server list"></td>
+<td width="50%"><b>Title screen</b><br><img width="100%" src="docs/screenshots/HModern1_main.png" alt="Modern1 title screen"></td>
+<td width="50%"><b>Server list</b><br><img width="100%" src="docs/screenshots/HModern1_multiplayer.png" alt="Modern1 server list"></td>
 </tr>
 <tr>
-<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HModern1_multiplayer_drag.png" alt="HModern1 drag to reorder"></td>
-<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HModern1_accounts.png" alt="HModern1 accounts"></td>
+<td><b>Reorder by dragging</b><br><img width="100%" src="docs/screenshots/HModern1_multiplayer_drag.png" alt="Modern1 drag to reorder"></td>
+<td><b>Accounts</b><br><img width="100%" src="docs/screenshots/HModern1_accounts.png" alt="Modern1 accounts"></td>
 </tr>
 <tr>
-<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern1_versions.png" alt="HModern1 versions"></td>
-<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern1_proxies.png" alt="HModern1 proxies"></td>
+<td><b>Versions</b><br><img width="100%" src="docs/screenshots/HModern1_versions.png" alt="Modern1 versions"></td>
+<td><b>Proxies</b><br><img width="100%" src="docs/screenshots/HModern1_proxies.png" alt="Modern1 proxies"></td>
 </tr>
 <tr>
-<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui.png" alt="HModern1 ClickGUI"></td>
-<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui_module.png" alt="HModern1 module settings"></td>
+<td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui.png" alt="Modern1 ClickGUI"></td>
+<td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui_module.png" alt="Modern1 module settings"></td>
 </tr>
 </table>
 </details>
@@ -237,3 +241,5 @@ The jar lands in `build/libs/`.
 - [ParadiseClient-X](https://github.com/ParadiseDevelopments/ParadiseClient-X) by SpigotRCE - `.toggletab`
 - [LiquidBounce](https://github.com/CCBlueX/LiquidBounce) by CCBlueX - `Anticheat Detect`
 - [FDPClient](https://github.com/SkidderMC/FDPClient) by SkidderMC - `Anticheat Detect`
+- [Draggable Lists](https://github.com/mrmelon54/draggable_lists) by MrMelon54 - drag to reorder servers and packs
+- [JetBrains Mono](https://github.com/JetBrains/JetBrainsMono) by JetBrains - Terminal theme font (SIL OFL 1.1)

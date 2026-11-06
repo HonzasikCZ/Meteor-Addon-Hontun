@@ -1,7 +1,11 @@
 package cz.honzasik.hontun.mixin.client.titlescreen;
 
+import cz.honzasik.hontun.Hontun;
+import cz.honzasik.hontun.gui.render.MatrixRain;
 import cz.honzasik.hontun.utils.HontunTheme;
 import cz.honzasik.hontun.utils.MenuBackground;
+import meteordevelopment.meteorclient.gui.GuiThemes;
+import meteordevelopment.meteorclient.gui.WidgetScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -42,5 +46,17 @@ public abstract class MenuScreenBackgroundMixin {
             extractMenuBackground(graphics);
             ci.cancel();
         }
+    }
+
+    @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("TAIL"))
+    private void hontun$scanlines(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        if (!MatrixRain.scanlines()) return;
+
+        Object self = this;
+        boolean terminal = Minecraft.getInstance().level == null && (self instanceof WidgetScreen
+                ? Hontun.THEME != null && GuiThemes.get() == Hontun.THEME && Hontun.THEME.style().id() == HontunTheme.UiMode.Terminal
+                : HontunTheme.terminal());
+
+        if (terminal) MatrixRain.renderScanlines(graphics);
     }
 }

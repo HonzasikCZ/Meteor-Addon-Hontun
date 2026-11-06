@@ -1,7 +1,10 @@
 package cz.honzasik.hontun.gui.screen;
 
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette;
 import cz.honzasik.hontun.gui.widget.HontunTextBox;
 import cz.honzasik.hontun.gui.widget.ProxyCardList;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
+import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.systems.proxies.Proxies;
 import meteordevelopment.meteorclient.systems.proxies.Proxy;
@@ -41,7 +44,8 @@ public class HontunProxiesScreen extends HontunScreen {
         int paneX = contentLeft();
         int lh = font.lineHeight;
 
-        addCentered("Add proxy", paneX, LEFT_PANE, top, HontunTheme.subtext1());
+        addCentered("Add proxy", paneX, LEFT_PANE, top,
+                HontunTheme.terminal() ? TerminalWidgets.fg() & 0xFFFFFF : HontunTheme.subtext1());
 
         int avail = bottom - top;
         boolean roomy = avail >= 190;
@@ -81,8 +85,14 @@ public class HontunProxiesScreen extends HontunScreen {
 
         if (!status.isEmpty()) {
             boolean good = status.startsWith("Add") || status.startsWith("Check");
-            addCentered(status, contentLeft(), contentWidth(), statusY(),
-                    good ? HontunTheme.green() : HontunTheme.textDim());
+            int rgb;
+            if (HontunTheme.terminal()) {
+                TerminalWidgets.ensure();
+                rgb = good ? TerminalPalette.green : TerminalPalette.dim;
+            } else {
+                rgb = good ? HontunTheme.green() : HontunTheme.textDim();
+            }
+            addCentered(status, contentLeft(), contentWidth(), statusY(), rgb);
         }
     }
 
@@ -96,7 +106,7 @@ public class HontunProxiesScreen extends HontunScreen {
 
     private void addCentered(String text, int boxX, int boxW, int y, int rgb) {
         Component c = Component.literal(text).setStyle(Style.EMPTY.withColor(TextColor.fromRgb(rgb)));
-        int tw = font.width(c);
+        int tw = font.width(HontunTheme.terminal() ? HontunFont.apply(c) : c);
         addRenderableWidget(new StringWidget(boxX + (boxW - tw) / 2, y, tw, font.lineHeight, c, font));
     }
 

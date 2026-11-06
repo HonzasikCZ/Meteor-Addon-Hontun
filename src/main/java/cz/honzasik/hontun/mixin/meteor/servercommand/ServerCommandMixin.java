@@ -5,6 +5,7 @@ import cz.honzasik.hontun.commands.AnticheatProbe;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.commands.SoftwareProbe;
+import cz.honzasik.hontun.commands.VersionProbe;
 import cz.honzasik.hontun.mixin.network.custompayload.ClientListenerConnectionAccessor;
 import cz.honzasik.hontun.modules.AnticheatDetect;
 import cz.honzasik.hontun.modules.ChannelFetcher;
@@ -225,6 +226,9 @@ public abstract class ServerCommandMixin {
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("anticheat")
             .executes(c -> { AnticheatProbe.run(); return 1; }));
+
+        builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("version")
+            .executes(c -> { VersionProbe.run(); return 1; }));
     }
 
     private void hontun$printChannels() {

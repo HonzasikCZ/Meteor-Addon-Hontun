@@ -13,6 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class SplashTextMixin {
     @Inject(method = "extractRenderState", at = @At("HEAD"), cancellable = true)
     private void hontun$hideSplash(GuiGraphicsExtractor g, int width, Font font, float alpha, CallbackInfo ci) {
-        if (HontunTheme.restyleEnabled()) ci.cancel();
+        if (!HontunTheme.restyleEnabled()) return;
+        ci.cancel();
     }
 }

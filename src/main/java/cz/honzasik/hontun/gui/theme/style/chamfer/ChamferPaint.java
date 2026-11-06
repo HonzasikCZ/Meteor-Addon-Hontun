@@ -13,12 +13,12 @@ import java.util.Locale;
 import java.util.Map;
 
 final class ChamferPaint {
-    static final Color SUBTEXT1_DARK = HontunTheme.color(HontunTheme.ramp(HontunTheme.UiMode.HModern2).subtext1());
-    static final Color SUBTEXT1_LIGHT = HontunTheme.color(HontunLightPalette.ramp(HontunTheme.UiMode.HModern2).subtext1());
+    static final Color SUBTEXT1_DARK = HontunTheme.color(HontunTheme.ramp(HontunTheme.UiMode.Modern2).subtext1());
+    static final Color SUBTEXT1_LIGHT = HontunTheme.color(HontunLightPalette.ramp(HontunTheme.UiMode.Modern2).subtext1());
     static final Color CLEAR = new Color(0, 0, 0, 0);
     static final Color RIM_LIGHT = HontunTheme.color(HontunTheme.lerp(
-            HontunLightPalette.ramp(HontunTheme.UiMode.HModern2).overlay2(),
-            HontunLightPalette.ramp(HontunTheme.UiMode.HModern2).textDim(), 0.4f));
+            HontunLightPalette.ramp(HontunTheme.UiMode.Modern2).overlay2(),
+            HontunLightPalette.ramp(HontunTheme.UiMode.Modern2).textDim(), 0.4f));
 
     private static final Map<String, RichText> UPPER = new HashMap<>();
 

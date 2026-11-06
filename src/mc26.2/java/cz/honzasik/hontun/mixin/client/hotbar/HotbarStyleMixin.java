@@ -16,6 +16,7 @@ public abstract class HotbarStyleMixin {
     @Redirect(method = "extractItemHotbar", at = @At(value = "INVOKE", target = BLIT, ordinal = 0))
     private void hontun$hotbarFrame(GuiGraphicsExtractor g, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
         if (!HontunTheme.restyleEnabled()) { g.blitSprite(pipeline, sprite, x, y, w, h); return; }
+        if (HontunTheme.terminal()) { cz.honzasik.hontun.gui.widget.TerminalWidgets.hotbarFrame(g, x, y, w, h); return; }
 
         int accent = HontunTheme.accent();
         if (HontunTheme.modern()) {
@@ -34,6 +35,7 @@ public abstract class HotbarStyleMixin {
     @Redirect(method = "extractItemHotbar", at = @At(value = "INVOKE", target = BLIT, ordinal = 1))
     private void hontun$hotbarSelection(GuiGraphicsExtractor g, RenderPipeline pipeline, Identifier sprite, int x, int y, int w, int h) {
         if (!HontunTheme.restyleEnabled()) { g.blitSprite(pipeline, sprite, x, y, w, h); return; }
+        if (HontunTheme.terminal()) { cz.honzasik.hontun.gui.widget.TerminalWidgets.hotbarSelection(g, x, y, w, h); return; }
 
         int c = HontunTheme.argb(0xFF, HontunTheme.accentHi());
         g.fill(x, y, x + w, y + 1, c);

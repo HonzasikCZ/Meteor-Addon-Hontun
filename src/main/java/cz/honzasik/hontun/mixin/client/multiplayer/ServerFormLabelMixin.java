@@ -3,6 +3,7 @@ package cz.honzasik.hontun.mixin.client.multiplayer;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import cz.honzasik.hontun.gui.widget.HontunServerForm;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.gui.Font;
@@ -47,7 +48,8 @@ public abstract class ServerFormLabelMixin {
             x = box.getX() + 1;
             y = box.getY() - HontunServerForm.LABEL_GAP;
         }
-        op.call(g, font, HontunFont.apply(text), x, y, HontunTheme.argb(0xFF, HontunTheme.textDim()));
+        op.call(g, font, HontunFont.apply(text), x, y,
+                HontunTheme.terminal() ? TerminalWidgets.dim() : HontunTheme.argb(0xFF, HontunTheme.textDim()));
     }
 
     @WrapOperation(method = "extractRenderState", at = @At(value = "INVOKE",
@@ -60,6 +62,7 @@ public abstract class ServerFormLabelMixin {
         hontun$labelIndex = 0;
         List<EditBox> fields = hontun$fields();
         if (!fields.isEmpty()) y = HontunServerForm.titleY(fields.get(0));
-        op.call(g, font, HontunFont.apply(text), x, y, HontunTheme.argb(0xFF, HontunTheme.textLight()));
+        op.call(g, font, HontunFont.apply(text), x, y,
+                HontunTheme.terminal() ? TerminalWidgets.fg() : HontunTheme.argb(0xFF, HontunTheme.textLight()));
     }
 }

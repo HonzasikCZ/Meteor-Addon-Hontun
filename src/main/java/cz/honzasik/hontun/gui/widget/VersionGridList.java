@@ -38,7 +38,11 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
 
     @Override public int getRowWidth() { return getWidth() - 28; }
 
-    @Override protected void extractListBackground(GuiGraphicsExtractor g) {}
+    @Override
+    protected void extractListBackground(GuiGraphicsExtractor g) {
+        if (HontunTheme.terminal()) TerminalWidgets.listColumn(g, getX(), getY(), getWidth(), getHeight());
+    }
+
     @Override protected void extractListSeparators(GuiGraphicsExtractor g) {}
 
     @Override
@@ -88,12 +92,17 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
                 boolean cur = v.handle() != null && Objects.equals(v.handle(), current);
                 boolean over = mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + ch;
 
-                if (modern) HontunCards.row(g, cx, cy, cw, ch, cur, over, HontunTheme.accent());
+                boolean term = HontunTheme.terminal();
+                if (term) TerminalWidgets.cell(g, cx, cy, cw, ch, cur, over);
+                else if (modern) HontunCards.row(g, cx, cy, cw, ch, cur, over, HontunTheme.accent());
                 else if (HontunTheme.restyleEnabled()) HontunCards.vanillaStyledCell(g, cx, cy, cw, ch, cur || over);
                 else HontunCards.vanillaButtonCell(g, cx, cy, cw, ch, cur || over);
 
-                int nameCol = cur ? (modern ? HontunTheme.accentHi() : HontunTheme.accent())
+                int nameCol = term ? (cur ? TerminalWidgets.ink() : TerminalWidgets.fg()) & 0xFFFFFF
+                        : cur ? (modern ? HontunTheme.accentHi() : HontunTheme.accent())
                         : HontunTheme.textLight();
+                int protoCol = term ? (cur ? TerminalWidgets.ink() : TerminalWidgets.dim()) & 0xFFFFFF
+                        : HontunTheme.textDim();
                 int left = cx + 5 + HontunCards.rowTextInset(cur);
                 int right = cx + cw - 5;
 
@@ -106,7 +115,7 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
 
                 boolean smoothDot = cur && HontunRound.smoothDots();
                 Component nameText = cz.honzasik.hontun.utils.HontunFont.apply(
-                        colored((cur && !smoothDot ? "● " : "") + v.name(), nameCol));
+                        colored((cur && !smoothDot && !term ? "● " : "") + v.name(), nameCol));
                 if (smoothDot) {
                     int tw = f.width(nameText);
                     int group = tw + 7;
@@ -115,14 +124,23 @@ public class VersionGridList extends ObjectSelectionList<VersionGridList.Row> {
                     HontunRound.dot(g, gx + 1.75f, cy + 3 + 4f, 1.75f, HontunTheme.argb(0xFF, nameCol));
                     g.textRenderer().acceptScrollingWithDefaultCenter(nameText,
                             gx + 7, fits ? gx + 7 + tw : right, cy + 3, cy + 3 + f.lineHeight);
+                } else if (term) {
+                    int ty = TerminalWidgets.stackY(cy, ch, 2, TerminalWidgets.LINE_STEP);
+                    g.textRenderer().acceptScrollingWithDefaultCenter(nameText, left, right, ty - 2, ty + 9);
                 } else {
                     g.textRenderer().acceptScrollingWithDefaultCenter(nameText,
                             left, right, cy + 3, cy + 3 + f.lineHeight);
                 }
 
+                int protoTop = cy + ch - 3 - f.lineHeight, protoBottom = cy + ch - 3;
+                if (term) {
+                    int ty = TerminalWidgets.stackY(cy, ch, 2, TerminalWidgets.LINE_STEP) + TerminalWidgets.LINE_STEP;
+                    protoTop = ty - 2;
+                    protoBottom = ty + 9;
+                }
                 g.textRenderer().acceptScrollingWithDefaultCenter(
-                        cz.honzasik.hontun.utils.HontunFont.apply(colored("protocol " + v.id(), HontunTheme.textDim())),
-                        left, right, cy + ch - 3 - f.lineHeight, cy + ch - 3);
+                        cz.honzasik.hontun.utils.HontunFont.apply(colored("protocol " + v.id(), protoCol)),
+                        left, right, protoTop, protoBottom);
             }
         }
 

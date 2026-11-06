@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.mixin.meteor.hud;
 
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette;
 import cz.honzasik.hontun.gui.widget.HontunIcons;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
 import cz.honzasik.hontun.utils.HontunTheme;
@@ -62,7 +63,9 @@ public abstract class LagNotifierStyleMixin {
         double labelW = renderer.textWidth(label, true, s);
         double valueW = renderer.textWidth(value, true, s);
 
-        if (HontunTheme.modern2()) {
+        if (HontunTheme.terminal()) {
+            hontun$terminal(renderer, g, el, s, th, labelW, valueW, label, value, since >= 4f);
+        } else if (HontunTheme.modern2()) {
             hontun$modern2(renderer, g, el, s, th, labelW, valueW, label, value, state, accent);
         } else if (HontunTheme.modern1()) {
             hontun$modern1(renderer, g, el, s, th, labelW, valueW, label, value, state, accent);
@@ -188,13 +191,45 @@ public abstract class LagNotifierStyleMixin {
         hontun$text(r, iconX + icon + gap, y + (h - th) / 2.0, scale, label, value, state);
     }
 
+    private void hontun$terminal(HudRenderer r, HontunShapes.Fill g, HudElement el, double scale, double th,
+                                 double labelW, double valueW, String label, String value, boolean bad) {
+        TerminalPalette.ensure();
+        int state = bad ? TerminalPalette.red : TerminalPalette.yellow;
+        int cw = Math.max(1, (int) Math.round(r.textWidth("0", true, scale)));
+        int pad = (int) Math.round(6 * scale);
+
+        int w = 3 * cw + (int) Math.ceil(labelW + valueW) + cw;
+        int h = (int) Math.ceil(th) + pad;
+        el.setSize(w, h);
+        int x = el.getX(), y = el.getY();
+        int x2 = x + w, y2 = y + h;
+
+        g.fill(x, y, x2, y2, TerminalPalette.win());
+        int frame = TerminalPalette.opaque(TerminalPalette.line);
+        g.fill(x, y, x2, y + 1, frame);
+        g.fill(x, y2 - 1, x2, y2, frame);
+        g.fill(x, y + 1, x + 1, y2 - 1, frame);
+        g.fill(x2 - 1, y + 1, x2, y2 - 1, frame);
+
+        int mh = Math.max(2, (int) Math.round(th));
+        int my = y + (h - mh) / 2;
+        g.fill(x + cw, my, x + 2 * cw, my + mh, TerminalPalette.opaque(state));
+
+        hontun$text(r, x + 3 * cw, y + (h - th) / 2.0, scale, label, value, TerminalPalette.fg, state);
+    }
+
     private void hontun$text(HudRenderer r, double x, double y, double scale, String label, String value, int state) {
+        hontun$text(r, x, y, scale, label, value, 0xFFFFFF, state);
+    }
+
+    private void hontun$text(HudRenderer r, double x, double y, double scale, String label, String value,
+                             int labelRgb, int state) {
         if (shadow.get()) {
             double o = hontun$shadowOffset(scale);
             Color dark = hontun$argb(hontun$shadowCol, 0x90000000);
             hontun$line(r, x + o, y + o, scale, label, value, dark, dark);
         }
-        Color light = hontun$col(hontun$labelCol, 0xFFFFFF);
+        Color light = hontun$col(hontun$labelCol, labelRgb);
         Color tone = hontun$col(hontun$valueCol, state);
         int passes = Hud.get().hasCustomFont() ? 2 : 1;
         for (int i = 0; i < passes; i++) hontun$line(r, x, y, scale, label, value, light, tone);

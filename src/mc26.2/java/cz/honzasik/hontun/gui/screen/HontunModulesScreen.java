@@ -5,6 +5,7 @@ import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.api.text.RichText;
 import cz.honzasik.hontun.gui.theme.icons.HontunBuiltinIcons;
 import cz.honzasik.hontun.gui.theme.style.ClickStyle;
+import cz.honzasik.hontun.gui.theme.style.FooterKind;
 import cz.honzasik.hontun.gui.theme.style.Metrics;
 import cz.honzasik.hontun.gui.theme.style.WindowKind;
 import cz.honzasik.hontun.gui.theme.widgets.WHontunLabel;
@@ -45,6 +46,7 @@ import static org.lwjgl.glfw.GLFW.GLFW_MOD_CONTROL;
 
 import net.minecraft.util.Util;
 
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 
 import org.jspecify.annotations.NonNull;
@@ -74,6 +76,12 @@ public class HontunModulesScreen extends TabScreen {
         controller = controllerCell.widget();
 
         if (!theme.modulesHelpText.get()) return;
+
+        WWidget footer = theme.style().footer(theme, FooterKind.MODULES);
+        if (footer != null) {
+            add(footer).bottom().expandX();
+            return;
+        }
 
         WVerticalList help = add(theme.verticalList()).pad(4).bottom().widget();
 
@@ -133,6 +141,18 @@ public class HontunModulesScreen extends TabScreen {
         return false;
     }
 
+    @Override
+    public boolean charTyped(@NonNull CharacterEvent input) {
+        if (super.charTyped(input)) return true;
+        if (!theme.hontunSearchScreen.get() || !theme.style().typeToFind()) return false;
+
+        int codepoint = input.codepoint();
+        if (codepoint <= ' ' || !(Character.isLetterOrDigit(codepoint) || codepoint == '-' || codepoint == '_')) return false;
+
+        mc.gui.setScreen(new HontunSearchScreen(theme, new String(Character.toChars(codepoint))));
+        return true;
+    }
+
     protected WWindow createCategory(WContainer c, Category category, List<Module> moduleList) {
         ClickStyle style = theme.style();
         Metrics m = style.metrics();
@@ -154,9 +174,15 @@ public class HontunModulesScreen extends TabScreen {
         w.view.spacing = m.viewSpacing;
         w.view.maxHeight -= m.categoryViewInset;
 
+        WWidget prologue = style.categoryPrologue(theme, category);
+        if (prologue != null) w.add(prologue).expandX();
+
         for (Module module : moduleList) {
             w.add(theme.module(module)).expandX();
         }
+
+        WWidget epilogue = style.categoryEpilogue(theme, category);
+        if (epilogue != null) w.add(epilogue).expandX();
 
         return w;
     }
@@ -259,9 +285,16 @@ public class HontunModulesScreen extends TabScreen {
 
         modules.sort((o1, o2) -> String.CASE_INSENSITIVE_ORDER.compare(o1.name, o2.name));
 
+        ClickStyle style = theme.style();
+        WWidget prologue = modules.isEmpty() ? null : style.categoryPrologue(theme, null);
+        if (prologue != null) w.add(prologue).expandX();
+
         for (Module module : modules) {
             w.add(theme.module(module)).expandX();
         }
+
+        WWidget epilogue = modules.isEmpty() ? null : style.categoryEpilogue(theme, null);
+        if (epilogue != null) w.add(epilogue).expandX();
 
         return !modules.isEmpty();
     }
@@ -329,6 +362,8 @@ public class HontunModulesScreen extends TabScreen {
 
         @Override
         protected void onCalculateWidgetPositions() {
+            if (((HontunGuiTheme) theme).style().layoutCategories((HontunGuiTheme) theme, cells)) return;
+
             Metrics m = ((HontunGuiTheme) theme).style().metrics();
             double pad = theme.scale(m.categoryGapX);
             double h = theme.scale(m.categoryRowStep);

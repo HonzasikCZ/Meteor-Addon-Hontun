@@ -36,6 +36,7 @@ public class HontunDotButton extends Button.Plain {
 
     private static Component label(String text, boolean sel, boolean smooth) {
         if (!sel) return Component.literal(text);
+        if (HontunTheme.terminal()) return Component.literal(text + "*");
         String s;
         if (HontunTheme.modern2()) s = "– " + text + " –";
         else if (HontunTheme.hvanilla()) s = "» " + text + " «";

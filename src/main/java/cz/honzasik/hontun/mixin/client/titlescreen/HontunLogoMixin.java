@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.mixin.client.titlescreen;
 
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -67,7 +68,10 @@ public abstract class HontunLogoMixin {
                     size, size, TEX, TEX, TEX, TEX, HontunTheme.argb(shadowA / 2, 0x000000));
         }
 
-        int glowA = Math.round(a * 150f);
+        boolean term = HontunTheme.terminal();
+        if (term) tint = HontunTheme.argb(Math.round(a * 255f), TerminalWidgets.acc());
+
+        int glowA = term ? 0 : Math.round(a * 150f);
         if (glowA > 0) {
             for (int i = 1; i <= 5; i++) {
                 int gs = size + i * 8;

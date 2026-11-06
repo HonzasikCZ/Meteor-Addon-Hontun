@@ -1,6 +1,8 @@
 package com.mrmelon54.DraggableLists.theme;
 
 import com.mrmelon54.DraggableLists.DraggableLists;
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.lang.invoke.MethodHandle;
@@ -30,7 +32,7 @@ public final class HontunBridge {
     private static MethodHandle accent, accentHi, accentLo;
     private static MethodHandle surface0, surface1, crust, overlay0;
     private static MethodHandle textLight, textDim;
-    private static MethodHandle restyleEnabled, modern1, modern2, smog, version;
+    private static MethodHandle restyleEnabled, modern1, modern2, smog, terminal, version;
 
     private static int cachedVersion = Integer.MIN_VALUE;
     private static Palette cached;
@@ -65,6 +67,16 @@ public final class HontunBridge {
         }
     }
 
+    public static boolean terminal() {
+        if (!available()) return false;
+        try {
+            return (boolean) terminal.invokeExact();
+        } catch (Throwable t) {
+            disable(t);
+            return false;
+        }
+    }
+
     /** The current Hontun palette, or {@code null} if Hontun is unavailable. */
     public static Palette palette() {
         if (!available()) return null;
@@ -73,9 +85,26 @@ public final class HontunBridge {
             if (cached != null && v == cachedVersion) return cached;
 
             // Each Hontun UI mode gets the corner treatment that matches how it draws its own
-            // panels and server cards: HModern2 cuts its corners (chamfer), HModern1 is softly
+            // panels and server cards: Modern2 cuts its corners (chamfer), Modern1 is softly
             // rounded, and HVanilla keeps Minecraft's sharp squares. Vanilla never reaches here
             // (restyling() is false, so Themes falls back to the built-in palette).
+            if ((boolean) terminal.invokeExact()) {
+                cached = new Palette(
+                    TerminalWidgets.acc() & 0xFFFFFF,
+                    TerminalWidgets.acc() & 0xFFFFFF,
+                    TerminalWidgets.fill() & 0xFFFFFF,
+                    TerminalWidgets.bg() & 0xFFFFFF,
+                    TerminalPalette.bar,
+                    TerminalPalette.bar,
+                    TerminalWidgets.line() & 0xFFFFFF,
+                    TerminalWidgets.fg() & 0xFFFFFF,
+                    TerminalWidgets.dim() & 0xFFFFFF,
+                    CornerStyle.SQUARE,
+                    0
+                );
+                cachedVersion = v;
+                return cached;
+            }
             CornerStyle corners;
             int cornerSize;
             if ((boolean) smog.invokeExact()) {
@@ -137,6 +166,7 @@ public final class HontunBridge {
             modern1 = lookup.findStatic(theme, "modern1", boolGetter);
             modern2 = lookup.findStatic(theme, "modern2", boolGetter);
             smog = lookup.findStatic(theme, "smog", boolGetter);
+            terminal = lookup.findStatic(theme, "terminal", boolGetter);
             version = lookup.findStatic(theme, "version", intGetter);
 
             available = true;

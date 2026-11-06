@@ -16,6 +16,7 @@
     "meteorclient.FontsMixin",
     "meteorclient.GuiRendererAccessor",
     "meteorclient.GuiRendererMixin",
+    "meteorclient.GuiTabScreenMixin",
     "meteorclient.MeteorWidgetMixin",
     "meteorclient.ProxiesImportScreenMixin",
     "meteorclient.SettingAccessor",

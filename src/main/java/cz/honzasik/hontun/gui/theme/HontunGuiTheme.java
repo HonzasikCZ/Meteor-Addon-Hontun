@@ -14,6 +14,9 @@ import cz.honzasik.hontun.gui.theme.style.Knob;
 import cz.honzasik.hontun.gui.theme.style.Pipeline;
 import cz.honzasik.hontun.gui.theme.style.StylePalette;
 import cz.honzasik.hontun.gui.theme.style.TabGlide;
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalMarker;
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalNames;
+import cz.honzasik.hontun.gui.render.MatrixRain;
 import cz.honzasik.hontun.gui.render.route.PrimitiveRouter;
 import cz.honzasik.hontun.gui.render.route.Routers;
 import cz.honzasik.hontun.gui.theme.widgets.*;
@@ -71,6 +74,7 @@ import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -93,13 +97,16 @@ public class HontunGuiTheme extends GuiTheme {
     private final Map<HontunColor, Color> colorCache;
     private final StylePalette palette = new StylePalette();
 
-    private volatile HontunTheme.UiMode activeUiMode = HontunTheme.UiMode.HModern2;
-    private volatile HontunTheme.UiMode activeClickGui = HontunTheme.UiMode.HModern2;
+    private volatile HontunTheme.UiMode activeUiMode = HontunTheme.UiMode.Modern2;
+    private volatile HontunTheme.UiMode activeClickGui = HontunTheme.UiMode.Modern2;
 
     private RichTextRenderer textRenderer;
     private RichTextRenderer smogTextRenderer;
+    private RichTextRenderer monoTextRenderer;
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
+    private final SettingGroup sgTerminal = settings.createGroup("Terminal");
+    private final SettingGroup sgRain = settings.createGroup("Rain");
     private final SettingGroup sgCorners = settings.createGroup("Corners");
     private final SettingGroup sgAnimations = settings.createGroup("Animations");
     private final SettingGroup sgColors = settings.createGroup("Colors");
@@ -109,16 +116,16 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<HontunTheme.UiMode> uiMode = sgGeneral.add(new EnumSetting.Builder<HontunTheme.UiMode>()
             .name("ui-mode")
-            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft shapes. HModern1 = flat and rounded. HModern2 = chamfered corners with an accent glow (default). SmogClient = rounded black and white SmogClientPro look with the SF font. Also sets click-gui to the matching style.")
-            .defaultValue(HontunTheme.UiMode.HModern2)
+            .description("Look of the whole addon (ClickGUI + MC menus/buttons/hotbar/containers). Vanilla = no restyle. HVanilla = classic Minecraft shapes. Modern1 = flat and rounded. Modern2 = chamfered corners with an accent glow (default). SmogClient = rounded black and white SmogClientPro look with the SF font. Terminal = square black console look with a forced monospace font; palette-color still works and tints the text, borders and caret. Also sets click-gui to the matching style.")
+            .defaultValue(HontunTheme.UiMode.Modern2)
             .onChanged(this::onUiModeChanged)
             .build()
     );
 
     public final Setting<HontunTheme.UiMode> clickGui = sgGeneral.add(new EnumSetting.Builder<HontunTheme.UiMode>()
             .name("click-gui")
-            .description("Look of the Meteor ClickGUI only. Changing ui-mode switches this to the matching style; you can pick any other style afterwards. Vanilla and HVanilla always use the Minecraft font, SmogClient always uses the SF font. Vanilla and HVanilla snap scale to half steps and ignore palette-color (Vanilla) or custom font (Vanilla, HVanilla). SmogClient maps BACK easings to QUART_OUT. Low window-opacity triggers readability floors.")
-            .defaultValue(HontunTheme.UiMode.HModern2)
+            .description("Look of the Meteor ClickGUI only. Changing ui-mode switches this to the matching style; you can pick any other style afterwards. Vanilla and HVanilla always use the Minecraft font, SmogClient always uses the SF font, Terminal always uses its monospace font. Vanilla and HVanilla snap scale to half steps and ignore palette-color (Vanilla) or custom font (Vanilla, HVanilla). SmogClient maps BACK easings to QUART_OUT. Low window-opacity triggers readability floors.")
+            .defaultValue(HontunTheme.UiMode.Modern2)
             .onChanged(this::onClickGuiChanged)
             .build()
     );
@@ -128,6 +135,7 @@ public class HontunGuiTheme extends GuiTheme {
             .description("Light palette for the Meteor ClickGUI (modules, settings, search, tabs). Minecraft menus, chat, containers and the HUD keep their dark look. Window and background opacity are raised so dark text stays readable over the game.")
             .defaultValue(false)
             .onChanged(v -> refreshPalette())
+            .visible(this::lightModeVisible)
             .build()
     );
 
@@ -205,6 +213,129 @@ public class HontunGuiTheme extends GuiTheme {
             .build()
     );
 
+    public final Setting<TerminalMarker> terminalMarker = sgTerminal.add(new EnumSetting.Builder<TerminalMarker>()
+            .name("marker")
+            .description("How enabled modules are marked in click-gui Terminal: Block = a solid palette-color block in front of the name, Brackets = [x].")
+            .defaultValue(TerminalMarker.Block)
+            .onChanged(this::invalidateScreen)
+            .visible(this::terminalVisible)
+            .build()
+    );
+
+    public final Setting<TerminalNames> terminalNames = sgTerminal.add(new EnumSetting.Builder<TerminalNames>()
+            .name("module-names")
+            .description("How click-gui Terminal prints modules: Id = command ids like kill-aura, Title = titles like Kill Aura.")
+            .defaultValue(TerminalNames.Id)
+            .onChanged(v -> scheduleRebuild())
+            .visible(this::terminalVisible)
+            .build()
+    );
+
+    public final Setting<String> terminalPrompt = sgTerminal.add(new StringSetting.Builder()
+            .name("prompt")
+            .description("Prompt printed before commands in click-gui Terminal, up to 3 characters.")
+            .defaultValue("$")
+            .onChanged(this::invalidateScreen)
+            .visible(this::terminalVisible)
+            .build()
+    );
+
+    public final Setting<Boolean> terminalCursorBlink = sgTerminal.add(new BoolSetting.Builder()
+            .name("cursor-blink")
+            .description("Blinking block cursor in click-gui Terminal.")
+            .defaultValue(true)
+            .visible(this::terminalVisible)
+            .build()
+    );
+
+    public final Setting<Boolean> terminalLineNumbers = sgTerminal.add(new BoolSetting.Builder()
+            .name("line-numbers")
+            .description("Line numbers in the click-gui Terminal config views.")
+            .defaultValue(true)
+            .visible(this::terminalVisible)
+            .build()
+    );
+
+    public final Setting<Boolean> terminalPrintAnimation = sgTerminal.add(new BoolSetting.Builder()
+            .name("print-animation")
+            .description("Lines print in one after another when a click-gui Terminal screen opens.")
+            .defaultValue(true)
+            .visible(this::terminalVisible)
+            .build()
+    );
+
+    public final Setting<Boolean> terminalScanlines = sgTerminal.add(new BoolSetting.Builder()
+            .name("scanlines")
+            .description("Faint CRT scanlines over the whole screen, only while no world is loaded: over the menus with ui-mode Terminal and over the ClickGUI with click-gui Terminal. Never drawn over a world.")
+            .defaultValue(false)
+            .onChanged(MatrixRain::setScanlines)
+            .visible(this::terminalAnyVisible)
+            .build()
+    );
+
+    public final Setting<Boolean> rain = sgRain.add(new BoolSetting.Builder()
+            .name("rain")
+            .description("Digital rain of hex digits and terminal symbols behind the click-gui Terminal ClickGUI and, with ui-mode Terminal, behind the menus shown without a world. It replaces menu-scene there; turn it off to get menu-scene back. Tinted by palette-color.")
+            .defaultValue(true)
+            .onChanged(MatrixRain::setEnabled)
+            .visible(this::terminalAnyVisible)
+            .build()
+    );
+
+    public final Setting<MatrixRain.Charset> rainCharset = sgRain.add(new EnumSetting.Builder<MatrixRain.Charset>()
+            .name("charset")
+            .description("Glyphs that fall, all from the bundled monospace font. Hex = 0-9 A-F and a few terminal symbols, Ascii = letters, digits and symbols, Binary = 0 and 1.")
+            .defaultValue(MatrixRain.Charset.Hex)
+            .onChanged(MatrixRain::setCharset)
+            .visible(this::rainTuningVisible)
+            .build()
+    );
+
+    public final Setting<Boolean> rainMirror = sgRain.add(new BoolSetting.Builder()
+            .name("mirror-glyphs")
+            .description("Mirror half of the glyphs for a less readable, more alien look.")
+            .defaultValue(true)
+            .onChanged(MatrixRain::setMirror)
+            .visible(this::rainTuningVisible)
+            .build()
+    );
+
+    public final Setting<Double> rainSpeed = sgRain.add(new DoubleSetting.Builder()
+            .name("speed")
+            .description("Fall speed of the streams.")
+            .defaultValue(1)
+            .range(0.2, 3)
+            .sliderRange(0.2, 3)
+            .decimalPlaces(2)
+            .onChanged(MatrixRain::setSpeed)
+            .visible(this::rainTuningVisible)
+            .build()
+    );
+
+    public final Setting<Double> rainDensity = sgRain.add(new DoubleSetting.Builder()
+            .name("density")
+            .description("Share of columns that carry a stream.")
+            .defaultValue(0.7)
+            .range(0.1, 1)
+            .sliderRange(0.1, 1)
+            .decimalPlaces(2)
+            .onChanged(MatrixRain::setDensity)
+            .visible(this::rainTuningVisible)
+            .build()
+    );
+
+    public final Setting<Double> rainBrightness = sgRain.add(new DoubleSetting.Builder()
+            .name("brightness")
+            .description("Brightness of the trails.")
+            .defaultValue(0.7)
+            .range(0.1, 1)
+            .sliderRange(0.1, 1)
+            .decimalPlaces(2)
+            .onChanged(MatrixRain::setBrightness)
+            .visible(this::rainTuningVisible)
+            .build()
+    );
+
     public final Setting<Integer> cornerRadius = sgCorners.add(new IntSetting.Builder()
             .name("corner-radius")
             .description("The radius of corners for large UI elements.")
@@ -259,7 +390,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<SettingColor> menuBackground = sgColors.add(new ColorSetting.Builder()
             .name("menu-background")
-            .description("Base color of the animated menu gradient (title/pause/loading) and of the BlockyHorizon menu-scene. Default dark grey; set it to your accent to make the menu breathe that color. Alpha is ignored. ui-mode SmogClient ignores it and keeps its fixed black and white backdrop, for both the particle backdrop and BlockyHorizon.")
+            .description("Base color of the menu-scene backdrop (title/pause/loading): the BlockyParticles gradient, the RoundedParticles glow and the base of BlockyHorizon. Default dark grey; set it to your accent to make the menu breathe that color. Alpha is ignored. ui-mode SmogClient ignores it and keeps its fixed black and white backdrop in every scene.")
             .defaultValue(new SettingColor(20, 21, 25))
             .onChanged(c -> HontunTheme.setMenuColor(c.getPacked()))
             .build()
@@ -267,9 +398,9 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<HontunTheme.MenuScene> menuScene = sgColors.add(new EnumSetting.Builder<HontunTheme.MenuScene>()
             .name("menu-scene")
-            .description("Scene behind the title screen and every menu shown without a world (also the ClickGUI opened from the title screen and the Hontun screens). Particles = animated gradient with accent particles (default). BlockyHorizon = shader-drawn blocky night landscape with a moon, stars, clouds and fireflies, tinted by palette-color on a menu-background base (SmogClient stays black and white and ignores both). Menus over a world keep their translucent backdrop and ui-mode Vanilla keeps the panorama. Falls back to Particles if the shader cannot run.")
-            .defaultValue(HontunTheme.MenuScene.Particles)
-            .onChanged(HontunTheme::setMenuScene)
+            .description("Scene behind the title screen and every menu shown without a world (also the ClickGUI opened from the title screen and the Hontun screens). BlockyParticles = animated menu-background gradient with square palette-color particles (default). RoundedParticles = soft round palette-color particles joined by faint lines over a menu-background glow, the SmogClient backdrop in your colors. BlockyHorizon = shader-drawn blocky night landscape with a moon, stars, clouds and fireflies, tinted by palette-color on a menu-background base. Matrix = falling digital rain of hex digits and terminal symbols on black, tinted by palette-color. ui-mode SmogClient keeps its black and white colors in every scene and draws RoundedParticles for both particle scenes. ui-mode Terminal (and the click-gui Terminal ClickGUI) draws Matrix while its rain setting is on. Menus over a world keep a translucent particle backdrop (round with RoundedParticles, square otherwise) and ui-mode Vanilla keeps the panorama. Falls back to the particle backdrop if the shader cannot run.")
+            .defaultValue(HontunTheme.MenuScene.BlockyParticles)
+            .onChanged(this::onMenuSceneChanged)
             .build()
     );
 
@@ -289,7 +420,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<TransitionStyle> screenTransition = sgScreens.add(new EnumSetting.Builder<TransitionStyle>()
             .name("screen-transition")
-            .description("How screens change: the previous screen fades out over the new one instead of switching at once. Covers the title screen and the other menus, the Hontun screens and the Meteor ClickGUI (opening it, closing it back to the game, every tab and module screen). Fade = plain crossfade. FadeZoom = the old screen also grows slightly while it fades (default); over a world, between ClickGUI tabs and when a menu reopens itself it uses the plain crossfade. On ClickGUI tab switches the top bar stays live and only the content fades. Off = instant. Chat, inventories and containers, sign, book and command block editing, the death screen and the credits always switch instantly, and so does the first title screen after the game starts. ui-mode Vanilla keeps instant switching.")
+            .description("How screens change: the previous screen fades out over the new one instead of switching at once. Covers the title screen and the other menus, the Hontun screens and the Meteor ClickGUI (opening it, closing it back to the game, every tab and module screen). Fade = plain crossfade. FadeZoom = the old screen also grows slightly while it fades (default); over a world, between ClickGUI tabs and when a menu reopens itself it uses the plain crossfade. On ClickGUI tab switches the top bar stays live and only the content fades. With ui-mode Terminal and no world loaded, FadeZoom slides the old screen 8 px down while it fades instead of growing, ClickGUI tab switches included; the Terminal top bar and key bar stay in place. Off = instant. Chat, inventories and containers, sign, book and command block editing, the death screen and the credits always switch instantly, and so does the first title screen after the game starts. ui-mode Vanilla keeps instant switching.")
             .defaultValue(TransitionStyle.FadeZoom)
             .build()
     );
@@ -396,6 +527,7 @@ public class HontunGuiTheme extends GuiTheme {
         HontunTheme.setMenuColor(menuBackground.get().getPacked());
         HontunTheme.setMenuScene(menuScene.get());
         HontunGeo.setEnabled(serverFlags.get());
+        applyRain();
         updateCache();
 
         HontunTheme.addListener(this::updateCache);
@@ -408,15 +540,49 @@ public class HontunGuiTheme extends GuiTheme {
         return tag;
     }
 
+    private static final Map<String, String> LEGACY_VALUES = Map.of(
+            "HModern1", HontunTheme.UiMode.Modern1.name(),
+            "HModern2", HontunTheme.UiMode.Modern2.name(),
+            "Particles", HontunTheme.MenuScene.BlockyParticles.name());
+
+    private static final Set<String> LEGACY_SETTINGS = Set.of("ui-mode", "click-gui", "menu-scene");
+
+    private static void migrateLegacy(CompoundTag tag) {
+        tag.getString("click-gui").map(LEGACY_VALUES::get).ifPresent(value -> tag.putString("click-gui", value));
+        tag.getCompound("settings").ifPresent(saved -> {
+            for (Tag group : saved.getListOrEmpty("groups")) {
+                if (!(group instanceof CompoundTag groupTag)) continue;
+                for (Tag setting : groupTag.getListOrEmpty("settings")) {
+                    if (!(setting instanceof CompoundTag settingTag)) continue;
+                    if (!LEGACY_SETTINGS.contains(settingTag.getStringOr("name", ""))) continue;
+                    String value = LEGACY_VALUES.get(settingTag.getStringOr("value", ""));
+                    if (value != null) settingTag.putString("value", value);
+                }
+            }
+        });
+    }
+
     @Override
     public GuiTheme fromTag(CompoundTag tag) {
+        migrateLegacy(tag);
         super.fromTag(tag);
         tag.getString("click-gui").ifPresent(value -> {
             for (HontunTheme.UiMode mode : HontunTheme.UiMode.values()) {
                 if (mode.name().equals(value)) clickGui.set(mode);
             }
         });
+        applyRain();
         return this;
+    }
+
+    private void applyRain() {
+        MatrixRain.setEnabled(rain.get());
+        MatrixRain.setCharset(rainCharset.get());
+        MatrixRain.setMirror(rainMirror.get());
+        MatrixRain.setSpeed(rainSpeed.get());
+        MatrixRain.setDensity(rainDensity.get());
+        MatrixRain.setBrightness(rainBrightness.get());
+        MatrixRain.setScanlines(terminalScanlines.get());
     }
 
     private Setting<SettingColor> color(SettingGroup group, String name, String description, SettingColor color) {
@@ -573,7 +739,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     @Override
     public WWidget module(Module module) {
-        return w(module(module, module.title));
+        return w(module(module, style().moduleTitle(module)));
     }
 
     @Override
@@ -824,15 +990,15 @@ public class HontunGuiTheme extends GuiTheme {
     private static final Color LIGHT_STARSCRIPT_OBJECT = new Color(135, 16, 148);
 
     private Color starscript(Setting<SettingColor> setting, Color light) {
-        return lightMode.get() && setting.get().equals(setting.getDefaultValue()) ? light : setting.get();
+        return light() && setting.get().equals(setting.getDefaultValue()) ? light : setting.get();
     }
 
     public boolean light() {
-        return lightMode.get();
+        return lightMode.get() && style().supportsLightMode();
     }
 
     public Color shadowColor() {
-        return lightMode.get() ? new Color(0, 0, 0, 38) : ColorUtils.withAlpha(crustColor(), 0.4);
+        return light() ? new Color(0, 0, 0, 38) : ColorUtils.withAlpha(crustColor(), 0.4);
     }
 
     private void refreshPalette() {
@@ -909,7 +1075,25 @@ public class HontunGuiTheme extends GuiTheme {
 
     @Override
     public WidgetScreen moduleScreen(Module module) {
-        return new HontunModuleScreen(this, module);
+        WidgetScreen custom = style().moduleScreen(this, module);
+        return custom != null ? custom : new HontunModuleScreen(this, module);
+    }
+
+    @Override
+    public WWidget settings(Settings settings, String filter) {
+        WWidget custom = style().settingsView(this, settings, filter);
+        return custom != null ? custom : super.settings(settings, filter);
+    }
+
+    public WWidget classicSettings(Settings settings, String filter) {
+        return super.settings(settings, filter);
+    }
+
+    public String terminalPromptText() {
+        String p = terminalPrompt.get();
+        if (p == null || p.isBlank()) return "$";
+        p = p.strip();
+        return p.length() > 3 ? p.substring(0, 3) : p;
     }
 
     @Override
@@ -918,6 +1102,10 @@ public class HontunGuiTheme extends GuiTheme {
             case SF -> {
                 RichTextRenderer sf = smogRenderer();
                 yield sf != null ? sf : richTextRenderer();
+            }
+            case MONO -> {
+                RichTextRenderer mono = monoRenderer();
+                yield mono != null ? mono : richTextRenderer();
             }
             case MC -> VanillaTextRenderer.INSTANCE;
             default -> Config.get().customFont.get() ? richTextRenderer() : VanillaTextRenderer.INSTANCE;
@@ -940,6 +1128,11 @@ public class HontunGuiTheme extends GuiTheme {
         if (style().font() == FontChoice.SF) {
             RichTextRenderer sf = smogRenderer();
             if (sf != null) return sf;
+        }
+
+        if (style().font() == FontChoice.MONO) {
+            RichTextRenderer mono = monoRenderer();
+            if (mono != null) return mono;
         }
 
         if (textRenderer == null) {
@@ -981,6 +1174,39 @@ public class HontunGuiTheme extends GuiTheme {
         }
 
         FontFace face = new SystemFontFace(new FontInfo("SF", FontInfo.Type.Regular), path);
+
+        if (Fonts.getFamily(face.info.family()) == null) {
+            FontFamily family = new FontFamily(face.info.family());
+            family.addFont(face);
+            Fonts.FONT_FAMILIES.add(family);
+        }
+
+        return face;
+    }
+
+    private RichTextRenderer monoRenderer() {
+        if (monoTextRenderer == null) {
+            try {
+                monoTextRenderer = new RichTextRenderer(monoFontFace());
+            } catch (Exception e) {
+                HontunGui.LOG.error("Failed to load Terminal mono TextRenderer: ", e);
+                return null;
+            }
+        }
+
+        return monoTextRenderer;
+    }
+
+    private static FontFace monoFontFace() throws IOException {
+        Path path = Files.createTempFile("hontun-terminal-mono", ".ttf");
+        path.toFile().deleteOnExit();
+
+        try (InputStream in = HontunGuiTheme.class.getResourceAsStream("/assets/hontun/font/mono.ttf")) {
+            if (in == null) throw new IOException("Bundled Terminal font hontun:font/mono.ttf not found on classpath");
+            Files.copy(in, path, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+        FontFace face = new SystemFontFace(new FontInfo("Hontun Mono", FontInfo.Type.Regular), path);
 
         if (Fonts.getFamily(face.info.family()) == null) {
             FontFamily family = new FontFamily(face.info.family());
@@ -1186,6 +1412,28 @@ public class HontunGuiTheme extends GuiTheme {
 
     private boolean windowShadowVisible() {
         return style().uses(Knob.WINDOW_SHADOW);
+    }
+
+    private boolean terminalVisible() {
+        return clickGui.get() == HontunTheme.UiMode.Terminal;
+    }
+
+    private boolean terminalAnyVisible() {
+        return terminalVisible() || uiMode.get() == HontunTheme.UiMode.Terminal;
+    }
+
+    private boolean rainTuningVisible() {
+        return (terminalAnyVisible() && rain.get()) || menuScene.get() == HontunTheme.MenuScene.Matrix;
+    }
+
+    private void onMenuSceneChanged(HontunTheme.MenuScene scene) {
+        boolean wasMatrix = HontunTheme.menuScene() == HontunTheme.MenuScene.Matrix;
+        HontunTheme.setMenuScene(scene);
+        if (wasMatrix != (scene == HontunTheme.MenuScene.Matrix) && !terminalAnyVisible()) scheduleRebuild();
+    }
+
+    private boolean lightModeVisible() {
+        return style().supportsLightMode();
     }
 
     private boolean tabIconsVisible() {

@@ -1,6 +1,5 @@
 package cz.honzasik.hontun.gui.screen;
 
-import com.mojang.authlib.GameProfile;
 import cz.honzasik.hontun.gui.widget.AccountCardList;
 import cz.honzasik.hontun.gui.widget.HontunCards;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
@@ -95,10 +94,10 @@ public class HontunAccountsScreen extends HontunScreen {
         addBoxH = (row2Y + btnH) - addBoxTop + padIn;
 
         try {
-            GameProfile prof = minecraft.getGameProfile();
-            if (prof != null && modelH >= 40) {
+            User mu = minecraft.getUser();
+            if (mu != null && modelH >= 40) {
                 PlayerSkinWidget model = new PlayerSkinWidget(modelW, modelH, minecraft.getEntityModels(),
-                        minecraft.getSkinManager().createLookup(prof, false));
+                        cz.honzasik.hontun.utils.HontunSkins.lookup(mu.getName(), mu.getProfileId()));
                 model.setX(paneX + (leftPane() - modelW) / 2);
                 model.setY(modelY);
                 addRenderableWidget(model);
@@ -107,8 +106,11 @@ public class HontunAccountsScreen extends HontunScreen {
         }
 
         User u = minecraft.getUser();
-        addCentered(u != null ? u.getName() : "-", paneX, leftPane(), captionY, HontunTheme.textLight());
-        addCentered(currentTypeLabel(), paneX, leftPane(), captionY + lh + 2, HontunTheme.textDim());
+        boolean term = HontunTheme.terminal();
+        addCentered(u != null ? u.getName() : "-", paneX, leftPane(), captionY,
+                term ? cz.honzasik.hontun.gui.widget.TerminalWidgets.fg() & 0xFFFFFF : HontunTheme.textLight());
+        addCentered(currentTypeLabel(), paneX, leftPane(), captionY + lh + 2,
+                term ? cz.honzasik.hontun.gui.widget.TerminalWidgets.dim() & 0xFFFFFF : HontunTheme.textDim());
         loggedDot = false;
         if (cz.honzasik.hontun.gui.widget.HontunRound.smoothDots()) {
             int ly = captionY + (lh + 2) * 2;
@@ -120,6 +122,9 @@ public class HontunAccountsScreen extends HontunScreen {
             loggedDot = true;
             loggedDotX = gx + 1.75f;
             loggedDotY = ly + 4f;
+        } else if (HontunTheme.terminal()) {
+            addCentered("logged in", paneX, leftPane(), captionY + (lh + 2) * 2,
+                    cz.honzasik.hontun.gui.widget.TerminalWidgets.acc() & 0xFFFFFF);
         } else {
             addCentered("● Logged in", paneX, leftPane(), captionY + (lh + 2) * 2, HontunTheme.green());
         }
@@ -127,7 +132,8 @@ public class HontunAccountsScreen extends HontunScreen {
         if (HontunTheme.modern2()) {
             addLabel("Add account", paneX + 11, addLabelY, HontunTheme.accentHi());
         } else {
-            addCentered("Add account", paneX, leftPane(), addLabelY, HontunTheme.subtext1());
+            addCentered("Add account", paneX, leftPane(), addLabelY,
+                    term ? cz.honzasik.hontun.gui.widget.TerminalWidgets.fg() & 0xFFFFFF : HontunTheme.subtext1());
         }
 
         int innerX = paneX + padIn;
@@ -168,6 +174,11 @@ public class HontunAccountsScreen extends HontunScreen {
         if (!status.isEmpty()) {
             boolean good = status.startsWith("Add") || status.startsWith("Logged");
             int rgb = good ? HontunTheme.green() : HontunTheme.textDim();
+            if (term) {
+                cz.honzasik.hontun.gui.widget.TerminalWidgets.ensure();
+                rgb = good ? cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette.green
+                        : cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette.dim;
+            }
             if (HontunTheme.smog()) {
                 addCentered(status, px, pw, statusY(), rgb);
             } else {
@@ -189,6 +200,12 @@ public class HontunAccountsScreen extends HontunScreen {
                 cz.honzasik.hontun.gui.widget.HontunRound.dot(g, loggedDotX, loggedDotY, 1.75f,
                         HontunTheme.argb(0xFF, HontunTheme.green()));
             }
+            return;
+        }
+        if (HontunTheme.terminal()) {
+            int lw = cz.honzasik.hontun.gui.widget.TerminalWidgets.width(font, "Add account") + 8;
+            cz.honzasik.hontun.gui.widget.TerminalWidgets.legendFrame(g, addBoxX, addBoxY, addBoxW, addBoxH,
+                    addBoxX + addBoxW / 2, lw);
             return;
         }
         if (!HontunTheme.modern2()) return;

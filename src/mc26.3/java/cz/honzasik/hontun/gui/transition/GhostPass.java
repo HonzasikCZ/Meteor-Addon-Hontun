@@ -117,7 +117,7 @@ final class GhostPass {
         }
     }
 
-    static boolean draw(RenderTarget target, float alpha, float scale, float x0, float y0, float x1, float y1) {
+    static boolean draw(RenderTarget target, float alpha, float scale, float shift, float foot, float x0, float y0, float x1, float y1) {
         if (state != 1 || ghost == null || ghost.isClosed() || ghostView == null) return false;
         try {
             GpuTextureView output = target.getColorTextureView();
@@ -131,6 +131,8 @@ final class GhostPass {
             if (compiled == null) return false;
             DATA.alpha = alpha;
             DATA.scale = scale;
+            DATA.shift = shift;
+            DATA.foot = foot;
             DATA.x0 = x0;
             DATA.y0 = y0;
             DATA.x1 = x1;
@@ -238,6 +240,8 @@ final class GhostPass {
     private static final class Data implements DynamicGpuDataStorage.DynamicGpuData {
         private float alpha;
         private float scale;
+        private float shift;
+        private float foot;
         private float x0;
         private float y0;
         private float x1;
@@ -246,7 +250,7 @@ final class GhostPass {
         @Override
         public void write(@NonNull ByteBuffer buffer) {
             Std140Builder.intoBuffer(buffer)
-                    .putVec4(alpha, scale, 0f, 0f)
+                    .putVec4(alpha, scale, shift, foot)
                     .putVec4(x0, y0, x1, y1);
         }
 

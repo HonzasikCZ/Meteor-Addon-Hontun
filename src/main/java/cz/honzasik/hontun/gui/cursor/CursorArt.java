@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.gui.cursor;
 
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette;
 import cz.honzasik.hontun.utils.HontunTheme;
 
 import java.awt.BasicStroke;
@@ -23,7 +24,7 @@ public final class CursorArt {
 
     public record Art(BufferedImage image, int hotX, int hotY) {}
 
-    private enum Look { PIXEL, FLAT, CHAMFER, SMOG }
+    private enum Look { PIXEL, FLAT, CHAMFER, SMOG, TERM }
 
     private enum Role { MAIN, ACTIVE, RING, LINE }
 
@@ -47,7 +48,8 @@ public final class CursorArt {
     }
 
     public static Art draw(Kind kind, int scale) {
-        Look look = HontunTheme.smog() ? Look.SMOG
+        Look look = HontunTheme.terminal() ? Look.TERM
+                : HontunTheme.smog() ? Look.SMOG
                 : HontunTheme.modern2() ? Look.CHAMFER
                 : HontunTheme.modern1() ? Look.FLAT
                 : Look.PIXEL;
@@ -110,7 +112,8 @@ public final class CursorArt {
                 11.7 * Math.sin(AXIS), 11.7 * Math.cos(AXIS), 16.0 * Math.sin(r), 16.0 * Math.cos(r)};
     }
 
-    private static Area dart(boolean ch) {
+    private static Area dart(boolean ch, boolean term) {
+        if (term) return new Area(poly(dartPts(), new double[]{0, 0, 0, 0}, true));
         if (ch) return new Area(poly(dartPts(), new double[]{0, 1.4, 0.9, 1.4}, true));
         return new Area(poly(dartPts(), new double[]{0.25, 1.9, 1.4, 1.9}, false));
     }
@@ -142,7 +145,8 @@ public final class CursorArt {
         return new RoundRectangle2D.Double(x, y, w, h, m, m);
     }
 
-    private static Shape dot(double d, boolean ch) {
+    private static Shape dot(double d, boolean ch, boolean term) {
+        if (term) return new Rectangle2D.Double(-d / 2, -d / 2, d, d);
         if (!ch) return new Ellipse2D.Double(-d / 2, -d / 2, d, d);
         double k = d * 0.62;
         Path2D p = new Path2D.Double();
@@ -164,21 +168,28 @@ public final class CursorArt {
         return st.createStrokedShape(p);
     }
 
-    private static List<Part> build(Kind kind, boolean ch, boolean flat, double u, double o, double od, boolean[] half) {
+    private static List<Part> build(Kind kind, boolean ch, boolean term, boolean flat, double u, double o, double od, boolean[] half) {
         List<Part> out = new ArrayList<>();
         List<Shape> ps = new ArrayList<>();
         double k = u < 1.2 ? 1.25 : 1.0;
         switch (kind) {
             case ARROW -> {
-                Area s = dart(ch);
+                Area s = dart(ch, term);
                 out.add(new Part(null, s, shrink(s, od, ch), Role.MAIN, 0));
             }
             case HAND -> {
                 out.add(new Part(burst(u, ch, flat, k), null, null, Role.RING, flat ? 0 : o));
-                Area s = dart(ch);
+                Area s = dart(ch, term);
                 out.add(new Part(null, s, shrink(s, o, ch), Role.ACTIVE, 0));
             }
             case IBEAM -> {
+                if (term) {
+                    half[0] = npx(5.8, u) % 2 == 1;
+                    double bw = par(5.8, u, half[0]), bh = par(13.4, u, half[0]);
+                    ps.add(bar(-bw / 2, -bh / 2, bw, bh, true));
+                    out.add(new Part(ps, null, null, Role.ACTIVE, o));
+                    break;
+                }
                 half[0] = npx(1.15, u) % 2 == 1;
                 double bw = par(1.15, u, half[0]), h = 13.4, sw = 4.8;
                 ps.add(bar(-bw / 2, -h / 2, bw, h, ch));
@@ -190,7 +201,7 @@ public final class CursorArt {
                 half[0] = npx(1.0, u) % 2 == 1;
                 double bw = par(1.0, u, half[0]), r1 = 3.3 * k, r2 = 7.2 * k;
                 for (int i = 0; i < 4; i++) ps.add(rot(bar(-bw / 2, -r2, bw, r2 - r1, ch), i * Math.PI / 2));
-                ps.add(dot(par(1.8, u, half[0]), ch));
+                ps.add(dot(par(1.8, u, half[0]), ch, term));
                 out.add(new Part(ps, null, null, Role.LINE, o));
             }
             case RESIZE_EW, RESIZE_NS -> {
@@ -198,14 +209,14 @@ public final class CursorArt {
                 double cw = px(1.35, u), t = kind == Kind.RESIZE_NS ? Math.PI / 2 : 0;
                 ps.add(rot(chev(6.2 * k, 2.6 * k, cw, ch), t));
                 ps.add(rot(chev(6.2 * k, 2.6 * k, cw, ch), t + Math.PI));
-                ps.add(dot(par(2.2, u, half[0]), ch));
+                ps.add(dot(par(2.2, u, half[0]), ch, term));
                 out.add(new Part(ps, null, null, Role.LINE, o));
             }
             case RESIZE_ALL -> {
                 half[0] = npx(2.2, u) % 2 == 1;
                 double cw = px(1.35, u);
                 for (int i = 0; i < 4; i++) ps.add(rot(chev(7.8 * k, 2.2 * k, cw, ch), i * Math.PI / 2));
-                ps.add(dot(par(2.2, u, half[0]), ch));
+                ps.add(dot(par(2.2, u, half[0]), ch, term));
                 out.add(new Part(ps, null, null, Role.LINE, o));
             }
             case NOT_ALLOWED -> {
@@ -234,6 +245,15 @@ public final class CursorArt {
             case CHAMFER -> {
                 int core = HontunTheme.lerp(0x0A0D13, acc, 0.10f);
                 yield role == Role.MAIN ? new int[]{acc, core} : new int[]{0x0A0D13, acc};
+            }
+            case TERM -> {
+                TerminalPalette.ensure();
+                int ink = TerminalPalette.INK_D;
+                yield switch (role) {
+                    case MAIN -> new int[]{TerminalPalette.acc, ink};
+                    case ACTIVE, RING -> new int[]{ink, TerminalPalette.fill};
+                    case LINE -> new int[]{ink, TerminalPalette.acc};
+                };
             }
             default -> role == Role.ACTIVE ? new int[]{0xFFFFFF, 0x0B0B0D} : new int[]{0x0B0B0D, 0xFFFFFF};
         };
@@ -285,11 +305,12 @@ public final class CursorArt {
 
     private static Art smooth(Kind kind, Look look, int s) {
         double u = s == 1 ? 1.0 : s * 0.72;
-        boolean ch = look == Look.CHAMFER;
+        boolean term = look == Look.TERM;
+        boolean ch = look == Look.CHAMFER || term;
         double o = px(0.62, u);
-        double od = ch ? px(1.05, u) : o;
+        double od = term ? px(0.8, u) : ch ? px(1.05, u) : o;
         boolean[] half = {false};
-        List<Part> parts = build(kind, ch, look == Look.FLAT, u, o, od, half);
+        List<Part> parts = build(kind, ch, term, look == Look.FLAT, u, o, od, half);
         double grow = ch ? 2.2 * o : o;
         Rectangle2D b = null;
         for (Part p : parts) {
@@ -312,8 +333,8 @@ public final class CursorArt {
         int[] buf = new int[w * h];
         AffineTransform drop = AffineTransform.getTranslateInstance(0.25 * u, 0.8 * u);
         drop.concatenate(at);
-        over(buf, blur(mask(w, h, drop, parts, ch), w, h, 0.85 * u), 0x000000, look == Look.SMOG ? 0.5 : 0.42);
-        if (ch) over(buf, blur(mask(w, h, at, parts, ch), w, h, 1.1 * u), HontunTheme.accent(), kind == Kind.HAND ? 0.8 : 0.55);
+        if (!term) over(buf, blur(mask(w, h, drop, parts, ch), w, h, 0.85 * u), 0x000000, look == Look.SMOG ? 0.5 : 0.42);
+        if (look == Look.CHAMFER) over(buf, blur(mask(w, h, at, parts, ch), w, h, 1.1 * u), HontunTheme.accent(), kind == Kind.HAND ? 0.8 : 0.55);
         BufferedImage img = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         img.setRGB(0, 0, w, h, buf, 0, w);
         Graphics2D g = gfx(img, at);
@@ -327,7 +348,7 @@ public final class CursorArt {
             sil(g, p, 0, ch);
             g.setColor(c(col[1], 255));
             body(g, p);
-            if (p.body() != null) {
+            if (p.body() != null && !term) {
                 double[] d = dartPts();
                 Path2D f = new Path2D.Double();
                 f.moveTo(0, 0);
@@ -347,7 +368,7 @@ public final class CursorArt {
                 g.fill(fold);
             }
         }
-        if (ch && kind == Kind.ARROW) {
+        if (look == Look.CHAMFER && kind == Kind.ARROW) {
             Path2D t = new Path2D.Double();
             t.moveTo(0, 0);
             t.lineTo(0, 5.0);

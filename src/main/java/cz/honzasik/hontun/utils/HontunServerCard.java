@@ -2,6 +2,7 @@ package cz.honzasik.hontun.utils;
 
 import cz.honzasik.hontun.gui.widget.HontunRound;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.mixin.client.multiplayer.JoinMultiplayerScreenAccessor;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
@@ -35,6 +36,11 @@ public final class HontunServerCard {
                                   boolean hovered, boolean selected) {
         int x = e.getX(), y = e.getY() + 1, w = e.getWidth(), h = e.getHeight() - 2;
 
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.row(g, x, y, w, h, selected, hovered);
+            return;
+        }
+
         if (HontunTheme.smog()) {
             int fill, border;
             if (selected) {
@@ -61,6 +67,17 @@ public final class HontunServerCard {
     public static void foreground(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e,
                                   ServerData data, FaviconTexture icon, Identifier statusIcon,
                                   int index, int serverCount, boolean hovered, int mouseX, int mouseY) {
+        foreground(g, e, data, icon, statusIcon, index, serverCount, hovered, false, mouseX, mouseY);
+    }
+
+    public static void foreground(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e,
+                                  ServerData data, FaviconTexture icon, Identifier statusIcon,
+                                  int index, int serverCount, boolean hovered, boolean selected,
+                                  int mouseX, int mouseY) {
+        if (HontunTheme.terminal()) {
+            terminalForeground(g, e, data, icon, statusIcon, index, serverCount, hovered, selected, mouseX, mouseY);
+            return;
+        }
         Font f = Minecraft.getInstance().font;
         int contentX = e.getContentX(), contentY = e.getContentY(), contentRight = e.getContentRight();
 
@@ -105,7 +122,55 @@ public final class HontunServerCard {
             }
         }
 
-        drawFlag(g, f, data, contentX, contentY, statusX);
+        drawFlag(g, f, data, contentX, contentY, statusX, contentX + 35 + f.width(data.name));
+
+        if (hovered) {
+            arrows(g, contentX, contentY, index, serverCount, mouseX, mouseY);
+        }
+    }
+
+    private static void terminalForeground(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e,
+                                           ServerData data, FaviconTexture icon, Identifier statusIcon,
+                                           int index, int serverCount, boolean hovered, boolean selected,
+                                           int mouseX, int mouseY) {
+        Font f = Minecraft.getInstance().font;
+        int contentX = e.getContentX(), contentY = e.getContentY(), contentRight = e.getContentRight();
+
+        g.blit(RenderPipelines.GUI_TEXTURED, icon.textureLocation(), contentX, contentY, 0.0f, 0.0f,
+                32, 32, 64, 64, 64, 64);
+
+        int statusIconX = contentRight - 15;
+        if (statusIcon != null) {
+            g.blitSprite(RenderPipelines.GUI_TEXTURED, statusIcon, statusIconX, contentY, 10, 8);
+        }
+
+        Component status = data.state() == ServerData.State.INCOMPATIBLE
+                ? data.version.copy().withColor(TerminalWidgets.red() & 0xFFFFFF)
+                : data.status;
+        int lineY = TerminalWidgets.lineY(contentY, 8);
+        int statusX = statusIconX;
+        if (status != null) {
+            Component statusText = HontunFont.apply(status);
+            statusX = statusIconX - f.width(statusText) - 5;
+            g.text(f, statusText, statusX, lineY, TerminalWidgets.dim(), false);
+        }
+
+        int tx = contentX + 36;
+        boolean bad = data.state() == ServerData.State.UNREACHABLE;
+        int nameColor = bad ? TerminalWidgets.red() : selected ? TerminalWidgets.acc() : TerminalWidgets.fg();
+        String name = TerminalWidgets.clipString(f, data.name, statusX - 4 - tx);
+        TerminalWidgets.text(g, f, name, tx, lineY, nameColor);
+
+        if (data.motd != null) {
+            int motdW = Math.max(40, contentRight - 12 - tx);
+            List<FormattedCharSequence> lines = f.split(data.motd, motdW);
+            int motdColor = TerminalWidgets.dim();
+            for (int i = 0; i < Math.min(lines.size(), 2); i++) {
+                g.text(f, lines.get(i), tx, contentY + 12 + f.lineHeight * i, motdColor, false);
+            }
+        }
+
+        drawFlag(g, f, data, contentX, contentY, statusX, tx + TerminalWidgets.width(f, name));
 
         if (hovered) {
             arrows(g, contentX, contentY, index, serverCount, mouseX, mouseY);
@@ -114,6 +179,7 @@ public final class HontunServerCard {
 
     public static void selection(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e, boolean selected) {
         if (!selected) return;
+        if (HontunTheme.terminal()) return;
         int x = e.getX(), y = e.getY() + 1, w = e.getWidth(), h = e.getHeight() - 2;
 
         if (HontunTheme.smog()) return;
@@ -149,6 +215,13 @@ public final class HontunServerCard {
         if (upZone) zone(g, contentX, contentY, 16, 16, upH);
         if (downZone) zone(g, contentX, contentY + 16, 16, 16, downH);
 
+        if (HontunTheme.terminal()) {
+            Font f = Minecraft.getInstance().font;
+            terminalGlyph(g, f, contentX + 16, contentY, 16, 32, ">", joinH);
+            if (upZone) terminalGlyph(g, f, contentX, contentY, 16, 16, "^", upH);
+            if (downZone) terminalGlyph(g, f, contentX, contentY + 16, 16, 16, "v", downH);
+            return;
+        }
         if (HontunTheme.smog()) {
             smogChevron(g, contentX + 16, contentY, 16, 32, '>', joinH);
             if (upZone) smogChevron(g, contentX, contentY, 16, 16, '^', upH);
@@ -176,7 +249,20 @@ public final class HontunServerCard {
         HontunRound.stroke(g, mx, my, bx, by, th, col);
     }
 
+    private static void terminalGlyph(GuiGraphicsExtractor g, Font f, int zx, int zy, int zw, int zh,
+                                      String glyph, boolean hovered) {
+        TerminalWidgets.glyph(g, f, glyph, zx + zw / 2f, zy + zh / 2f,
+                hovered ? TerminalWidgets.head() : TerminalWidgets.acc());
+    }
+
     private static void zone(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered) {
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.Px p = new TerminalWidgets.Px();
+            p.rect(x, y, w, h, TerminalWidgets.a(0xC8, TerminalWidgets.bg()));
+            if (hovered) p.rect(x, y, w, h, TerminalWidgets.hl()).frame(x, y, w, h, TerminalWidgets.lineF());
+            p.submit(g);
+            return;
+        }
         if (HontunTheme.smog()) {
             HontunRound.fill(g, x + 1, y + 1, w - 2, h - 2, 4, HontunTheme.argb(hovered ? 0xC0 : 0x7A, 0x000000));
             return;
@@ -222,7 +308,7 @@ public final class HontunServerCard {
     }
 
     private static void drawFlag(GuiGraphicsExtractor g, Font f, ServerData data,
-                                 int contentX, int contentY, int statusX) {
+                                 int contentX, int contentY, int statusX, int nameEnd) {
         if (!HontunGeo.enabled() || data.type() != ServerData.Type.OTHER) return;
 
         ServerData.State st = data.state();
@@ -232,7 +318,6 @@ public final class HontunServerCard {
 
         int right = statusX - 6;
         int y = contentY + ROW_BOTTOM - HontunFlags.H;
-        int nameEnd = contentX + 35 + f.width(data.name);
         if (right - FLAG_W < nameEnd + 4) return;
 
         if (cc == null) {

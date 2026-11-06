@@ -26,6 +26,7 @@ public final class CaptchaNet {
     private static final class Op {
         String type;
         int in, out, kh, kw, ph, pw, sh, sw, wOff, bOff;
+        int padL, padR, padT, padB;
     }
 
     private static final class Tensor {
@@ -103,6 +104,11 @@ public final class CaptchaNet {
                 op.kw = i(om, "kw");
                 op.sh = i(om, "sh");
                 op.sw = i(om, "sw");
+            } else if (op.type.equals("pad")) {
+                op.padL = iOr(om, "left", 0);
+                op.padR = iOr(om, "right", 0);
+                op.padT = iOr(om, "top", 0);
+                op.padB = iOr(om, "bottom", 0);
             }
             ops.add(op);
         }
@@ -115,6 +121,11 @@ public final class CaptchaNet {
 
     private static int i(Map<?, ?> m, String k) {
         return ((Number) m.get(k)).intValue();
+    }
+
+    private static int iOr(Map<?, ?> m, String k, int dflt) {
+        Object v = m.get(k);
+        return v == null ? dflt : ((Number) v).intValue();
     }
 
     public int grayOf(int rgb) {
@@ -132,6 +143,7 @@ public final class CaptchaNet {
             if (op.type.equals("conv")) t = conv(t, op);
             else if (op.type.equals("relu")) relu(t);
             else if (op.type.equals("maxpool")) t = pool(t, op);
+            else if (op.type.equals("pad")) t = pad(t, op);
         }
         int steps = t.w;
         int cls = t.c;
@@ -209,6 +221,20 @@ public final class CaptchaNet {
 
     private void relu(Tensor t) {
         for (int k = 0; k < t.d.length; k++) if (t.d[k] < 0) t.d[k] = 0;
+    }
+
+    private Tensor pad(Tensor in, Op op) {
+        int outH = in.h + op.padT + op.padB;
+        int outW = in.w + op.padL + op.padR;
+        Tensor out = new Tensor(in.c, outH, outW);
+        for (int c = 0; c < in.c; c++) {
+            for (int y = 0; y < in.h; y++) {
+                int src = (c * in.h + y) * in.w;
+                int dst = (c * outH + (y + op.padT)) * outW + op.padL;
+                System.arraycopy(in.d, src, out.d, dst, in.w);
+            }
+        }
+        return out;
     }
 
     private Tensor pool(Tensor in, Op op) {

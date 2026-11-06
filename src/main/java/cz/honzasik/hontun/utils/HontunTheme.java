@@ -1,13 +1,14 @@
 package cz.honzasik.hontun.utils;
 
+import cz.honzasik.hontun.gui.theme.style.terminal.TerminalPalette;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public final class HontunTheme {
-    public enum UiMode { Vanilla, HVanilla, HModern1, HModern2, SmogClient }
+    public enum UiMode { Vanilla, HVanilla, Modern1, Modern2, SmogClient, Terminal }
 
-    public enum MenuScene { Particles, BlockyHorizon }
+    public enum MenuScene { BlockyParticles, RoundedParticles, BlockyHorizon, Matrix }
 
     public record Ramp(int crust, int mantle, int base, int surface0, int surface1, int surface2,
                        int overlay0, int overlay1, int overlay2, int text, int subtext1, int textDim) {}
@@ -18,8 +19,10 @@ public final class HontunTheme {
             0x3A3C42, 0x4E5058, 0x646670, 0xF0F2F5, 0xCACDD4, 0x9CA0A8);
     private static final Ramp SMOG_RAMP = new Ramp(0x000000, 0x050506, 0x0A0A0C, 0x0E0E10, 0x151517, 0x1E1E20,
             0x2A2A2C, 0x3C3C3E, 0x555558, 0xFFFFFF, 0xC8CDD2, 0x9096A0);
+    private static final Ramp TERMINAL_RAMP = new Ramp(0x000000, 0x030304, 0x060608, 0x0A0A0D, 0x101014, 0x16161B,
+            0x232329, 0x33333B, 0x47474F, 0xD6DAE0, 0xA6AAB0, 0x6A6E74);
 
-    private static volatile UiMode mode = UiMode.HModern2;
+    private static volatile UiMode mode = UiMode.Modern2;
 
     public static final int SMOG_ACCENT    = 0xE6E9EC;
     public static final int SMOG_ACCENT_HI = 0xFFFFFF;
@@ -30,15 +33,19 @@ public final class HontunTheme {
     private static final int SMOG_CHAT_PUNCT   = 0x5A5D62;
     private static final int SMOG_CHAT_TAG     = 0xA3A6AB;
 
-    private static volatile int accent   = 0x3E8CFF;
-    private static volatile int accentHi = 0x5AC8FF;
-    private static volatile int accentLo = 0x2E63B8;
+    private static final int DEFAULT_ACCENT    = 0x3E8CFF;
+    private static final int DEFAULT_ACCENT_HI = 0x5AC8FF;
+    private static final int DEFAULT_ACCENT_LO = 0x2E63B8;
+
+    private static volatile int accent   = DEFAULT_ACCENT;
+    private static volatile int accentHi = DEFAULT_ACCENT_HI;
+    private static volatile int accentLo = DEFAULT_ACCENT_LO;
 
     private static volatile int bgOverlay = (235 << 24) | 0xA8ABB2;
 
     private static volatile int menuColor = 0x141519;
 
-    private static volatile MenuScene menuScene = MenuScene.Particles;
+    private static volatile MenuScene menuScene = MenuScene.BlockyParticles;
 
     private static volatile int version = 0;
     private static final CopyOnWriteArrayList<Runnable> listeners = new CopyOnWriteArrayList<>();
@@ -48,11 +55,12 @@ public final class HontunTheme {
     public static UiMode mode()            { return mode; }
     public static boolean vanilla()        { return mode == UiMode.Vanilla; }
 
-    public static boolean modern()         { return mode == UiMode.HModern1 || mode == UiMode.HModern2 || mode == UiMode.SmogClient; }
+    public static boolean modern()         { return mode == UiMode.Modern1 || mode == UiMode.Modern2 || mode == UiMode.SmogClient; }
     public static boolean hvanilla()       { return mode == UiMode.HVanilla; }
-    public static boolean modern1()        { return mode == UiMode.HModern1; }
-    public static boolean modern2()        { return mode == UiMode.HModern2; }
+    public static boolean modern1()        { return mode == UiMode.Modern1; }
+    public static boolean modern2()        { return mode == UiMode.Modern2; }
     public static boolean smog()           { return mode == UiMode.SmogClient; }
+    public static boolean terminal()       { return mode == UiMode.Terminal; }
     public static boolean restyleEnabled() { return mode != UiMode.Vanilla; }
 
     public static void setMode(UiMode m) {
@@ -67,11 +75,15 @@ public final class HontunTheme {
     public static int userAccentHi() { return accentHi; }
     public static int userAccentLo() { return accentLo; }
 
-    public static int chatName()    { return smog() ? SMOG_CHAT_NAME    : accent(); }
-    public static int chatValue()   { return smog() ? SMOG_CHAT_VALUE   : accentHi(); }
-    public static int chatBracket() { return smog() ? SMOG_CHAT_BRACKET : overlay0(); }
-    public static int chatPunct()   { return smog() ? SMOG_CHAT_PUNCT   : textDim(); }
-    public static int chatTag()     { return smog() ? SMOG_CHAT_TAG     : subtext1(); }
+    public static int chatName()    { return terminal() ? termAcc() : smog() ? SMOG_CHAT_NAME    : accent(); }
+    public static int chatValue()   { return terminal() ? termAcc() : smog() ? SMOG_CHAT_VALUE   : accentHi(); }
+    public static int chatBracket() { return terminal() ? termDim() : smog() ? SMOG_CHAT_BRACKET : overlay0(); }
+    public static int chatPunct()   { return terminal() ? termDim() : smog() ? SMOG_CHAT_PUNCT   : textDim(); }
+    public static int chatTag()     { return terminal() ? termFg()  : smog() ? SMOG_CHAT_TAG     : subtext1(); }
+
+    private static int termAcc() { TerminalPalette.ensure(); return TerminalPalette.acc; }
+    private static int termDim() { TerminalPalette.ensure(); return TerminalPalette.dim; }
+    private static int termFg()  { TerminalPalette.ensure(); return TerminalPalette.fg; }
 
     public static void setAccent(int rgb) {
         rgb &= 0xFFFFFF;
@@ -82,6 +94,11 @@ public final class HontunTheme {
     }
 
     private static void recomputeAccent() {
+        if (accent == DEFAULT_ACCENT) {
+            accentHi = DEFAULT_ACCENT_HI;
+            accentLo = DEFAULT_ACCENT_LO;
+            return;
+        }
         float[] hsb = java.awt.Color.RGBtoHSB((accent >> 16) & 0xFF, (accent >> 8) & 0xFF, accent & 0xFF, null);
 
         accentHi = java.awt.Color.HSBtoRGB(hsb[0], clamp(hsb[1] - 0.14f), clamp(hsb[2] + 0.26f)) & 0xFFFFFF;
@@ -119,7 +136,8 @@ public final class HontunTheme {
         if (m == null) return MODERN_RAMP;
         return switch (m) {
             case SmogClient -> SMOG_RAMP;
-            case HModern1, HModern2 -> MODERN_RAMP;
+            case Terminal -> TERMINAL_RAMP;
+            case Modern1, Modern2 -> MODERN_RAMP;
             default -> MINECRAFT_RAMP;
         };
     }

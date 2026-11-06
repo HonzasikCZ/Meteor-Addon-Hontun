@@ -131,7 +131,7 @@ public class FlatClickStyle extends ClickStyle {
 
     @Override
     public HontunTheme.UiMode id() {
-        return HontunTheme.UiMode.HModern1;
+        return HontunTheme.UiMode.Modern1;
     }
 
     @Override
@@ -264,7 +264,7 @@ public class FlatClickStyle extends ClickStyle {
 
         this.light = light;
 
-        int body = light ? lightBody(out, t) : out.base;
+        int body = out.body;
 
         if (light) {
             out.subtext1 = atLeast(out.subtext1, body, LIGHT_BODY_TEXT);
@@ -319,8 +319,8 @@ public class FlatClickStyle extends ClickStyle {
     }
 
     @Override
-    protected int lightBody(StylePalette out, HontunGuiTheme t) {
-        double wa = t != null ? windowAlpha(t.windowOpacity.get(), true) : 1;
+    protected int windowBody(StylePalette out, boolean light, HontunGuiTheme t) {
+        double wa = t != null ? windowAlpha(t.windowOpacity.get(), light) : 1;
         return HontunTheme.lerp(HontunTheme.ramp(id()).base(), out.surface0, (float) clamp01(0xF4 / 255.0 * wa));
     }
 
@@ -637,7 +637,7 @@ public class FlatClickStyle extends ClickStyle {
             bottom = mix(cS0, HontunTheme.darken(cAL, 0.6f), hp);
             topA = alpha(lerp(0x55, 0x9A, hp));
             bottomA = alpha(lerp(0x4A, 0x66, hp));
-            outline = mix(cO0, cAH, hp);
+            outline = mix(cO0, cLAH, hp);
             outlineA = alpha(lerp(0x80, 0xE0, hp));
             lightC = cO2;
             lightA = alpha(lerp(0x2E, 0x70, hp));
@@ -1815,7 +1815,7 @@ public class FlatClickStyle extends ClickStyle {
         int step = gridSize;
         while ((long) (windowWidth / step + 1) * (windowHeight / step + 1) > GRID_DOT_LIMIT) step += gridSize;
 
-        int core = light ? col(cLA, 0xA8).getPacked() : col(mix(cO2, cAH, 0.3), 0xA0).getPacked();
+        int core = light ? col(cLA, 0xA8).getPacked() : col(mix(cO2, cLAH, 0.3), 0xA0).getPacked();
         int halo = light ? col(0xFFFFFF, 0x70).getPacked() : col(cCrust, 0x60).getPacked();
 
         Matrix3x2fStack pose = g.pose();

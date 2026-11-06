@@ -1,14 +1,28 @@
 package cz.honzasik.hontun.gui.theme;
 
+import cz.honzasik.hontun.gui.theme.style.StylePalette;
 import cz.honzasik.hontun.utils.HontunTheme;
 
 import java.util.function.IntPredicate;
+import java.util.function.ToIntFunction;
 
 public final class HontunLightPalette {
     public static final double TEXT_CONTRAST = 4.5;
     public static final double LINE_CONTRAST = 3.0;
     public static final double FAINT_SEPARATION = 0.1;
     public static final float ROW_TINT = 49 / 255f;
+    public static final double PRESENCE = 0.12;
+    public static final double PRESENCE_CHROMA = 0.35;
+    public static final double SHIFT_STEP = 0.005;
+    public static final int LIGHT_SHIFT_STEPS = 24;
+    public static final int DARK_SHIFT_STEPS = 28;
+    public static final int SHIFT_FADE_STEPS = 12;
+    public static final double TONE_RATIO = 0.3;
+    public static final double TONE_MAX = 0.03;
+
+    private static final double TOE_K1 = 0.206;
+    private static final double TOE_K2 = 0.03;
+    private static final double TOE_K3 = (1 + TOE_K1) / (1 + TOE_K2);
 
     private static final HontunTheme.Ramp MINECRAFT_RAMP = new HontunTheme.Ramp(0xDCDCDF, 0xE8E8EA, 0xF3F3F4, 0xE2E2E5, 0xD5D5D9, 0xC7C7CC,
             0xB0B0B6, 0x96969D, 0x7C7C84, 0x1C1C20, 0x3A3A40, 0x606067);
@@ -26,7 +40,7 @@ public final class HontunLightPalette {
         if (m == null) return MODERN_RAMP;
         return switch (m) {
             case SmogClient -> SMOG_RAMP;
-            case HModern1, HModern2 -> MODERN_RAMP;
+            case Modern1, Modern2 -> MODERN_RAMP;
             default -> MINECRAFT_RAMP;
         };
     }
@@ -35,22 +49,22 @@ public final class HontunLightPalette {
     public static int yellow() { return 0x9A6700; }
     public static int red()    { return 0xD20F39; }
 
-    public static int body(HontunTheme.Ramp dark, HontunTheme.Ramp light, double windowOpacity) {
-        return HontunTheme.lerp(dark.base(), light.mantle(), (float) Math.clamp(windowOpacity, 0.0, 1.0));
+    public static int readableOn(int rgb, int bg, double min, boolean up) {
+        int c = rgb & 0xFFFFFF, b = bg & 0xFFFFFF;
+        if (contrast(c, b) >= min) return c;
+        return shade(c, m -> contrast(m, b) >= min, up);
     }
 
     public static int readableOn(int rgb, int bg, double min) {
-        int c = rgb & 0xFFFFFF, b = bg & 0xFFFFFF;
-        if (contrast(c, b) >= min) return c;
-        return shade(c, m -> contrast(m, b) >= min, false);
+        return readableOn(rgb, bg, min, false);
     }
 
-    public static int text(int rgb, int bg) {
-        return readableOn(rgb, bg, TEXT_CONTRAST);
+    public static int text(int rgb, int bg, boolean light) {
+        return readableOn(rgb, bg, TEXT_CONTRAST, !light);
     }
 
-    public static int line(int rgb, int bg) {
-        return readableOn(rgb, bg, LINE_CONTRAST);
+    public static int line(int rgb, int bg, boolean light) {
+        return readableOn(rgb, bg, LINE_CONTRAST, !light);
     }
 
     public static double separation(int a, int b) {
@@ -64,6 +78,84 @@ public final class HontunLightPalette {
             if (separation(rgb, s) < FAINT_SEPARATION) return true;
         }
         return false;
+    }
+
+    public static double toe(double l) {
+        double k = TOE_K3 * l - TOE_K1;
+        return 0.5 * (k + Math.sqrt(k * k + 4 * TOE_K2 * TOE_K3 * l));
+    }
+
+    public static double presence(int a, int b) {
+        double[] p = oklab(a & 0xFFFFFF), q = oklab(b & 0xFFFFFF);
+        double dl = toe(p[0]) - toe(q[0]);
+        double da = PRESENCE_CHROMA * (p[1] - q[1]), db = PRESENCE_CHROMA * (p[2] - q[2]);
+        return Math.sqrt(dl * dl + da * da + db * db);
+    }
+
+    public static boolean visible(int accent, int body, StylePalette p) {
+        return presence(accent, body) >= PRESENCE
+                && !faint(accent, body, p.crust, p.mantle, p.base, p.surface0, p.surface1, p.surface2);
+    }
+
+    public static int shiftSurface(int rgb, double dl, double da, double db) {
+        double[] lab = oklab(rgb & 0xFFFFFF);
+        double l = Math.max(0, Math.min(1, lab[0] + dl)), a = lab[1] + da, b = lab[2] + db;
+        return fromLch(l, Math.sqrt(a * a + b * b), Math.atan2(b, a));
+    }
+
+    public static double toneHue(int accent, int crust) {
+        double[] lab = oklab(accent & 0xFFFFFF);
+        if (Math.sqrt(lab[1] * lab[1] + lab[2] * lab[2]) >= 0.03) return Math.atan2(-lab[2], -lab[1]);
+        double[] c = oklab(crust & 0xFFFFFF);
+        return Math.atan2(c[2], c[1]);
+    }
+
+    public static void shiftSurfaces(StylePalette p, boolean light, ToIntFunction<StylePalette> body) {
+        p.shift = 0;
+        p.tone = 0;
+        int body0 = body.applyAsInt(p);
+        if (visible(p.accent, body0, p)) return;
+        double before = presence(p.accent, body0);
+        int[] orig = {p.crust, p.mantle, p.base, p.surface0, p.surface1, p.surface2, p.overlay0, p.overlay1, p.overlay2};
+        int cap = light ? LIGHT_SHIFT_STEPS : DARK_SHIFT_STEPS;
+        double dir = light ? -1 : 1;
+        double hue = toneHue(p.accent, p.crust);
+        int need = 0;
+        double first = before;
+        for (int i = 1; i <= cap + SHIFT_FADE_STEPS; i++) {
+            applyShift(p, orig, light, dir, i, hue);
+            int b = body.applyAsInt(p);
+            if (i == 1) first = presence(p.accent, b);
+            if (visible(p.accent, b, p)) {
+                need = i;
+                break;
+            }
+        }
+        int steps = need == 0 || (need > cap && first <= before) ? 0
+                : need <= cap ? need : cap * (SHIFT_FADE_STEPS - (need - cap)) / SHIFT_FADE_STEPS;
+        applyShift(p, orig, light, dir, steps, hue);
+        if (steps != 0 && need > cap && presence(p.accent, body.applyAsInt(p)) <= before) applyShift(p, orig, light, dir, 0, hue);
+    }
+
+    public static int holdContrast(int rgb, int body0, int bg0, int body, int bg, boolean light) {
+        int c = readableOn(rgb, body, Math.min(contrast(rgb, body0), TEXT_CONTRAST), !light);
+        return readableOn(c, bg, Math.min(contrast(rgb, bg0), TEXT_CONTRAST), !light);
+    }
+
+    private static void applyShift(StylePalette p, int[] orig, boolean light, double dir, int steps, double hue) {
+        int[] s = orig;
+        double shift = 0, tone = 0;
+        if (steps != 0) {
+            double m = steps * SHIFT_STEP;
+            tone = light ? Math.min(TONE_MAX, TONE_RATIO * m) : 0;
+            double da = tone * Math.cos(hue), db = tone * Math.sin(hue);
+            s = new int[orig.length];
+            for (int k = 0; k < orig.length; k++) s[k] = shiftSurface(orig[k], dir * m, da, db);
+            shift = dir * m;
+        }
+        p.setSurfaces(s);
+        p.shift = shift;
+        p.tone = tone;
     }
 
     public static int ink(int fill, int dark, int light) {

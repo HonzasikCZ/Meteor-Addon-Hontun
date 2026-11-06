@@ -3,6 +3,7 @@ package com.mrmelon54.DraggableLists.render;
 import com.mrmelon54.DraggableLists.theme.HontunBridge;
 import com.mrmelon54.DraggableLists.theme.Palette;
 import cz.honzasik.hontun.gui.render.RoundedGui;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
@@ -35,6 +36,28 @@ public final class DragSkin {
     public static void handle(GuiGraphicsExtractor g, int x, int contentY, int contentHeight,
                               boolean hot, float fade, Palette p) {
         if (fade <= 0.01f) return;
+
+        if (HontunBridge.terminal()) {
+            int gw = DOT_COLUMNS * DOT + (DOT_COLUMNS - 1) * DOT_GAP;
+            int gh = DOT_ROWS * DOT + (DOT_ROWS - 1) * DOT_GAP;
+            int tx = x + (HANDLE_WIDTH - gw) / 2;
+            int ty = contentY + (contentHeight - gh) / 2;
+            TerminalWidgets.Px px = new TerminalWidgets.Px();
+            if (hot) {
+                int bx = tx - 4, by = ty - 5, bw = gw + 8, bh = gh + 10;
+                int hl = TerminalWidgets.hl();
+                px.rect(bx, by, bw, bh, Palette.argb(scale((hl >>> 24) & 0xFF, fade), hl));
+                px.frame(bx, by, bw, bh, Palette.argb(scale(0xFF, fade), TerminalWidgets.lineF()));
+            }
+            int dot = Palette.argb(scale(0xFF, fade), hot ? TerminalWidgets.acc() : TerminalWidgets.dim());
+            for (int col = 0; col < DOT_COLUMNS; col++) {
+                for (int row = 0; row < DOT_ROWS; row++) {
+                    px.rect(tx + col * (DOT + DOT_GAP), ty + row * (DOT + DOT_GAP), DOT, DOT, dot);
+                }
+            }
+            px.submit(g);
+            return;
+        }
 
         if (HontunBridge.smog() && RoundedGui.available()) {
             float plateH = Math.min(30f, contentHeight - 2f);
@@ -93,6 +116,12 @@ public final class DragSkin {
         int gh = height - inset * 2;
         if (gw <= 0 || gh <= 0) return;
 
+        if (HontunBridge.terminal()) {
+            new TerminalWidgets.Px().rect(gx, gy, gw, gh, TerminalWidgets.bg())
+                .frame(gx, gy, gw, gh, TerminalWidgets.lineF()).submit(g);
+            return;
+        }
+
         // Fully opaque, and in the row's own surface colour rather than the near-black crust:
         // crust blended into the dark menu background so only the outline showed, which read as a
         // hollow hole / pane of glass. Surface is a visible mid-tone, so the slot looks like a
@@ -113,6 +142,10 @@ public final class DragSkin {
 
     /** Accent edge and outward glow for the lifted row. Drawn after the row's own content. */
     public static void cardEdge(GuiGraphicsExtractor g, int x, int y, int width, int height, Palette p) {
+        if (HontunBridge.terminal()) {
+            new TerminalWidgets.Px().frame(x, y, width, height, TerminalWidgets.lineF()).submit(g);
+            return;
+        }
         Shapes.glow(g, x, y, width, height, p.corners(), p.cornerSize(), 3, 0x60, p.accent());
         Shapes.outline(g, x, y, width, height, p.corners(), p.cornerSize(), Palette.argb(0xFF, p.accentHi()));
     }
@@ -131,6 +164,11 @@ public final class DragSkin {
 
         int alpha = (int) (0xE0 * strength * strength);
         if (alpha <= 2) return;
+
+        if (HontunBridge.terminal()) {
+            new TerminalWidgets.Px().frame(x, y, width, height, Palette.argb(alpha, TerminalWidgets.acc())).submit(g);
+            return;
+        }
 
         Shapes.outline(g, x, y, width, height, p.corners(), p.cornerSize(),
             Palette.argb(alpha, p.accentHi()));

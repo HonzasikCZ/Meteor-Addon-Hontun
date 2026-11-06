@@ -39,7 +39,7 @@ public abstract class ServerCardMixin {
     @Inject(method = "extractContent", at = @At("HEAD"))
     private void hontun$cardBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, boolean hovered,
                                        float pt, CallbackInfo ci) {
-        if (!HontunTheme.modern2() && !HontunTheme.smog()) return;
+        if (!HontunTheme.modern2() && !HontunTheme.smog() && !HontunTheme.terminal()) return;
 
         if (hontun$clipped) {
             hontun$clipped = false;
@@ -61,7 +61,7 @@ public abstract class ServerCardMixin {
             hontun$clipped = false;
             g.disableScissor();
             HontunServerCard.foreground(g, self, serverData, icon, statusIcon,
-                    hontun$index(), hontun$serverCount(), hovered, mouseX, mouseY);
+                    hontun$index(), hontun$serverCount(), hovered, selected, mouseX, mouseY);
             HontunServerCard.selection(g, self, selected);
             return;
         }

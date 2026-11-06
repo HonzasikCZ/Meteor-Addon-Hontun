@@ -2,6 +2,7 @@ package cz.honzasik.hontun.gui.join;
 
 import cz.honzasik.hontun.gui.widget.HontunCards;
 import cz.honzasik.hontun.gui.widget.HontunShapes;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.server.level.progress.ChunkLoadStatusView;
@@ -14,8 +15,10 @@ public abstract class JoinSkin {
     private static final JoinSkin FLAT = new Flat();
     private static final JoinSkin CHAMFER = new Chamfer();
     private static final JoinSkin PIXEL = new Pixel();
+    private static final JoinSkin TERMINAL = new Term();
 
     public static JoinSkin current() {
+        if (HontunTheme.terminal()) return TERMINAL;
         if (HontunTheme.smog()) return SMOG;
         if (HontunTheme.modern2()) return CHAMFER;
         if (HontunTheme.modern1()) return FLAT;
@@ -55,6 +58,13 @@ public abstract class JoinSkin {
     }
 
     static float pixelWell(GuiGraphicsExtractor g, JoinState s, float cx, float top, float max, int frame, int border) {
+        int acc = HontunTheme.accent();
+        return pixelWell(g, s, cx, top, max, frame, border,
+                0xFF101114, HontunTheme.overlay0(), HontunTheme.lighten(acc, 0.75f), 0xFF000000 | acc);
+    }
+
+    static float pixelWell(GuiGraphicsExtractor g, JoinState s, float cx, float top, float max, int frame, int border,
+                           int empty, int lo, int hi, int full) {
         ChunkLoadStatusView view = s.view;
         if (view == null) return 0f;
         int d = view.radius() * 2 + 1;
@@ -66,10 +76,9 @@ public abstract class JoinSkin {
         int gx = Math.round(cx - gw / 2f), gy = Math.round(top + 4f);
         g.fill(gx - 4, gy - 4, gx + gw + 4, gy + gw + 4, frame);
         HontunCards.border(g, gx - 4, gy - 4, gw + 8, gw + 8, border);
-        int acc = HontunTheme.accent();
         for (int x = 0; x < d; x++) {
             for (int z = 0; z < d; z++) {
-                int col = cellColor(view.get(x, z), 0xFF101114, HontunTheme.overlay0(), HontunTheme.lighten(acc, 0.75f), 0xFF000000 | acc);
+                int col = cellColor(view.get(x, z), empty, lo, hi, full);
                 int x0 = gx + x * pitch, y0 = gy + z * pitch;
                 g.fill(x0, y0, x0 + cell, y0 + cell, col);
             }
@@ -384,6 +393,100 @@ public abstract class JoinSkin {
         @Override
         public float well(GuiGraphicsExtractor g, JoinState s, float cx, float top, float max) {
             return pixelWell(g, s, cx, top, max, HontunTheme.argb(0xFF, HontunTheme.crust()), HontunTheme.argb(0xB0, HontunTheme.accentLo()));
+        }
+    }
+
+    private static final class Term extends JoinSkin {
+        @Override public boolean pixel() { return true; }
+        @Override public int title() { return TerminalWidgets.fg() & 0xFFFFFF; }
+        @Override public int light() { return lerpRgb(TerminalWidgets.fg(), TerminalWidgets.dim(), 0.3f); }
+        @Override public int dim() { return TerminalWidgets.dim() & 0xFFFFFF; }
+        @Override public int muted() { return TerminalWidgets.faint() & 0xFFFFFF; }
+        @Override public int accent() { return TerminalWidgets.acc() & 0xFFFFFF; }
+
+        private static int ea(float e, int rgb) {
+            return argb(Math.round(255 * cl(e)), rgb);
+        }
+
+        @Override
+        public void panel(GuiGraphicsExtractor g, float x, float y, float w, float h, int tier) {
+            int ix = Math.round(x), iy = Math.round(y), iw = Math.round(w), ih = Math.round(h);
+            soft(g, ix, iy + 10f, iw, ih, 6f, 26f, 0x8C000000);
+            TerminalWidgets.Px p = new TerminalWidgets.Px();
+            p.rect(ix, iy, iw, ih, TerminalWidgets.a(0xF0, TerminalWidgets.bg()));
+            p.frame(ix, iy, iw, ih, TerminalWidgets.line());
+            p.submit(g);
+        }
+
+        @Override
+        public void rule(GuiGraphicsExtractor g, float x0, float x1, float y, float e) {
+            if (e <= 0.01f) return;
+            new TerminalWidgets.Px().hline(x0, x0 + (x1 - x0) * e, Math.round(y - 0.5f), ea(e, TerminalWidgets.line())).submit(g);
+        }
+
+        @Override
+        public void highlight(GuiGraphicsExtractor g, float x, float y, float w, float h, float a) {
+            int ix = Math.round(x), iy = Math.round(y), iw = Math.round(w), ih = Math.round(h);
+            int hl = TerminalWidgets.hl();
+            g.fill(ix, iy, ix + iw, iy + ih, argb(Math.round(((hl >>> 24) & 0xFF) * cl(a)), hl));
+        }
+
+        @Override
+        public void link(GuiGraphicsExtractor g, float x, float y0, float y1, float fill, boolean bright, float e) {
+            int ix = Math.round(x - 0.5f), a = Math.round(y0), b = Math.round(y1);
+            g.fill(ix, a, ix + 1, b, ea(e, TerminalWidgets.line()));
+            if (fill > 0.001f) g.fill(ix, a, ix + 1, a + Math.round((b - a) * cl(fill)), ea(e * (bright ? 1f : 0.7f), TerminalWidgets.acc()));
+        }
+
+        @Override
+        public void branch(GuiGraphicsExtractor g, float x0, float x1, float y, float fill, boolean bright, float e) {
+            int iy = Math.round(y - 0.5f), a = Math.round(x0), b = Math.round(x1);
+            g.fill(a, iy, b, iy + 1, ea(e, TerminalWidgets.line()));
+            if (fill > 0.001f) g.fill(a, iy, a + Math.round((b - a) * cl(fill)), iy + 1, ea(e * (bright ? 1f : 0.7f), TerminalWidgets.acc()));
+        }
+
+        @Override
+        public void marker(GuiGraphicsExtractor g, JoinState s, int i, float mx, float cy, float r, float e) {
+            int n = Math.max(7, Math.round(2f * r) | 1);
+            int x = Math.round(mx - n / 2f), y = Math.round(cy - n / 2f);
+            TerminalWidgets.Px p = new TerminalWidgets.Px();
+            if (s.skipped(i)) {
+                p.frame(x, y, n, n, ea(e, TerminalWidgets.faint()));
+                p.rect(x + 2, y + n / 2, n - 4, 1, ea(e, TerminalWidgets.faint()));
+                p.submit(g);
+            } else if (s.done(i)) {
+                p.rect(x, y, n, n, ea(e, TerminalWidgets.fill()));
+                p.submit(g);
+                pixelCheck(g, x, y, n, ea(e, TerminalWidgets.ink()));
+            } else if (s.active(i)) {
+                p.frame(x, y, n, n, ea(e, TerminalWidgets.lineF()));
+                if (TerminalWidgets.blinkOn()) p.rect(x + 2, y + 2, n - 4, n - 4, ea(e, TerminalWidgets.fill()));
+                p.submit(g);
+            } else {
+                p.frame(x, y, n, n, ea(e, TerminalWidgets.line()));
+                p.submit(g);
+            }
+        }
+
+        @Override
+        public void bar(GuiGraphicsExtractor g, JoinState s, float x, float y, float w, float h, float e) {
+            float top = y - h / 2f;
+            if (s.hasProgress) {
+                TerminalWidgets.segments(g, x, top, w, h, 0, s.progress, e);
+                return;
+            }
+            float u = frac(s.t / 1.7);
+            u = u * u * (3f - 2f * u);
+            float len = 0.3f;
+            float lead = -len + (1f + len) * u;
+            TerminalWidgets.segments(g, x, top, w, h, Math.max(0f, lead), Math.min(1f, lead + len), e);
+        }
+
+        @Override
+        public float well(GuiGraphicsExtractor g, JoinState s, float cx, float top, float max) {
+            return pixelWell(g, s, cx, top, max, TerminalWidgets.bg(), TerminalWidgets.line(),
+                    TerminalWidgets.empty(), TerminalWidgets.line() & 0xFFFFFF, TerminalWidgets.acc() & 0xFFFFFF,
+                    TerminalWidgets.fill());
         }
     }
 

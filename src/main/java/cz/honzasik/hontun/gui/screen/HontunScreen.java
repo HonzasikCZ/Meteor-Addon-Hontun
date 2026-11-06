@@ -21,6 +21,8 @@ public abstract class HontunScreen extends Screen {
 
     private static final int TITLE_H = 22;
 
+    private static final int TERM_TOP = 20;
+
     protected final Screen parent;
 
     protected int px, py, pw, ph;
@@ -53,7 +55,7 @@ public abstract class HontunScreen extends Screen {
 
     protected int bandBottom() { return height - FOOTER_H; }
 
-    protected int contentTop()    { return HontunTheme.modern() ? py + TITLE_H : HEADER_H; }
+    protected int contentTop()    { return HontunTheme.modern() ? py + TITLE_H : HontunTheme.terminal() ? TERM_TOP + 6 : HEADER_H; }
 
     protected int contentBottom() { return HontunTheme.modern() ? py + ph - 48 : bandBottom() - STATUS_H; }
     protected int contentLeft()   { return HontunTheme.modern() ? px + 14 : blockX(); }
@@ -66,6 +68,13 @@ public abstract class HontunScreen extends Screen {
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         if (!HontunTheme.restyleEnabled()) {
             super.extractBackground(g, mouseX, mouseY, delta);
+            return;
+        }
+
+        if (HontunTheme.terminal()) {
+            if (minecraft.level != null) extractBlurredBackground(g);
+            else MenuBackground.render(g, width, height, true);
+            cz.honzasik.hontun.gui.widget.TerminalWidgets.screenChrome(g, font, width, height, TERM_TOP, bandBottom(), getTitle());
             return;
         }
 

@@ -31,6 +31,12 @@ public abstract class ButtonStyleMixin {
             return;
         }
 
+        if (HontunTheme.terminal()) {
+            cz.honzasik.hontun.gui.widget.TerminalWidgets.button(g, w, hontun$selected(w));
+            ci.cancel();
+            return;
+        }
+
         if (!HontunTheme.modern()) {
             hontun$vanillaStyled(g, w);
             ci.cancel();

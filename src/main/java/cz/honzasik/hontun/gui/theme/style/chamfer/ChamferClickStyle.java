@@ -132,7 +132,7 @@ public class ChamferClickStyle extends ClickStyle {
 
     @Override
     public HontunTheme.UiMode id() {
-        return HontunTheme.UiMode.HModern2;
+        return HontunTheme.UiMode.Modern2;
     }
 
     @Override
@@ -232,11 +232,14 @@ public class ChamferClickStyle extends ClickStyle {
     public void palette(StylePalette out, boolean light, HontunGuiTheme t) {
         super.palette(out, light, t);
 
-        if (light) return;
+        if (light) {
+            ChamferPaint.RIM_LIGHT.set(HontunTheme.color(HontunTheme.lerp(out.overlay2, out.subtext0, 0.4f)));
+            return;
+        }
 
         float[] hsb = java.awt.Color.RGBtoHSB((out.accentLo >> 16) & 0xFF, (out.accentLo >> 8) & 0xFF, out.accentLo & 0xFF, null);
         if (hsb[2] < 0.35f) out.accentLo = java.awt.Color.HSBtoRGB(hsb[0], hsb[1], 0.35f) & 0xFFFFFF;
-        out.copyRoles();
+        out.roles(out.roleBg, out.body, false);
     }
 
     @Override
@@ -1177,7 +1180,7 @@ public class ChamferClickStyle extends ClickStyle {
         frame(g, kx0, ky0, kx1, ky1, u, u, u, argb(knobHover || drag ? 0xFF : ink(t, 0xC0), t.accentHiLineColor()));
 
         int gx = kx0 + (3 * u) / 2;
-        rect(g, gx, ky0 + 3 * u, gx + u, ky0 + 7 * u, light ? argb(0xFF, t.baseColor()) : argb(0x80, t.accentHiColor()));
+        rect(g, gx, ky0 + 3 * u, gx + u, ky0 + 7 * u, light ? argb(0xFF, t.baseColor()) : argb(0x80, t.accentHiLineColor()));
     }
 
     @Override

@@ -183,6 +183,7 @@ public class WHontunDropdown<T> extends WDropdown<T> implements HontunWidget {
         @Override
         protected void onCalculateWidgetPositions() {
             this.y += style().popupOffset(theme());
+            this.x += style().popupOffsetX(theme());
             super.onCalculateWidgetPositions();
         }
 

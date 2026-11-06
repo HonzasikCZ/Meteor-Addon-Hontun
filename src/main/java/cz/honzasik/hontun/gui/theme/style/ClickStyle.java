@@ -39,14 +39,20 @@ import cz.honzasik.hontun.gui.theme.widgets.pressable.WHontunTriangle;
 import cz.honzasik.hontun.gui.theme.widgets.settings.WHontunKeybind;
 import cz.honzasik.hontun.gui.util.ColorUtils;
 import cz.honzasik.hontun.utils.HontunTheme;
+import meteordevelopment.meteorclient.gui.WidgetScreen;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
+import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.settings.Settings;
 import meteordevelopment.meteorclient.systems.modules.Category;
+import meteordevelopment.meteorclient.systems.modules.Module;
 import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import org.joml.Matrix3x2fStack;
+
+import java.util.List;
 
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
@@ -70,7 +76,9 @@ public abstract class ClickStyle {
     }
 
     public FontChoice font() {
-        return id() == HontunTheme.UiMode.SmogClient ? FontChoice.SF : FontChoice.THEME;
+        if (id() == HontunTheme.UiMode.SmogClient) return FontChoice.SF;
+        if (id() == HontunTheme.UiMode.Terminal) return FontChoice.MONO;
+        return FontChoice.THEME;
     }
 
     public Backdrop backdrop() {
@@ -91,7 +99,7 @@ public abstract class ClickStyle {
 
     public boolean uses(Knob knob) {
         return switch (knob) {
-            case CORNER_RADIUS -> id() == HontunTheme.UiMode.HModern1 || id() == HontunTheme.UiMode.HModern2;
+            case CORNER_RADIUS -> id() == HontunTheme.UiMode.Modern1 || id() == HontunTheme.UiMode.Modern2;
             case PALETTE_COLOR -> id() != HontunTheme.UiMode.SmogClient;
             default -> true;
         };
@@ -114,12 +122,12 @@ public abstract class ClickStyle {
     }
 
     public double radiusFactor() {
-        return id() == HontunTheme.UiMode.HModern1 || id() == HontunTheme.UiMode.HModern2 ? 1.0 : 0.0;
+        return id() == HontunTheme.UiMode.Modern1 || id() == HontunTheme.UiMode.Modern2 ? 1.0 : 0.0;
     }
 
     public boolean windowShadow(HontunGuiTheme t) {
         HontunTheme.UiMode m = id();
-        return t.windowShadow.get() && (m == HontunTheme.UiMode.HModern1 || m == HontunTheme.UiMode.HModern2 || m == HontunTheme.UiMode.SmogClient);
+        return t.windowShadow.get() && (m == HontunTheme.UiMode.Modern1 || m == HontunTheme.UiMode.Modern2 || m == HontunTheme.UiMode.SmogClient);
     }
 
     public double chromeMargin(HontunGuiTheme t) {
@@ -189,28 +197,39 @@ public abstract class ClickStyle {
             out.green = HontunTheme.green();
             out.yellow = HontunTheme.yellow();
             out.red = HontunTheme.red();
-            out.copyRoles();
-            return;
+        } else {
+            HontunTheme.Ramp lightRamp = HontunLightPalette.ramp(m);
+            fillRamp(out, lightRamp);
+            out.accent = smog ? HontunLightPalette.SMOG_ACCENT : out.userAccent;
+            out.accentHi = smog ? HontunLightPalette.SMOG_ACCENT_HI : out.userAccentHi;
+            out.accentLo = smog ? lightRamp.textDim() : out.userAccentLo;
+            out.green = HontunLightPalette.green();
+            out.yellow = HontunLightPalette.yellow();
+            out.red = HontunLightPalette.red();
         }
-
-        HontunTheme.Ramp lightRamp = HontunLightPalette.ramp(m);
-        fillRamp(out, lightRamp);
-        out.accent = smog ? HontunLightPalette.SMOG_ACCENT : out.userAccent;
-        out.accentHi = smog ? HontunLightPalette.SMOG_ACCENT_HI : out.userAccentHi;
-        out.accentLo = smog ? lightRamp.textDim() : out.userAccentLo;
-        out.green = HontunLightPalette.green();
-        out.yellow = HontunLightPalette.yellow();
-        out.red = HontunLightPalette.red();
         if (smog) {
             out.copyRoles();
             return;
         }
-        int body = lightBody(out, t);
-        out.lightRoles(roleBackground(out, body, t), body);
+        int body0 = windowBody(out, light, t);
+        int bg0 = light ? roleBackground(out, body0, t) : body0;
+        HontunLightPalette.shiftSurfaces(out, light, q -> windowBody(q, light, t));
+        int body = windowBody(out, light, t);
+        int bg = light ? roleBackground(out, body, t) : body;
+        if (out.shift != 0) {
+            out.text = HontunLightPalette.holdContrast(out.text, body0, bg0, body, bg, light);
+            out.subtext1 = HontunLightPalette.holdContrast(out.subtext1, body0, bg0, body, bg, light);
+            out.subtext0 = HontunLightPalette.holdContrast(out.subtext0, body0, bg0, body, bg, light);
+            out.green = HontunLightPalette.holdContrast(out.green, body0, bg0, body, bg, light);
+            out.yellow = HontunLightPalette.holdContrast(out.yellow, body0, bg0, body, bg, light);
+            out.red = HontunLightPalette.holdContrast(out.red, body0, bg0, body, bg, light);
+        }
+        out.roles(bg, body, light);
     }
 
-    protected int lightBody(StylePalette out, HontunGuiTheme t) {
-        return HontunLightPalette.body(HontunTheme.ramp(id()), HontunLightPalette.ramp(id()), windowAlpha(t.windowOpacity.get(), true));
+    protected int windowBody(StylePalette out, boolean light, HontunGuiTheme t) {
+        double wa = t != null ? windowAlpha(t.windowOpacity.get(), light) : 1;
+        return HontunTheme.lerp(HontunTheme.ramp(id()).base(), out.mantle, (float) Math.clamp(wa, 0.0, 1.0));
     }
 
     protected int roleBackground(StylePalette out, int body, HontunGuiTheme t) {
@@ -233,6 +252,66 @@ public abstract class ClickStyle {
     }
 
     public void onPressed(WWidget w) {
+    }
+
+    public boolean supportsLightMode() {
+        return true;
+    }
+
+    public double windowMinWidth(HontunGuiTheme t) {
+        return t.scale(metrics().windowMinWidth);
+    }
+
+    public String moduleTitle(Module module) {
+        return module.title;
+    }
+
+    public WWidget categoryPrologue(HontunGuiTheme t, Category category) {
+        return null;
+    }
+
+    public WWidget categoryEpilogue(HontunGuiTheme t, Category category) {
+        return null;
+    }
+
+    public boolean layoutCategories(HontunGuiTheme t, List<Cell<?>> cells) {
+        return false;
+    }
+
+    public WWidget footer(HontunGuiTheme t, FooterKind kind) {
+        return null;
+    }
+
+    public boolean topBarFullWidth() {
+        return false;
+    }
+
+    public WWidget topBarLead(HontunGuiTheme t) {
+        return null;
+    }
+
+    public WWidget topBarTrail(HontunGuiTheme t) {
+        return null;
+    }
+
+    public boolean typeToFind() {
+        return false;
+    }
+
+    public boolean searchView(HontunGuiTheme t, WidgetScreen screen, String query) {
+        return false;
+    }
+
+    public WidgetScreen moduleScreen(HontunGuiTheme t, Module module) {
+        return null;
+    }
+
+    public WWidget settingsView(HontunGuiTheme t, Settings settings, String filter) {
+        return null;
+    }
+
+    public double popupOffsetX(HontunGuiTheme t) {
+        return 0;
     }
 
     public WWidget windowIcon(HontunGuiTheme t, WindowKind kind, Category category, WWidget fallback) {

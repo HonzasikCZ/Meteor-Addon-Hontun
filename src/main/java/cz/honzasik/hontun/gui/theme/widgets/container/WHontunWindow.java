@@ -22,6 +22,8 @@ import meteordevelopment.meteorclient.utils.Utils;
 import net.minecraft.client.input.MouseButtonEvent;
 
 public class WHontunWindow extends WWindow implements HontunWidget {
+    public String subtitle;
+
     private HontunModulesScreen modulesScreen;
     private boolean shouldSnap = false;
     private int gridSize;
@@ -78,7 +80,7 @@ public class WHontunWindow extends WWindow implements HontunWidget {
     @Override
     protected void onCalculateSize() {
         super.onCalculateSize();
-        minWidth = theme().scale(metrics().windowMinWidth);
+        minWidth = style().windowMinWidth(theme());
     }
 
     public void initSnapping(HontunModulesScreen modulesScreen, int gridSize) {

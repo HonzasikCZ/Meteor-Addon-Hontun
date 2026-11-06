@@ -17,6 +17,11 @@ public final class HontunSliders {
 
     public static void track(GuiGraphicsExtractor g, int x, int y, int w, int h, int cx,
                              boolean active, boolean hot, boolean focused, int wa) {
+        if (HontunTheme.terminal()) {
+            double frac = w > 8 ? (cx - x - 4) / (double) (w - 8) : 0;
+            TerminalWidgets.slider(g, x, y, w, h, frac, active, hot, focused);
+            return;
+        }
         int x2 = x + w, y2 = y + h;
 
         if (HontunTheme.smog()) {
@@ -83,6 +88,7 @@ public final class HontunSliders {
     }
 
     public static void knob(GuiGraphicsExtractor g, int hx, int y, int hw, int h, boolean active, boolean hot, int wa) {
+        if (HontunTheme.terminal()) return;
         int y2 = y + h;
 
         if (HontunTheme.smog()) {

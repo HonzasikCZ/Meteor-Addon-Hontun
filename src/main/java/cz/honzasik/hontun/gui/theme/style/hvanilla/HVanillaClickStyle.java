@@ -260,7 +260,7 @@ public class HVanillaClickStyle extends ClickStyle {
     @Override
     public void palette(StylePalette out, boolean light, HontunGuiTheme t) {
         super.palette(out, light, t);
-        capture(out, light, light ? lightBody(out, t) : 0);
+        capture(out, light, out.body);
     }
 
     @Override
@@ -334,9 +334,9 @@ public class HVanillaClickStyle extends ClickStyle {
         } else {
             bevel = accentHi;
             barLit = accent;
-            rowEdge = accentHi;
+            rowEdge = accentHiLine;
             rowSeam = accentEdge;
-            rim = accent;
+            rim = accentLine;
             tint = accentLo;
             tabTint = surface2;
             dimInk = textDim;
@@ -354,7 +354,7 @@ public class HVanillaClickStyle extends ClickStyle {
             wellShade = VOID;
             wellLit = overlay1;
             chipEdge = overlay0;
-            popupEdge = accentHi;
+            popupEdge = accentHiLine;
         }
 
         int hi = light ? p.userAccentHi : accentHi;
@@ -363,7 +363,7 @@ public class HVanillaClickStyle extends ClickStyle {
     }
 
     private int outline() {
-        return light ? opaque(rim) : argb(0xCC, accent);
+        return light ? opaque(rim) : argb(0xCC, accentLine);
     }
 
     private int onInk(int fill) {
@@ -874,7 +874,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         boolean pressed = b.isPressed();
         boolean listening = k.isListening();
-        buttonChrome(t, x, y, w, h, b.mouseOver, pressed, listening ? opaque(light ? rim : accentHi) : 0);
+        buttonChrome(t, x, y, w, h, b.mouseOver, pressed, listening ? opaque(light ? rim : accentHiLine) : 0);
 
         int ty = y + 3 * p + (pressed ? p : 0);
 
@@ -1108,7 +1108,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         boolean open = d.isExpanded();
         boolean pressed = d.isPressed();
-        buttonChrome(t, x, y, w, h, d.mouseOver, pressed, open ? opaque(light ? rim : accentHi) : 0);
+        buttonChrome(t, x, y, w, h, d.mouseOver, pressed, open ? opaque(light ? rim : accentHiLine) : 0);
 
         int dy = pressed ? p : 0;
         int ink = opaque(buttonInk());
@@ -1195,7 +1195,7 @@ public class HVanillaClickStyle extends ClickStyle {
         Color custom = b.customColor();
 
         if (framed) {
-            int frame = focused ? opaque(light ? rim : accentHi) : opaque(hover ? (light ? textDim : overlay2) : stroke);
+            int frame = focused ? opaque(light ? rim : accentHiLine) : opaque(hover ? (light ? textDim : overlay2) : stroke);
 
             if (b.hasTitle()) {
                 WHontunLabel title = titleLabel(b);
@@ -1322,7 +1322,7 @@ public class HVanillaClickStyle extends ClickStyle {
         int w = snap(h.x + h.width) - x, hh = snap(h.y + h.height) - y;
 
         PixelCanvas.fill(x + p, y + p, w - 2 * p, hh - 2 * p, BOX_FILL);
-        PixelCanvas.hline(x + p, y + hh - p, w - 2 * p, argb(0xCC, light ? bevel : accent));
+        PixelCanvas.hline(x + p, y + hh - p, w - 2 * p, argb(0xCC, light ? bevel : accentLine));
 
         if (h.cells.isEmpty() || !(h.cells.getFirst().widget() instanceof WContainer row)) return;
 
@@ -1333,7 +1333,7 @@ public class HVanillaClickStyle extends ClickStyle {
 
         for (Cell<?> cell : row.cells) {
             WWidget widget = cell.widget();
-            if (widget instanceof WGuiTexture icon) icon.color = focused ? (light ? searchHotColor : t.accentHiColor()) : islandDimColor;
+            if (widget instanceof WGuiTexture icon) icon.color = focused ? (light ? searchHotColor : t.accentHiLineColor()) : islandDimColor;
             else if (widget instanceof WLabel label) label.color = islandDimColor;
         }
     }
@@ -1407,7 +1407,7 @@ public class HVanillaClickStyle extends ClickStyle {
             PixelCanvas.frame(x, y, w, h, opaque(rim));
         } else {
             PixelCanvas.fill(x, y, w, h, argb(0xCC, accentLo));
-            PixelCanvas.frame(x, y, w, h, opaque(accentHi));
+            PixelCanvas.frame(x, y, w, h, opaque(accentHiLine));
         }
         if (row.isPressed()) PixelCanvas.fill(x, y, w, h, argb(light ? 0x30 : 0x60, 0));
     }
@@ -1601,13 +1601,13 @@ public class HVanillaClickStyle extends ClickStyle {
             frame = opaque(pressed ? accentLine : hover ? rim : accentLoLine);
         } else if (pressed) {
             fill = opaque(accentEdge);
-            frame = opaque(accentHi);
+            frame = opaque(accentHiLine);
         } else if (hover) {
             fill = argb(0xCC, accentLo);
-            frame = opaque(accentHi);
+            frame = opaque(accentHiLine);
         } else {
             fill = alpha(0x99 / 255.0 * t.backgroundOpacity(), surface1);
-            frame = argb(0xAA, accent);
+            frame = argb(0xAA, accentLine);
         }
 
         if (frameOverride != 0) frame = frameOverride;

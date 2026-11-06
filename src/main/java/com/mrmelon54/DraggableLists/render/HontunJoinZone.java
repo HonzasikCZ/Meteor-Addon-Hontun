@@ -3,6 +3,9 @@ package com.mrmelon54.DraggableLists.render;
 import com.mrmelon54.DraggableLists.theme.HontunBridge;
 import com.mrmelon54.DraggableLists.theme.Palette;
 import cz.honzasik.hontun.gui.render.RoundedGui;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 /**
@@ -21,6 +24,17 @@ public final class HontunJoinZone {
                             int mouseX, int mouseY, Palette palette) {
         int x = contentX + 16;
         boolean hot = mouseX >= x && mouseX < x + 16 && mouseY >= contentY && mouseY < contentY + 32;
+
+        if (HontunBridge.terminal()) {
+            TerminalWidgets.Px p = new TerminalWidgets.Px();
+            p.rect(x, contentY, 16, 32, TerminalWidgets.a(0xC8, TerminalWidgets.bg()));
+            if (hot) p.rect(x, contentY, 16, 32, TerminalWidgets.hl()).frame(x, contentY, 16, 32, TerminalWidgets.lineF());
+            p.submit(graphics);
+            Font f = Minecraft.getInstance().font;
+            TerminalWidgets.glyph(graphics, f, ">", x + 8f, contentY + 16f,
+                hot ? TerminalWidgets.head() : TerminalWidgets.acc());
+            return;
+        }
 
         if (HontunBridge.smog() && RoundedGui.available()) {
             RoundedGui.fill(graphics, x + 1f, contentY + 1f, 14f, 30f, 4f, 0f,

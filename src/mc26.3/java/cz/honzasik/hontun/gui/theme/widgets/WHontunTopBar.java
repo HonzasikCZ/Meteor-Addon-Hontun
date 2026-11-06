@@ -11,7 +11,9 @@ import meteordevelopment.meteorclient.gui.tabs.Tab;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.tabs.Tabs;
 import meteordevelopment.meteorclient.gui.widgets.WTopBar;
+import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WPressable;
+import meteordevelopment.meteorclient.utils.Utils;
 import meteordevelopment.meteorclient.utils.render.color.Color;
 import net.minecraft.client.gui.screens.Screen;
 import org.lwjgl.sdl.SDLMouse;
@@ -23,8 +25,21 @@ public class WHontunTopBar extends WTopBar implements HontunWidget {
 
     @Override
     public void init() {
+        WWidget lead = style().topBarLead(theme());
+        if (lead != null) add(lead);
+
         for (Tab tab : Tabs.get())
             add(new WTopBarButton(tab)).pad(metrics().topBarItemPad);
+
+        WWidget trail = style().topBarTrail(theme());
+        if (trail != null) add(trail).expandCellX().right();
+    }
+
+    @Override
+    protected void onCalculateSize() {
+        super.onCalculateSize();
+
+        if (style().topBarFullWidth()) width = Utils.getWindowWidth();
     }
 
     @Override

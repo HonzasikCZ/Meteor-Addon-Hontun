@@ -17,6 +17,13 @@
   },
   "ops": [
     {
+      "type": "pad",
+      "left": 16,
+      "right": 0,
+      "top": 0,
+      "bottom": 0
+    },
+    {
       "type": "conv",
       "in": 1,
       "out": 32,

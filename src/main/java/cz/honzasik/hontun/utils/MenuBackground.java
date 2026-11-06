@@ -1,6 +1,7 @@
 package cz.honzasik.hontun.utils;
 
 import cz.honzasik.hontun.gui.render.BlockyHorizon;
+import cz.honzasik.hontun.gui.render.MatrixRain;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 import java.util.Random;
@@ -14,6 +15,7 @@ public class MenuBackground {
     private static int TOP_A, TOP_B;
     private static int BOT_A, BOT_B;
     private static int[] PARTICLE_COLORS = new int[3];
+    private static RoundedPalette ROUNDED = RoundedPalette.SMOG;
     private static int cachedVersion = -1;
 
     private static final long PERIOD_MS = 14000L;
@@ -40,16 +42,27 @@ public class MenuBackground {
     public static void render(GuiGraphicsExtractor g, int width, int height, boolean opaque, boolean particles, HontunTheme.UiMode look) {
         if (look == null || look == HontunTheme.UiMode.Vanilla) return;
 
+        boolean rain = HontunTheme.menuScene() == HontunTheme.MenuScene.Matrix
+                || (look == HontunTheme.UiMode.Terminal && MatrixRain.enabled());
+
+        if (opaque && rain && MatrixRain.render(g, width, height, look)) return;
+
         if (opaque && HontunTheme.menuScene() == HontunTheme.MenuScene.BlockyHorizon
                 && BlockyHorizon.render(g, width, height, look)) return;
 
         if (look == HontunTheme.UiMode.SmogClient) {
-            SmogBackground.render(g, width, height, opaque, particles);
+            SmogBackground.render(g, width, height, opaque, particles, RoundedPalette.SMOG);
             return;
         }
 
         refreshColors();
-        boolean modern = look == HontunTheme.UiMode.HModern1 || look == HontunTheme.UiMode.HModern2;
+
+        if (HontunTheme.menuScene() == HontunTheme.MenuScene.RoundedParticles) {
+            SmogBackground.render(g, width, height, opaque, particles, ROUNDED);
+            return;
+        }
+
+        boolean modern = look == HontunTheme.UiMode.Modern1 || look == HontunTheme.UiMode.Modern2;
 
         long now = System.currentTimeMillis();
 
@@ -92,6 +105,7 @@ public class MenuBackground {
         int acc   = HontunTheme.userAccent();
         int accLo = HontunTheme.userAccentLo();
         PARTICLE_COLORS = new int[] { argb(0xCC, accHi), argb(0xCC, acc), argb(0xB0, accLo) };
+        ROUNDED = RoundedPalette.of(m, acc, accHi, accLo);
 
         for (Particle p : PARTICLES) p.recolor();
     }

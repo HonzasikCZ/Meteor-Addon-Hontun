@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.mixin.client.button;
 
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -13,8 +14,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class AbstractWidgetLabelMixin {
     @Inject(method = "getMessage", at = @At("RETURN"), cancellable = true)
     private void hontun$smogFont(CallbackInfoReturnable<Component> cir) {
-        if (!HontunTheme.smog()) return;
+        if (!HontunFont.active()) return;
         Component msg = cir.getReturnValue();
-        if (msg != null) cir.setReturnValue(HontunFont.apply(msg));
+        if (msg == null) return;
+        if (HontunTheme.terminal()) {
+            cir.setReturnValue(TerminalWidgets.label((AbstractWidget) (Object) this, msg));
+            return;
+        }
+        cir.setReturnValue(HontunFont.apply(msg));
     }
 }

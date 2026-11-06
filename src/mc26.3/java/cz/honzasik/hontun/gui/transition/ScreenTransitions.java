@@ -5,7 +5,9 @@ import com.mojang.renderpearl.api.textures.GpuTexture;
 import cz.honzasik.hontun.Hontun;
 import cz.honzasik.hontun.gui.mixin.meteorclient.WidgetScreenAccessor;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.gui.theme.style.terminal.WTermFooter;
 import cz.honzasik.hontun.utils.HontunTheme;
+import meteordevelopment.meteorclient.gui.WidgetScreen;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WTopBar;
@@ -41,6 +43,7 @@ public final class ScreenTransitions {
     private static final long CALM_NANOS = 400_000_000L;
     private static final long PENDING = Long.MIN_VALUE;
     private static final double BAR_PAD = 2.0;
+    private static final double SLIDE = 8.0;
 
     private static boolean broken;
     private static boolean warmed;
@@ -51,6 +54,9 @@ public final class ScreenTransitions {
     private static GpuTexture presented;
     private static boolean running;
     private static boolean zoom;
+    private static boolean slide;
+    private static float slideUv;
+    private static float footUv;
     private static float maskX0;
     private static float maskY0;
     private static float maskX1;
@@ -145,19 +151,26 @@ public final class ScreenTransitions {
         }
         boolean tabs = from instanceof TabScreen && to instanceof TabScreen;
         running = true;
-        zoom = style == TransitionStyle.FadeZoom && mc.level == null && !tabs
+        slide = HontunTheme.terminal() && style == TransitionStyle.FadeZoom && mc.level == null
+                && from != null && to != null && (tabs || from.getClass() != to.getClass());
+        slideUv = slide ? (float) (SLIDE * mc.getWindow().getGuiScale() / Math.max(1, target.height)) : 0f;
+        zoom = !slide && style == TransitionStyle.FadeZoom && mc.level == null && !tabs
                 && from != null && to != null && from.getClass() != to.getClass();
-        if (!tabs || !topBar((TabScreen) from)) {
+        boolean pair = slide && from instanceof WidgetScreen && to instanceof WidgetScreen;
+        boolean bar = tabs ? topBar((WidgetScreen) from)
+                : pair && holds((WidgetScreen) to, WTopBar.class) && topBar((WidgetScreen) from);
+        if (!bar) {
             maskX0 = 2f;
             maskY0 = 2f;
             maskX1 = -1f;
             maskY1 = -1f;
         }
+        footUv = pair && holds((WidgetScreen) to, WTermFooter.class) ? footer((WidgetScreen) from) : 0f;
         startNanos = PENDING;
         durationNanos = duration() * 1_000_000L;
     }
 
-    private static boolean topBar(TabScreen screen) {
+    private static boolean topBar(WidgetScreen screen) {
         WContainer root = ((WidgetScreenAccessor) screen).hontun$root();
         if (root == null || root.width <= 0 || root.height <= 0) return false;
         List<Cell<?>> cells = root.cells;
@@ -173,6 +186,29 @@ public final class ScreenTransitions {
         return false;
     }
 
+    private static boolean holds(WidgetScreen screen, Class<? extends WWidget> type) {
+        WContainer root = ((WidgetScreenAccessor) screen).hontun$root();
+        if (root == null) return false;
+        List<Cell<?>> cells = root.cells;
+        for (int i = 0; i < cells.size(); i++) {
+            WWidget w = cells.get(i).widget();
+            if (type.isInstance(w) && w.visible) return true;
+        }
+        return false;
+    }
+
+    private static float footer(WidgetScreen screen) {
+        WContainer root = ((WidgetScreenAccessor) screen).hontun$root();
+        if (root == null || root.width <= 0 || root.height <= 0) return 0f;
+        List<Cell<?>> cells = root.cells;
+        for (int i = 0; i < cells.size(); i++) {
+            WWidget w = cells.get(i).widget();
+            if (!(w instanceof WTermFooter) || !w.visible || w.width <= 0 || w.height <= 0) continue;
+            return (float) Math.max(0.0, Math.min(1.0, 1.0 - (w.y - BAR_PAD) / root.height));
+        }
+        return 0f;
+    }
+
     private static void draw(RenderTarget target) {
         long now = System.nanoTime();
         if (startNanos == PENDING) startNanos = now;
@@ -184,7 +220,8 @@ public final class ScreenTransitions {
         float inv = 1f - (float) elapsed / durationNanos;
         float eased = 1f - inv * inv;
         float scale = zoom ? 1f + ZOOM * eased : 1f;
-        if (!GhostPass.draw(target, 1f - eased, scale, maskX0, maskY0, maskX1, maskY1)) running = false;
+        float shift = slide ? slideUv * eased : 0f;
+        if (!GhostPass.draw(target, 1f - eased, scale, shift, footUv, maskX0, maskY0, maskX1, maskY1)) running = false;
     }
 
     private static TransitionStyle style() {

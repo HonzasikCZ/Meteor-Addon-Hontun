@@ -56,7 +56,7 @@ public class HontunTextBox extends EditBox {
         this.boxH = h;
         setBordered(false);
         setMaxLength(128);
-        addFormatter((s, off) -> (HontunTheme.smog() && !masked)
+        addFormatter((s, off) -> (HontunFont.active() && !masked)
                 ? HontunFont.apply(Component.literal(s)).getVisualOrderText()
                 : null);
     }
@@ -90,7 +90,8 @@ public class HontunTextBox extends EditBox {
 
     public HontunTextBox masked() {
         masked = true;
-        addFormatter((s, off) -> FormattedCharSequence.forward("*".repeat(s.length()), Style.EMPTY));
+        addFormatter((s, off) -> FormattedCharSequence.forward("*".repeat(s.length()),
+                HontunTheme.terminal() ? Style.EMPTY.withFont(HontunFont.MONO) : Style.EMPTY));
         return this;
     }
 
@@ -179,7 +180,9 @@ public class HontunTextBox extends EditBox {
         refreshPalette();
 
         boolean smog = HontunTheme.smog();
-        if (smog) {
+        if (HontunTheme.terminal()) {
+            drawTerminal(g, mouseX, mouseY);
+        } else if (smog) {
             drawSmog(g, mouseX, mouseY);
         } else if (HontunTheme.modern2()) {
             drawModern2(g, mouseX, mouseY);
@@ -226,6 +229,19 @@ public class HontunTextBox extends EditBox {
     }
 
     private void refreshPalette() {
+        if (HontunTheme.terminal()) {
+            setTextColor(TerminalWidgets.fg());
+            setTextColorUneditable(TerminalWidgets.faint());
+            int v = HontunTheme.version();
+            if (v != hintVersion) {
+                hintVersion = v;
+                if (!hintText.isEmpty()) {
+                    setHint(HontunFont.apply(Component.literal(hintText)
+                            .setStyle(Style.EMPTY.withColor(TextColor.fromRgb(TerminalWidgets.faint() & 0xFFFFFF)))));
+                }
+            }
+            return;
+        }
         boolean modern = HontunTheme.modern();
         setTextColor(modern ? HontunTheme.argb(0xFF, HontunTheme.textLight()) : EditBox.DEFAULT_TEXT_COLOR);
         setTextColorUneditable(modern ? HontunTheme.argb(0xFF, HontunTheme.textDim()) : 0xFF707070);
@@ -243,6 +259,13 @@ public class HontunTextBox extends EditBox {
                             : (kind == Kind.SEARCH ? EditBox.SEARCH_HINT_STYLE : EditBox.DEFAULT_HINT_STYLE)));
                 }
             }
+        }
+    }
+
+    private void drawTerminal(GuiGraphicsExtractor g, int mouseX, int mouseY) {
+        TerminalWidgets.field(g, boxX(), boxY(), boxW, boxH, isFocused(), isMouseOver(mouseX, mouseY), isActive());
+        if (kind == Kind.SEARCH) {
+            TerminalWidgets.text(g, font, "$", boxX() + 6, getY(), TerminalWidgets.acc());
         }
     }
 
@@ -307,6 +330,10 @@ public class HontunTextBox extends EditBox {
 
     public static boolean themedBox(GuiGraphicsExtractor g, int x, int y, int w, int h,
                                     boolean focused, boolean hovered, boolean active) {
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.field(g, x, y, w, h, focused, hovered, active);
+            return true;
+        }
         if (!HontunTheme.restyleEnabled() || HontunTheme.hvanilla()) return false;
         int dim = active ? 0xFF : 0x80;
         if (HontunTheme.smog()) {
@@ -351,6 +378,11 @@ public class HontunTextBox extends EditBox {
         if (!clearable() || getValue().isEmpty()) return;
         int cx = boxX() + boxW - padRight;
         boolean over = overClear(mouseX, mouseY);
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.glyph(g, font, "x", cx + padRight / 2f, boxY() + boxH / 2f,
+                    over ? TerminalWidgets.red() : TerminalWidgets.dim());
+            return;
+        }
         if (HontunRound.smoothDots()) {
             float mx = cx + padRight / 2f - 1f, my = boxY() + boxH / 2f;
             float a = 2.5f;

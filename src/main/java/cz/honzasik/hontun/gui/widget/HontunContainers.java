@@ -94,6 +94,13 @@ public final class HontunContainers {
     private static int hlScreen;
 
     public static boolean slotHighlight(GuiGraphicsExtractor g, AbstractContainerScreen<?> s, int sx, int sy, boolean front) {
+        if (HontunTheme.terminal()) {
+            if (!themed(s)) return false;
+            boolean big = bigSlotAt(s, sx, sy);
+            int o = big ? 5 : 1, n = big ? 26 : 18;
+            TerminalWidgets.slotHighlight(g, sx - o, sy - o, n, front);
+            return true;
+        }
         if (!HontunTheme.smog()) return flatHighlight(g, s, sx, sy, front);
         boolean themed = themed(s);
         boolean big = themed && bigSlotAt(s, sx, sy);
@@ -182,11 +189,13 @@ public final class HontunContainers {
     }
 
     private static int decorColor() {
+        if (HontunTheme.terminal()) return TerminalWidgets.dim();
         if (HontunTheme.smog()) return HontunTheme.argb(0xFF, 0xB8BDC3);
         return HontunTheme.argb(0xFF, HontunTheme.modern() ? HontunTheme.overlay2() : HontunTheme.overlay1());
     }
 
     private static int emptyColor() {
+        if (HontunTheme.terminal()) return TerminalWidgets.empty();
         return HontunTheme.argb(0xFF, HontunTheme.smog() ? HontunTheme.overlay1() : HontunTheme.overlay0());
     }
 
@@ -209,6 +218,10 @@ public final class HontunContainers {
             g.enableScissor(bx, by + from, bx + 14, by + 14);
             flameShape(g, bx, by, HontunTheme.argb(0xFF, HontunTheme.accentHi()));
             g.disableScissor();
+            return;
+        }
+        if (HontunTheme.terminal()) {
+            mask(g, FLAME, bx, by, from, 14, TerminalWidgets.head(), TerminalWidgets.acc());
             return;
         }
         mask(g, FLAME, bx, by, from, 14, 0xFFFFC43D, 0xFFFF8A2A);
@@ -238,7 +251,7 @@ public final class HontunContainers {
             g.disableScissor();
             return;
         }
-        int lit = HontunTheme.argb(0xFF, HontunTheme.textLight());
+        int lit = HontunTheme.terminal() ? TerminalWidgets.acc() : HontunTheme.argb(0xFF, HontunTheme.textLight());
         mask(g, BURN, bx, by, 0, progressW, lit, lit);
     }
 
@@ -260,6 +273,10 @@ public final class HontunContainers {
     }
 
     private static void panel(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.panel(g, x, y, w, h);
+            return;
+        }
         if (HontunTheme.smog()) {
             RoundedGui.fill(g, x - 10f, y - 8f, w + 20f, h + 22f, 16f, 10f, HontunTheme.argb(0x90, 0x000000));
             HontunRound.card(g, x, y, w, h, 7, HontunTheme.argb(0xEE, HontunTheme.base()),
@@ -285,6 +302,10 @@ public final class HontunContainers {
     }
 
     private static void slot(GuiGraphicsExtractor g, int x, int y, int size) {
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.slot(g, x, y, size);
+            return;
+        }
         if (HontunTheme.smog()) {
             if (RoundedGui.available()) {
                 RoundedGui.fill(g, (float) x + 0.5f, (float) y + 0.5f, size - 1f, size - 1f, 3.5f, 0f,
@@ -316,6 +337,10 @@ public final class HontunContainers {
     }
 
     private static void well(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.well(g, x, y, w, h);
+            return;
+        }
         if (HontunTheme.smog()) {
             if (RoundedGui.available()) {
                 RoundedGui.fill(g, (float) x, (float) y, w, h, 5f, 0f, HontunTheme.argb(0xC8, 0x000000));

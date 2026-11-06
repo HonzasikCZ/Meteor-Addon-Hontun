@@ -24,6 +24,7 @@ public final class HontunCards {
     public static Component clip(net.minecraft.client.gui.Font f, String s, int maxW) {
         if (s == null) return Component.empty();
         if (maxW <= 0) return Component.empty();
+        if (HontunTheme.terminal()) return Component.literal(TerminalWidgets.clipString(f, s, maxW));
         if (f.width(s) <= maxW) return Component.literal(s);
         int room = Math.max(0, maxW - f.width("…"));
         return Component.literal(f.plainSubstrByWidth(s, room) + "…");
@@ -72,6 +73,7 @@ public final class HontunCards {
 
     public static boolean deleteButton(GuiGraphicsExtractor g, net.minecraft.client.gui.Font f,
                                        int boxX, int boxY, int boxSize, int mouseX, int mouseY) {
+        if (HontunTheme.terminal()) return TerminalWidgets.deleteButton(g, f, boxX, boxY, boxSize, mouseX, mouseY);
         boolean over = mouseX >= boxX && mouseX < boxX + boxSize && mouseY >= boxY && mouseY < boxY + boxSize;
         if (HontunTheme.smog()) {
             if (over) HontunRound.fill(g, boxX, boxY, boxSize, boxSize, 5,
@@ -128,6 +130,10 @@ public final class HontunCards {
 
     public static void row(GuiGraphicsExtractor g, int x, int y, int w, int h,
                            boolean active, boolean hovered, int accentTint) {
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.row(g, x, y, w, h, active, hovered);
+            return;
+        }
         if (HontunTheme.smog()) {
             int fill, border;
             if (active) {

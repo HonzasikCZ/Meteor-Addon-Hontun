@@ -23,7 +23,8 @@ public final class HontunCrosshair {
         Matrix3x2fStack pose = g.pose();
         pose.pushMatrix();
         pose.scale(1f / s, 1f / s);
-        if (HontunTheme.smog()) smog(g, cx, cy, s);
+        if (HontunTheme.terminal()) terminal(g, cx, cy, s);
+        else if (HontunTheme.smog()) smog(g, cx, cy, s);
         else if (HontunTheme.modern2()) chamfer(g, cx, cy, s);
         else if (HontunTheme.modern1()) flat(g, cx, cy, s);
         else pixel(g, cx, cy, s);
@@ -93,6 +94,20 @@ public final class HontunCrosshair {
         int half = t / 2;
         outlined(g, cx - half, cy - half, cx - half + t, cy - half + t, o,
                 HontunTheme.argb(0xFF, HontunTheme.accentHi()), edge);
+    }
+
+    private static void terminal(GuiGraphicsExtractor g, int cx, int cy, int s) {
+        int t = Math.max(1, s / 2 + (s % 2)), half = t / 2, gap = 2 * s, len = 3 * s;
+        int fill = cz.honzasik.hontun.gui.widget.TerminalWidgets.acc();
+        int edge = HontunTheme.argb(0x90, 0x000000);
+        int o = 1;
+        outlined(g, cx - half, cy - gap - len, cx - half + t, cy - gap, o, fill, edge);
+        outlined(g, cx - half, cy + gap, cx - half + t, cy + gap + len, o, fill, edge);
+        outlined(g, cx - gap - len, cy - half, cx - gap, cy - half + t, o, fill, edge);
+        outlined(g, cx + gap, cy - half, cx + gap + len, cy - half + t, o, fill, edge);
+        int b = Math.max(t, s);
+        outlined(g, cx - b / 2, cy - b / 2, cx - b / 2 + b, cy - b / 2 + b, o,
+                cz.honzasik.hontun.gui.widget.TerminalWidgets.fill(), edge);
     }
 
     private static void smog(GuiGraphicsExtractor g, int cx, int cy, int s) {

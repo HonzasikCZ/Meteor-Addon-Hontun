@@ -31,7 +31,11 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
 
     @Override public int getRowWidth() { return getWidth() - 28; }
 
-    @Override protected void extractListBackground(GuiGraphicsExtractor g) {}
+    @Override
+    protected void extractListBackground(GuiGraphicsExtractor g) {
+        if (HontunTheme.terminal()) TerminalWidgets.listColumn(g, getX(), getY(), getWidth(), getHeight());
+    }
+
     @Override protected void extractListSeparators(GuiGraphicsExtractor g) {}
 
     @Override
@@ -43,7 +47,7 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
 
     @Override
     protected void extractSelection(GuiGraphicsExtractor g, ProxyEntry e, int outlineColor) {
-        if (HontunTheme.modern()) return;
+        if (HontunTheme.modern() || HontunTheme.terminal()) return;
         HontunCards.vanillaSelection(g, e.getX(), e.getY(), e.getWidth(), e.getHeight(), isFocused());
     }
 
@@ -82,6 +86,11 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
 
             HontunCards.row(g, x, cy, w, ch, on, hovered, HontunTheme.green());
 
+            if (HontunTheme.terminal()) {
+                terminal(g, f, x, cy, w, ch, on, hovered, mouseX, mouseY);
+                return;
+            }
+
             int dotX = modern ? x + 10 + HontunCards.rowTextInset(on) : x + 4;
             int dotCol = HontunTheme.argb(0xFF, on ? HontunTheme.green() : HontunTheme.textDim());
             if (HontunRound.smoothDots()) {
@@ -116,6 +125,44 @@ public class ProxyCardList extends ObjectSelectionList<ProxyCardList.ProxyEntry>
             if (showStatus) {
                 g.text(f, stc, statusX, cy + (ch - f.lineHeight) / 2,
                         HontunTheme.argb(0xFF, statusColor(proxy)), true);
+            }
+
+            if (hovered) HontunCards.deleteButton(g, f, delX(), delY(), DEL, mouseX, mouseY);
+        }
+
+        private void terminal(GuiGraphicsExtractor g, Font f, int x, int cy, int w, int ch,
+                              boolean on, boolean hovered, int mouseX, int mouseY) {
+            int tx = x + 4;
+            int nameY = TerminalWidgets.stackY(cy, ch, 2, TerminalWidgets.LINE_STEP);
+            int subY = nameY + TerminalWidgets.LINE_STEP;
+
+            String st = proxy.status != null ? proxy.status.name() : "UNCHECKED";
+            String lat = proxy.latency > 0 ? " " + proxy.latency + "ms" : "";
+            Component stc = HontunFont.apply(Component.literal(st + lat));
+            int statusW = f.width(stc);
+            int statusX = x + w - DEL - 8 - statusW;
+
+            boolean showStatus = statusX >= tx + 40;
+            int textRight = showStatus ? statusX - 6 : delX() - 6;
+            int room = Math.max(0, textRight - tx);
+
+            g.text(f, HontunFont.apply(HontunCards.clip(f, String.valueOf(proxy.name.get()), room)), tx, nameY,
+                    on ? TerminalWidgets.acc() : TerminalWidgets.fg(), false);
+            String addr = proxy.address.get() + ":" + proxy.port.get();
+            String type = "   [" + proxy.type.get() + "]";
+            int addrRoom = room - TerminalWidgets.width(f, type);
+            String sub = addrRoom >= 40 && TerminalWidgets.width(f, addr) > addrRoom
+                    ? TerminalWidgets.clipString(f, addr, addrRoom) + type
+                    : TerminalWidgets.clipString(f, addr + type, room);
+            g.text(f, HontunFont.text(sub), tx, subY, TerminalWidgets.dim(), false);
+
+            if (showStatus) {
+                int col = switch (st) {
+                    case "ALIVE" -> TerminalWidgets.acc();
+                    case "DEAD" -> TerminalWidgets.red();
+                    default -> TerminalWidgets.dim();
+                };
+                g.text(f, stc, statusX, TerminalWidgets.lineY(cy, ch), col, false);
             }
 
             if (hovered) HontunCards.deleteButton(g, f, delX(), delY(), DEL, mouseX, mouseY);

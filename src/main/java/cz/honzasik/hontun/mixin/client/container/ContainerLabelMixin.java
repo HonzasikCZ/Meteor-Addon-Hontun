@@ -3,6 +3,7 @@ package cz.honzasik.hontun.mixin.client.container;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import cz.honzasik.hontun.gui.widget.HontunContainers;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.utils.HontunFont;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.gui.Font;
@@ -31,7 +32,8 @@ public abstract class ContainerLabelMixin {
         if (title && (screen instanceof DispenserScreen || screen instanceof AbstractFurnaceScreen<?>)) {
             x = (((ContainerScreenAccessor) screen).hontun$imageWidth() - font.width(styled)) / 2;
         }
-        int rgb = title ? HontunTheme.textLight() : HontunTheme.subtext1();
+        int rgb = HontunTheme.terminal() ? (title ? TerminalWidgets.fg() : TerminalWidgets.dim())
+                : title ? HontunTheme.textLight() : HontunTheme.subtext1();
         op.call(g, font, styled, x, y, 0xFF000000 | rgb, false);
     }
 }

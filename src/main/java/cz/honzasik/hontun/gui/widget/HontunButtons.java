@@ -10,6 +10,12 @@ public final class HontunButtons {
         if (w <= 2 || h <= 2) return;
         int x2 = x + w, y2 = y + h;
 
+        if (HontunTheme.terminal()) {
+            TerminalWidgets.field(g, x, y, w, h, hovered, false, active);
+            if (hovered) g.fill(x, y, x2, y2, TerminalWidgets.hl());
+            return;
+        }
+
         if (HontunTheme.smog()) {
             int a = !active ? 0x40 : (hovered ? 0xB4 : 0x6E);
             HontunRound.fill(g, x, y, w, h, Math.min(8, Math.min(w, h) / 2), HontunTheme.argb(a, 0x000000));

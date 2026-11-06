@@ -1,5 +1,6 @@
 package cz.honzasik.hontun.gui.widget;
 
+import cz.honzasik.hontun.utils.HontunSkins;
 import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.systems.accounts.Account;
 import net.minecraft.client.Minecraft;
@@ -9,9 +10,9 @@ import net.minecraft.client.gui.components.ObjectSelectionList;
 import net.minecraft.client.gui.components.PlayerFaceExtractor;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import net.minecraft.world.item.component.ResolvableProfile;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -33,7 +34,11 @@ public class AccountCardList extends ObjectSelectionList<AccountCardList.Account
 
     @Override public int getRowWidth() { return getWidth() - 28; }
 
-    @Override protected void extractListBackground(GuiGraphicsExtractor g) {}
+    @Override
+    protected void extractListBackground(GuiGraphicsExtractor g) {
+        if (HontunTheme.terminal()) TerminalWidgets.listColumn(g, getX(), getY(), getWidth(), getHeight());
+    }
+
     @Override protected void extractListSeparators(GuiGraphicsExtractor g) {}
 
     @Override
@@ -45,7 +50,7 @@ public class AccountCardList extends ObjectSelectionList<AccountCardList.Account
 
     @Override
     protected void extractSelection(GuiGraphicsExtractor g, AccountEntry e, int outlineColor) {
-        if (HontunTheme.modern()) return;
+        if (HontunTheme.modern() || HontunTheme.terminal()) return;
         HontunCards.vanillaSelection(g, e.getX(), e.getY(), e.getWidth(), e.getHeight(), isFocused());
     }
 
@@ -60,12 +65,12 @@ public class AccountCardList extends ObjectSelectionList<AccountCardList.Account
     public class AccountEntry extends ObjectSelectionList.Entry<AccountEntry> {
         private final Account<?> account;
         private final boolean active;
-        private final ResolvableProfile profile;
+        private final UUID profileId;
 
         AccountEntry(Account<?> account, boolean active) {
             this.account = account;
             this.active = active;
-            this.profile = ResolvableProfile.createUnresolved(account.getUsername());
+            this.profileId = HontunSkins.parse(account.getCache().uuid);
         }
 
         @Override
@@ -84,13 +89,31 @@ public class AccountCardList extends ObjectSelectionList<AccountCardList.Account
             int hy = modern ? cy + 4 : cy + 2;
 
             if (HontunTheme.modern2()) HontunShapes.iconFrame(g, hx - 2, hy - 2, hs + 4);
-            PlayerFaceExtractor.extractRenderState(g, profile, hx, hy, hs);
+            PlayerFaceExtractor.extractRenderState(g, HontunSkins.skin(account.getUsername(), profileId), hx, hy, hs);
 
             int tx = modern ? hx + hs + 8 : hx + 35;
             int nameY = modern ? cy + 6 : cy + 3;
             int subY = modern ? cy + 6 + f.lineHeight + 3 : cy + 14;
 
             int room = Math.max(0, delX() - 4 - tx);
+
+            if (HontunTheme.terminal()) {
+                nameY = TerminalWidgets.stackY(cy, ch, 2, TerminalWidgets.LINE_STEP);
+                subY = nameY + TerminalWidgets.LINE_STEP;
+                g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, account.getUsername(), room)), tx, nameY,
+                        active ? TerminalWidgets.acc() : TerminalWidgets.fg(), false);
+                Component typeText = cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, account.getType().name(), room));
+                int typeW = f.width(typeText);
+                g.text(f, typeText, tx, subY, TerminalWidgets.dim(), false);
+                int gap = TerminalWidgets.width(f, "  ");
+                int restRoom = room - typeW - gap;
+                if (active && restRoom > 8) {
+                    g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, "logged in", restRoom)),
+                            tx + typeW + gap, subY, TerminalWidgets.acc(), false);
+                }
+                if (hovered) HontunCards.deleteButton(g, f, delX(), delY(), DEL, mouseX, mouseY);
+                return;
+            }
 
             int nameCol = active ? HontunTheme.textLight() : HontunTheme.subtext1();
             g.text(f, cz.honzasik.hontun.utils.HontunFont.apply(HontunCards.clip(f, account.getUsername(), room)), tx, nameY,

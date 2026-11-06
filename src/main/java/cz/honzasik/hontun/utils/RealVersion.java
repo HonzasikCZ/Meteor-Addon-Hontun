@@ -6,8 +6,10 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -33,6 +35,8 @@ public final class RealVersion {
         public String vvChannel;
         public int vvProtocol;
         public String vvName;
+        public int proxyVvProtocol;
+        public String proxyVvName;
         public String corePack;
         public boolean knownPacksReceived;
         public boolean knownPacksEmpty;
@@ -63,9 +67,19 @@ public final class RealVersion {
         public Tags tags;
         public boolean playTags;
         public String pingName;
+        public String pingSeen;
+        public int pingProtocol = -1;
     }
 
     public record Result(String text, String range, String method, boolean translated, int lo, int hi, List<String> notes) {}
+
+    public enum Fate { DECISIVE, AGREES, IGNORED, UNUSED, NONE }
+
+    public record Evidence(String source, String signal, List<String> details, String implies, boolean hint, Fate fate, String reason) {}
+
+    public record Stage(String step, String range) {}
+
+    public record Report(Result result, String missing, String confidence, String through, String disagree, List<Stage> stages, List<Evidence> evidence) {}
 
     private record TagMarker(int present, int core, String registry, String tag, String entry) {}
 
@@ -77,18 +91,22 @@ public final class RealVersion {
 
     private record Rule(int lo, int hi, String method, String why, boolean exclude) {}
 
+    public static final String TAGS = "tags";
+    public static final String REGISTRIES = "registries";
+    public static final String JOIN = "join packets";
+    public static final String CORE = "core pack";
+    public static final String VIA = "ViaVersion details";
+    public static final String PING = "ping";
+    public static final String VFP = "ViaFabricPlus";
+    public static final String OVERWORLD = "overworld";
+    public static final List<String> SOURCES = List.of(CORE, VIA, VFP, PING, TAGS, REGISTRIES, OVERWORLD, JOIN);
+
     private static final String RESOURCE = "/assets/hontun/realversion.txt";
     private static final Set<String> CONTENT = Set.of("block", "item", "entity_type", "fluid");
     private static final Set<String> TAB_INIT = Set.of("ADD_PLAYER", "INITIALIZE_CHAT", "UPDATE_GAME_MODE", "UPDATE_LISTED", "UPDATE_LATENCY", "UPDATE_DISPLAY_NAME");
     private static final Pattern UUID_NAME = Pattern.compile("^(?:[a-z0-9_.-]+:)?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$");
     private static final Pattern PING_VERSION = Pattern.compile("^(?:\\S+ )?(\\d+\\.\\d+(?:\\.\\d+)?)$");
     private static final Pattern VERSION_SPAN = Pattern.compile("^(\\d+(?:\\.\\d+)+)(?:\\.x)?(?:-(\\d+(?:\\.\\d+)+)(?:\\.x)?)?$");
-    private static final String TAGS = "tags";
-    private static final String REGISTRIES = "registries";
-    private static final String JOIN = "join packets";
-    private static final String CORE = "core pack";
-    private static final String VIA = "ViaVersion details";
-    private static final String PING = "ping";
     private static final String VIA_SERVER = "vv:server_details";
     private static final String VIA_APP = "vv:app_details";
     private static final List<String> METHOD_ORDER = List.of(CORE, VIA, TAGS, REGISTRIES, JOIN, PING);
@@ -248,8 +266,25 @@ public final class RealVersion {
     }
 
     public static Result resolve(Snapshot s) {
+        return compute(s, null);
+    }
+
+    public static Report explain(Snapshot s) {
+        Trace t = new Trace();
+        Result r = compute(s, t);
+        return t.report(r);
+    }
+
+    private static Result compute(Snapshot s, Trace t) {
         Data d = data();
-        if (d == null || s == null) return null;
+        if (d == null || s == null) {
+            if (t != null) t.missing = d == null ? "the version table did not load" : "nothing captured yet";
+            return null;
+        }
+        if (t != null) {
+            t.d = d;
+            t.s = s;
+        }
         int top = d.names.length - 1;
         List<Rule> hard = new ArrayList<>();
         List<Rule> soft = new ArrayList<>();
@@ -316,10 +351,12 @@ public final class RealVersion {
 
         Tags tags = s.tags;
         boolean tagsUsable = tags != null && !legacy;
+        int hostCount = -1;
         if (tagsUsable && via && !s.playTags) {
             Set<String> hosts = new HashSet<>();
             for (TagMarker m : d.tags) if (tags.size(m.registry, m.tag) > 0) hosts.add(m.registry + "/" + m.tag);
             tagsUsable = hosts.size() >= 3;
+            hostCount = hosts.size();
         }
         Map<Integer, int[]> tagSteps = new LinkedHashMap<>();
         Map<Integer, int[]> nameSteps = new LinkedHashMap<>();
@@ -331,8 +368,10 @@ public final class RealVersion {
                 if (c == 1) {
                     st[0]++;
                     hard.add(new Rule(m.present, top, TAGS, "#" + m.registry + "/" + m.tag + " contains " + m.entry, false));
+                    if (t != null) t.entryPresent++;
                 } else if (c == 0) {
                     st[1]++;
+                    if (t != null) t.missingEntries.computeIfAbsent(m.core, k -> new ArrayList<>()).add("#" + m.registry + "/" + m.tag + " without " + m.entry);
                 }
             }
             for (NameMarker m : d.tagNames) {
@@ -342,19 +381,26 @@ public final class RealVersion {
                 if (size >= 0) {
                     st[0]++;
                     hard.add(new Rule(m.present, top, TAGS, "tag #" + m.registry + "/" + m.tag, false));
+                    if (t != null) t.namePresent++;
                 } else if (CONTENT.contains(m.registry) && tags.tagCount(m.registry) >= 10) {
                     st[1]++;
+                    if (t != null) t.missingNames.computeIfAbsent(m.core, k -> new ArrayList<>()).add("no tag #" + m.registry + "/" + m.tag);
                 }
             }
+        }
+        if (t != null) {
+            if (tags == null) t.tagState = "no tags received yet";
+            else if (legacy) t.tagState = "not used, ViaVersion makes them up for a 1.12.2 or older backend";
+            else if (!tagsUsable) t.tagState = "not used, ViaVersion's configuration tags are nearly empty (" + hostCount + " marker tags filled)";
         }
 
         for (Map.Entry<Integer, int[]> e : tagSteps.entrySet()) {
             int[] st = e.getValue();
-            if (st[0] == 0 && st[1] > 0 && st[1] >= Math.min(2, st[2])) soft.add(new Rule(0, e.getKey() - 1, TAGS, st[1] + " tag entries of " + d.names[e.getKey()] + " missing", false));
+            if (st[0] == 0 && st[1] > 0 && st[1] >= Math.min(2, st[2])) add(t, soft, new Rule(0, e.getKey() - 1, TAGS, st[1] + " tag entries of " + d.names[e.getKey()] + " missing", false), null, null, t == null ? null : t.missingEntries.get(e.getKey()));
         }
         for (Map.Entry<Integer, int[]> e : nameSteps.entrySet()) {
             int[] st = e.getValue();
-            if (st[0] == 0 && st[1] >= Math.min(2, st[2]) && st[1] > 0) soft.add(new Rule(0, e.getKey() - 1, TAGS, st[1] + " tags of " + d.names[e.getKey()] + " missing", false));
+            if (st[0] == 0 && st[1] >= Math.min(2, st[2]) && st[1] > 0) add(t, soft, new Rule(0, e.getKey() - 1, TAGS, st[1] + " tags of " + d.names[e.getKey()] + " missing", false), null, null, t == null ? null : t.missingNames.get(e.getKey()));
         }
         if (vanillaBiomes) {
             Set<String> have = new HashSet<>(biomes);
@@ -368,12 +414,12 @@ public final class RealVersion {
                 }
             }
             for (Map.Entry<Integer, Boolean> e : steps.entrySet()) {
-                if (!e.getValue()) soft.add(new Rule(0, e.getKey() - 1, REGISTRIES, "no biome of " + d.names[e.getKey()], false));
+                if (!e.getValue()) add(t, soft, new Rule(0, e.getKey() - 1, REGISTRIES, "no biome of " + d.names[e.getKey()], false), null, null, t == null ? null : biomesOf(d, e.getKey(), false));
             }
             if (anyOld && !oldNames) {
                 int after = 0;
                 for (BiomeMarker m : d.biomes) if (m.present < 0 && m.last < top) after = Math.max(after, m.last + 1);
-                soft.add(new Rule(after, top, REGISTRIES, "none of the biomes removed in " + d.names[after], false));
+                add(t, soft, new Rule(after, top, REGISTRIES, "none of the biomes removed in " + d.names[after], false), null, null, t == null ? null : biomesOf(d, after, true));
             }
         }
         if (tabShape && !s.firstTabActions.contains("UPDATE_LIST_ORDER")) soft.add(at(d, null, "1.21.1", JOIN, "tab list without the list-order action"));
@@ -381,8 +427,8 @@ public final class RealVersion {
         boolean limbo = s.configFinished && !s.featuresSeen && !via;
         if (s.loggedIn && !s.tickingState && !limbo && s.sinceLoginMs >= 3000) soft.add(at(d, null, "1.20.2", JOIN, "no ticking-state packet"));
         if (s.loggedIn && s.seaLevel == 64) soft.add(at(d, null, "1.21.1", JOIN, "sea level 64 (ViaVersion default for 1.21.1 and older)"));
-        if (s.overworldMinY == 0 && s.overworldHeight == 256) soft.add(at(d, null, "1.17.1", REGISTRIES, "overworld height 0-256"));
-        else if (s.overworldMinY == -64 && s.overworldHeight == 384) soft.add(at(d, "1.18", null, REGISTRIES, "overworld height -64-320"));
+        if (s.overworldMinY == 0 && s.overworldHeight == 256) add(t, soft, at(d, null, "1.17.1", REGISTRIES, "overworld height 0-256"), OVERWORLD, "height 256 from y 0", null);
+        else if (s.overworldMinY == -64 && s.overworldHeight == 384) add(t, soft, at(d, "1.18", null, REGISTRIES, "overworld height -64-320"), OVERWORLD, "height 384 from y -64", null);
         if (s.brandInConfig) soft.add(at(d, "1.20.2", null, JOIN, "brand sent in the configuration phase"));
         else if (via && s.brandInPlay) soft.add(at(d, null, "1.20.1", JOIN, "brand sent only after login"));
         if (via && s.loggedIn && s.loginSeed == 0) soft.add(at(d, null, "1.14.4", JOIN, "hashed seed 0"));
@@ -400,11 +446,26 @@ public final class RealVersion {
         int n = top + 1;
         List<Rule> unique = new ArrayList<>();
         Set<String> seenRules = new HashSet<>();
-        for (Rule r : hard) if (seenRules.add(r.method + "|" + r.lo + "|" + r.hi + "|" + r.exclude)) unique.add(r);
+        Map<String, Rule> firstByKey = new HashMap<>();
+        for (Rule r : hard) {
+            String key = r.method + "|" + r.lo + "|" + r.hi + "|" + r.exclude;
+            if (seenRules.add(key)) {
+                unique.add(r);
+                firstByKey.put(key, r);
+            }
+            if (t != null) t.uniqueOf.put(r, firstByKey.get(key));
+        }
         int[] score = new int[n];
         for (Rule r : unique) for (int i = 0; i < n; i++) if (satisfies(r, i)) score[i]++;
         int best = 0;
         for (int i = 0; i < n; i++) best = Math.max(best, score[i]);
+        if (t != null) {
+            boolean[] fit = new boolean[n];
+            for (int i = 0; i < n; i++) fit[i] = score[i] == best;
+            t.bestText = t.span(fit);
+            t.hard = hard;
+            t.soft = soft;
+        }
         List<Rule> accepted = new ArrayList<>();
         for (String method : METHOD_ORDER) {
             for (Rule r : unique) {
@@ -412,20 +473,29 @@ public final class RealVersion {
                 boolean agrees = false;
                 for (int i = 0; i < n && !agrees; i++) if (score[i] == best && satisfies(r, i)) agrees = true;
                 if (agrees) accepted.add(r);
-                else notes.add("ignored: " + r.why);
+                else {
+                    notes.add("ignored: " + r.why);
+                    if (t != null) t.rejected.add(r);
+                }
             }
         }
         Set<String> credited = new LinkedHashSet<>();
-        boolean[] hardMask = run(n, accepted, List.of(), Set.of(), new HashSet<>(), notes);
-        boolean[] mask = run(n, accepted, soft, Set.of(), credited, null);
+        boolean[] hardMask = run(n, accepted, List.of(), Set.of(), new HashSet<>(), notes, t == null ? null : t.clashed);
+        boolean[] mask = run(n, accepted, soft, Set.of(), credited, null, t == null ? null : t.failed);
         Set<String> removed = new HashSet<>();
         for (String m : List.of(REGISTRIES, JOIN, TAGS)) {
             Set<String> skip = new HashSet<>(removed);
             skip.add(m);
-            if (Arrays.equals(run(n, accepted, soft, skip, new HashSet<>(), null), mask)) removed.add(m);
+            if (Arrays.equals(run(n, accepted, soft, skip, new HashSet<>(), null, null), mask)) removed.add(m);
         }
         credited.clear();
-        run(n, accepted, soft, removed, credited, null);
+        run(n, accepted, soft, removed, credited, null, null);
+        if (t != null) {
+            t.hardMask = hardMask.clone();
+            t.softMask = mask.clone();
+            t.stage("hard evidence", hardMask);
+            t.stage("hints", mask);
+        }
 
         boolean vfp = s.vfpProtocol > 0 && s.vfpProtocol != s.clientProtocol;
         String vfpLabel = s.vfpName != null ? s.vfpName : "protocol " + s.vfpProtocol;
@@ -434,9 +504,14 @@ public final class RealVersion {
         if (vfp) {
             target = s.vfpName != null ? spec(d, s.vfpName) : null;
             if (target == null) target = protocolRange(d, s.vfpProtocol);
+            boolean[] before = t == null ? null : mask.clone();
             open(hardMask, target);
             opened = open(mask, target);
             if (opened) notes.add("ViaFabricPlus translates from " + vfpLabel + ", every newer backend looks the same");
+            if (t != null) t.viaFabricPlus(vfpLabel, target, before, opened, mask);
+        } else if (t != null) {
+            t.fix(new Evidence(VFP, s.vfpProtocol > 0 ? vfpLabel : "not installed", List.of(), null, false, s.vfpProtocol > 0 ? Fate.UNUSED : Fate.NONE,
+                    s.vfpProtocol > 0 ? "not translating, it targets the client's own version" : null));
         }
 
         String core = core(s.corePack);
@@ -444,7 +519,17 @@ public final class RealVersion {
         String viaName = s.vvName != null ? s.vvName : "protocol " + s.vvProtocol;
         String disagree = null;
         String pinned = null;
-        boolean[] exactMask = hardMask.clone();
+        int backendProto = -1;
+        if (viaBackend && s.vvProtocol > 0) backendProto = s.vvProtocol;
+        else if (core != null) { int[] cr = spec(d, core); if (cr != null) backendProto = d.protocols()[cr[0]]; }
+        boolean viaTranslated = vfp || (backendProto > 0 && s.clientProtocol > 0 && backendProto != s.clientProtocol);
+        boolean[] exactMask;
+        if (viaTranslated) {
+            exactMask = new boolean[n];
+            Arrays.fill(exactMask, true);
+        } else {
+            exactMask = hardMask.clone();
+        }
         Set<String> exactBy = new LinkedHashSet<>();
         for (int k = 0; k < 2; k++) {
             boolean isCore = k == 0;
@@ -452,15 +537,20 @@ public final class RealVersion {
             String method = isCore ? CORE : VIA;
             String name = isCore ? core : viaName;
             String why = isCore ? "core pack " + s.corePack : s.vvChannel + " says " + viaName;
+            String signal = isCore ? "minecraft:core " + s.corePack : s.vvChannel + " says " + viaName + (s.vvName != null ? " (protocol " + s.vvProtocol + ")" : "");
             int[] r = isCore ? spec(d, core) : s.vvName != null ? spec(d, s.vvName) : null;
             if (r == null && !isCore) r = protocolRange(d, s.vvProtocol);
+            String implied = r != null ? rangeText(d, r[0], r[1]) : name;
+            boolean[] before = t == null ? null : exactMask.clone();
             if (r != null) {
                 if (pinned == null && narrow(exactMask, new Rule(r[0], r[1], method, why, false), new HashSet<>())) {
                     exactBy.add(method);
+                    if (t != null) t.pin(method, signal, implied, before, exactMask, "pins it");
                     continue;
                 }
             } else if (pinned != null && pinned.equals(name)) {
                 exactBy.add(method);
+                if (t != null) t.fix(new Evidence(method, signal, List.of(), implied, false, Fate.AGREES, "agrees with the core pack"));
                 continue;
             } else {
                 int side = outside(d, isCore ? core : s.vvName);
@@ -471,16 +561,23 @@ public final class RealVersion {
                     pinned = name;
                     exactBy.add(method);
                     notes.add(why + " is " + (side > 0 ? "newer" : "older") + " than the table");
+                    if (t != null) {
+                        t.fix(new Evidence(method, signal, List.of(), implied, false, Fate.DECISIVE, "pins it, " + (side > 0 ? "newer" : "older") + " than the version table so taken as is"));
+                        t.stages.add(new Stage(method, name));
+                    }
                     continue;
                 }
             }
             if (disagree == null) disagree = (isCore ? "core pack says " : "ViaVersion says ") + name;
             notes.add("not used: " + why + " (evidence says " + maskText(d, exactMask) + ")");
+            if (t != null) t.fix(new Evidence(method, signal, List.of(), implied, false, Fate.IGNORED,
+                    r == null && outside(d, isCore ? core : s.vvName) == 0 ? "ignored, not in the version table" : "ignored, the evidence says " + maskText(d, exactMask)));
         }
         if (!exactBy.isEmpty()) {
             mask = exactMask;
             credited.clear();
             credited.add(exactBy.contains(CORE) ? CORE : VIA);
+            if (viaTranslated) notes.add((vfp ? "ViaFabricPlus" : "ViaVersion") + " synthesises the translated version's tags and registries, so the backend version is taken from the " + (exactBy.contains(CORE) ? "core pack" : "ViaVersion report") + " instead");
         }
 
         int lo = -1, hi = -1;
@@ -489,7 +586,16 @@ public final class RealVersion {
             if (lo < 0) lo = i;
             hi = i;
         }
-        if (lo < 0) return null;
+        if (t != null) {
+            t.exactBy = exactBy.isEmpty() ? null : exactBy.contains(CORE) ? CORE : VIA;
+            t.disagree = disagree;
+            t.ping(mask, lo, hi, pinned);
+        }
+        if (lo < 0) {
+            if (t != null) t.missing = "the signals leave no version possible";
+            return null;
+        }
+        boolean pingUsed = false;
         if (s.pingName != null && pinned == null && lo < hi) {
             Matcher m = PING_VERSION.matcher(s.pingName.trim());
             if (m.matches()) {
@@ -502,15 +608,27 @@ public final class RealVersion {
                     hi = p;
                     if (hidden && exactBy.isEmpty()) credited.clear();
                     credited.add(PING);
+                    pingUsed = true;
+                    if (t != null) t.stages.add(new Stage(PING, d.names[p]));
                 }
             }
         }
         if (lo == 0 && hi == top && pinned == null) {
-            if (!opened) return null;
+            if (!opened) {
+                if (t != null) t.missing = "nothing has narrowed the range yet";
+                return null;
+            }
             String range = "unknown";
+            if (t != null) {
+                t.through = VFP + " " + vfpLabel;
+                t.confidence = "low";
+            }
             return new Result(range + " (hidden by ViaFabricPlus " + vfpLabel + ")", range, "", true, lo, hi, List.copyOf(notes));
         }
-        if (credited.isEmpty()) return null;
+        if (credited.isEmpty()) {
+            if (t != null) t.missing = "no signal narrowed the range";
+            return null;
+        }
 
         List<String> ordered = new ArrayList<>();
         for (String m : METHOD_ORDER) if (credited.contains(m)) ordered.add(m);
@@ -528,19 +646,54 @@ public final class RealVersion {
         else if (translated) text.append(", through ViaVersion");
         if (disagree != null) text.append("; ").append(disagree);
         text.append(')');
+        if (t != null) {
+            t.through = vfp ? VFP + " " + vfpLabel : translated ? "ViaVersion" : null;
+            t.confidence = confidence(t, !exactBy.isEmpty(), disagree, opened, pingUsed);
+        }
         return new Result(text.toString(), range, method, translated, lo, hi, List.copyOf(notes));
     }
 
-    private static boolean[] run(int n, List<Rule> hard, List<Rule> soft, Set<String> skip, Set<String> credited, List<String> notes) {
+    private static String confidence(Trace t, boolean exact, String disagree, boolean opened, boolean pingUsed) {
+        if (exact) return disagree == null ? "high" : "medium";
+        if (opened) return pingUsed ? "medium" : "low";
+        boolean hardNarrowed = false;
+        for (boolean b : t.hardMask) hardNarrowed |= !b;
+        if (!hardNarrowed) return "low";
+        boolean contradicted = !t.rejected.isEmpty() || !t.clashed.isEmpty();
+        if (pingUsed || contradicted || !Arrays.equals(t.hardMask, t.softMask)) return "medium";
+        return "high";
+    }
+
+    private static void add(Trace t, List<Rule> list, Rule r, String source, String signal, List<String> details) {
+        list.add(r);
+        if (t == null) return;
+        if (source != null) t.sourceOf.put(r, source);
+        if (signal != null) t.signalOf.put(r, signal);
+        if (details != null) t.details.put(r, List.copyOf(details));
+    }
+
+    private static List<String> biomesOf(Data d, int version, boolean removed) {
+        List<String> out = new ArrayList<>();
+        int top = d.names.length - 1;
+        for (BiomeMarker m : d.biomes) {
+            if (removed ? m.present < 0 && m.last < top : m.core == version) out.add(m.name);
+        }
+        return out;
+    }
+
+    private static boolean[] run(int n, List<Rule> hard, List<Rule> soft, Set<String> skip, Set<String> credited, List<String> notes, Set<Rule> failed) {
         boolean[] mask = new boolean[n];
         Arrays.fill(mask, true);
         for (Rule r : hard) {
             if (skip.contains(r.method)) continue;
-            if (!narrow(mask, r, credited) && notes != null) notes.add("ignored: " + r.why);
+            if (!narrow(mask, r, credited)) {
+                if (notes != null) notes.add("ignored: " + r.why);
+                if (failed != null) failed.add(r);
+            }
         }
         for (Rule r : soft) {
             if (skip.contains(r.method)) continue;
-            narrow(mask, r, credited);
+            if (!narrow(mask, r, credited) && failed != null) failed.add(r);
         }
         return mask;
     }
@@ -621,5 +774,219 @@ public final class RealVersion {
         if (lo < 0) lo = 0;
         if (hi < 0) hi = d.names.length - 1;
         return new Rule(lo, hi, method, why, false);
+    }
+
+    private static final class Trace {
+        Data d;
+        Snapshot s;
+        String missing;
+        String disagree;
+        String through;
+        String confidence;
+        String exactBy;
+        String bestText;
+        String tagState;
+        int entryPresent;
+        int namePresent;
+        boolean[] hardMask;
+        boolean[] softMask;
+        List<Rule> hard = List.of();
+        List<Rule> soft = List.of();
+        final Map<Integer, List<String>> missingEntries = new HashMap<>();
+        final Map<Integer, List<String>> missingNames = new HashMap<>();
+        final Map<Rule, Rule> uniqueOf = new IdentityHashMap<>();
+        final Map<Rule, String> sourceOf = new IdentityHashMap<>();
+        final Map<Rule, String> signalOf = new IdentityHashMap<>();
+        final Map<Rule, List<String>> details = new IdentityHashMap<>();
+        final Set<Rule> rejected = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<Rule> failed = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Set<Rule> clashed = Collections.newSetFromMap(new IdentityHashMap<>());
+        final Map<String, List<Evidence>> fixed = new HashMap<>();
+        final List<Stage> stages = new ArrayList<>();
+
+        String span(boolean[] mask) {
+            boolean all = true;
+            for (boolean b : mask) all &= b;
+            return all ? "any version" : maskText(d, mask);
+        }
+
+        void stage(String step, boolean[] mask) {
+            stages.add(new Stage(step, span(mask)));
+        }
+
+        void fix(Evidence e) {
+            fixed.computeIfAbsent(e.source(), k -> new ArrayList<>()).add(e);
+        }
+
+        void pin(String method, String signal, String implied, boolean[] before, boolean[] after, String reason) {
+            boolean changed = !Arrays.equals(before, after);
+            fix(new Evidence(method, signal, List.of(), implied, false, changed ? Fate.DECISIVE : Fate.AGREES, changed ? reason : "confirms it"));
+            if (changed) stage(method, after);
+        }
+
+        void viaFabricPlus(String label, int[] target, boolean[] before, boolean opened, boolean[] after) {
+            String implied = target == null ? null : rangeText(d, target[0], target[1]);
+            if (opened) {
+                boolean changed = !Arrays.equals(before, after);
+                fix(new Evidence(VFP, "translating from " + label, List.of(), implied, false, changed ? Fate.DECISIVE : Fate.AGREES,
+                        changed ? "opens the range upward, every newer backend looks the same through it" : "agrees, nothing newer was ruled out"));
+                if (changed) stage(VFP, after);
+            } else {
+                fix(new Evidence(VFP, "translating from " + label, List.of(), implied, false, Fate.UNUSED,
+                        "not used, the evidence (" + span(before) + ") does not reach its target"));
+            }
+        }
+
+        void ping(boolean[] mask, int lo, int hi, String pinned) {
+            if (s.pingName == null) {
+                if (s.pingSeen != null) {
+                    fix(new Evidence(PING, quote(s.pingSeen), List.of(), null, false, Fate.UNUSED, "not used, a proxy moved you to another backend since the ping"));
+                } else {
+                    fix(new Evidence(PING, "none", List.of(), null, false, Fate.NONE, "no server-list ping for this server"));
+                }
+                return;
+            }
+            String signal = quote(s.pingName);
+            Matcher m = PING_VERSION.matcher(s.pingName.trim());
+            if (!m.matches()) {
+                fix(new Evidence(PING, signal, List.of(), null, false, Fate.UNUSED, "not used, not a plain version number"));
+                return;
+            }
+            int p = indexOf(d, m.group(1));
+            if (p < 0) {
+                fix(new Evidence(PING, signal, List.of(), m.group(1), false, Fate.UNUSED, "not used, not in the version table"));
+                return;
+            }
+            String implied = d.names[p];
+            if (pinned != null) fix(new Evidence(PING, signal, List.of(), implied, false, Fate.UNUSED, "not used, " + pinned + " is already pinned"));
+            else if (lo < 0 || !mask[p]) fix(new Evidence(PING, signal, List.of(), implied, false, Fate.IGNORED, "ignored, the evidence says " + (lo < 0 ? "?" : maskText(d, mask))));
+            else if (lo == hi) fix(new Evidence(PING, signal, List.of(), implied, false, Fate.AGREES, "agrees"));
+            else fix(new Evidence(PING, signal, List.of(), implied, false, Fate.DECISIVE, "picks it out of " + maskText(d, mask)));
+        }
+
+        String quote(String ping) {
+            return "\"" + ping + "\"" + (s.pingProtocol > 0 ? " (protocol " + s.pingProtocol + ")" : "");
+        }
+
+        Report report(Result r) {
+            if (d == null || s == null) return new Report(r, missing, confidence, through, disagree, List.copyOf(stages), List.of());
+            if (r != null) stages.add(new Stage("named", r.range()));
+            List<Evidence> out = new ArrayList<>();
+            List<Evidence> core = fixed.get(CORE);
+            if (core != null) out.addAll(core);
+            else {
+                String why = !s.knownPacksReceived ? "no known-packs list received" : s.knownPacksEmpty ? "the known-packs list was empty" : "no minecraft:core entry in the known-packs list";
+                out.add(new Evidence(CORE, "none", List.of(), null, false, Fate.NONE, why));
+            }
+            List<Evidence> via = fixed.get(VIA);
+            if (via != null) out.addAll(via);
+            else if (s.vvChannel != null) out.add(new Evidence(VIA, s.vvChannel, List.of(), null, false, Fate.NONE, "carried no version"));
+            else out.add(new Evidence(VIA, "none", List.of(), null, false, Fate.NONE, "no vv:server_details or vv:app_details payload"));
+            if (s.proxyVvProtocol > 0) {
+                String name = s.proxyVvName != null ? s.proxyVvName : "protocol " + s.proxyVvProtocol;
+                out.add(new Evidence(VIA, "vv:proxy_details says " + name + (s.proxyVvName != null ? " (protocol " + s.proxyVvProtocol + ")" : ""), List.of(), null, false, Fate.UNUSED,
+                        "not used, it describes the proxy, not the backend"));
+            }
+            out.addAll(fixed.getOrDefault(VFP, List.of(new Evidence(VFP, "not installed", List.of(), null, false, Fate.NONE, null))));
+            out.addAll(fixed.getOrDefault(PING, List.of(new Evidence(PING, "none", List.of(), null, false, Fate.NONE, "not checked"))));
+
+            out.add(new Evidence(TAGS, tagState != null ? tagState
+                    : entryPresent + " of " + d.tags.size() + " entry markers and " + namePresent + " of " + d.tagNames.size() + " tag names present"
+                    + (s.playTags ? "" : ", configuration tags only"), List.of(), null, false, Fate.NONE, null));
+            groups(out, TAGS);
+            hints(out, TAGS);
+
+            List<String> biomes = s.registries.get("minecraft:worldgen/biome");
+            out.add(new Evidence(REGISTRIES, biomes == null ? "no biome registry received" : biomes.size() + " biomes received", List.of(), null, false, Fate.NONE, null));
+            groups(out, REGISTRIES);
+            hints(out, REGISTRIES);
+
+            int before = out.size();
+            hints(out, OVERWORLD);
+            if (out.size() == before) {
+                out.add(new Evidence(OVERWORLD, s.overworldHeight == Integer.MIN_VALUE ? "no overworld dimension received"
+                        : "height " + s.overworldHeight + " from y " + s.overworldMinY, List.of(), null, false, Fate.NONE,
+                        s.overworldHeight == Integer.MIN_VALUE ? null : "custom, says nothing"));
+            }
+
+            before = out.size();
+            for (Rule raw : hard) if (raw.method.equals(JOIN)) out.add(evidence(JOIN, raw.why, List.of(), uniqueOf.get(raw), false));
+            hints(out, JOIN);
+            if (out.size() == before) out.add(new Evidence(JOIN, "nothing telling yet", List.of(), null, false, Fate.NONE, null));
+
+            return new Report(r, missing, confidence, through, disagree, List.copyOf(stages), List.copyOf(out));
+        }
+
+        private void groups(List<Evidence> out, String source) {
+            Map<Rule, List<String>> groups = new LinkedHashMap<>();
+            for (Rule raw : hard) if (raw.method.equals(source)) groups.computeIfAbsent(uniqueOf.get(raw), k -> new ArrayList<>()).add(raw.why);
+            List<Map.Entry<Rule, List<String>>> list = new ArrayList<>(groups.entrySet());
+            list.sort((a, b) -> a.getKey().lo != b.getKey().lo ? Integer.compare(b.getKey().lo, a.getKey().lo) : Integer.compare(a.getKey().hi, b.getKey().hi));
+            for (Map.Entry<Rule, List<String>> e : list) out.add(evidence(source, e.getValue().get(0), List.copyOf(e.getValue()), e.getKey(), false));
+        }
+
+        private void hints(List<Evidence> out, String source) {
+            for (Rule r : soft) {
+                if (!sourceOf.getOrDefault(r, r.method).equals(source)) continue;
+                out.add(evidence(source, signalOf.getOrDefault(r, r.why), details.getOrDefault(r, List.of()), r, true));
+            }
+        }
+
+        private Evidence evidence(String source, String signal, List<String> list, Rule r, boolean hint) {
+            Fate fate;
+            String reason;
+            if (!hint && rejected.contains(r)) {
+                fate = Fate.IGNORED;
+                reason = "ignored, the rest of the evidence points to " + bestText;
+            } else if (failed.contains(r)) {
+                fate = Fate.IGNORED;
+                reason = hint ? "hint ignored, clashes with stronger signals" : "ignored, clashes with the signals applied before it";
+            } else if (hint && exactBy != null) {
+                fate = Fate.UNUSED;
+                reason = "hint dropped, the version is pinned by the " + exactBy;
+            } else {
+                String bound = hint ? bind(r, hardMask, softMask) : bind(r, null, hardMask);
+                fate = bound != null ? Fate.DECISIVE : Fate.AGREES;
+                reason = bound != null ? (hint ? "hint, " + bound : bound) : hint ? "hint, agrees" : "already implied";
+            }
+            return new Evidence(source, signal, list, implies(r), hint, fate, reason);
+        }
+
+        private String bind(Rule r, boolean[] base, boolean[] now) {
+            int top = now.length - 1;
+            int lo = low(now), hi = high(now);
+            int blo = base == null ? 0 : low(base), bhi = base == null ? top : high(base);
+            if (lo < 0) return null;
+            if (r.exclude) {
+                if (r.hi + 1 == lo && lo > blo) return "sets the floor";
+                if (r.lo - 1 == hi && hi < bhi) return "sets the ceiling";
+                return r.lo > lo && r.hi < hi ? "cuts out " + rangeText(d, r.lo, r.hi) : null;
+            }
+            boolean floor = r.lo > 0 && r.lo == lo && lo > blo;
+            boolean ceiling = r.hi < top && r.hi == hi && hi < bhi;
+            if (floor && ceiling) return "sets both ends";
+            if (floor) return "sets the floor";
+            if (ceiling) return "sets the ceiling";
+            return null;
+        }
+
+        private String implies(Rule r) {
+            int top = d.names.length - 1;
+            if (r.exclude) return "not " + rangeText(d, r.lo, r.hi);
+            if (r.lo <= 0 && r.hi >= top) return "any version";
+            if (r.lo <= 0) return last(d.names[r.hi]) + " or older";
+            if (r.hi >= top) return first(d.names[r.lo]) + " or newer";
+            return rangeText(d, r.lo, r.hi);
+        }
+
+        private static int low(boolean[] mask) {
+            for (int i = 0; i < mask.length; i++) if (mask[i]) return i;
+            return -1;
+        }
+
+        private static int high(boolean[] mask) {
+            for (int i = mask.length - 1; i >= 0; i--) if (mask[i]) return i;
+            return -1;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package cz.honzasik.hontun.mixin.client.multiplayer;
 
 import cz.honzasik.hontun.gui.widget.HontunShapes;
+import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractScrollArea;
@@ -14,6 +15,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class ScrollbarStyleMixin {
     @Inject(method = "extractScrollbar", at = @At("HEAD"), cancellable = true)
     private void hontun$themedScrollbar(GuiGraphicsExtractor g, int mouseX, int mouseY, CallbackInfo ci) {
+        if (HontunTheme.terminal()) {
+            AbstractScrollArea area = (AbstractScrollArea) (Object) this;
+            if (!area.scrollable()) return;
+            TerminalWidgets.scrollbar(g, area.scrollBarX(), area.getY(), area.getBottom(),
+                    area.scrollbarWidth(), area.scrollBarY(), area.scrollerHeight());
+            ci.cancel();
+            return;
+        }
         if (!HontunTheme.modern()) return;
         Object self = this;
         if (!(self instanceof ServerSelectionList list)) return;
