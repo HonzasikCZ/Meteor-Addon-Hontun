@@ -1,18 +1,22 @@
 package cz.honzasik.hontun.utils;
 
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.network.Connection;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.protocol.common.ClientboundStoreCookiePacket;
+import net.minecraft.network.protocol.common.ClientboundTransferPacket;
 import net.minecraft.network.protocol.cookie.ClientboundCookieRequestPacket;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,6 +31,8 @@ public final class CookieObserver {
     private static final AtomicBoolean DIRTY = new AtomicBoolean(false);
     private static volatile String server = null;
     private static volatile Path file = null;
+    private static volatile Connection connection = null;
+    private static volatile boolean transferring = false;
 
     private CookieObserver() {}
 
@@ -39,15 +45,34 @@ public final class CookieObserver {
         volatile long last = System.currentTimeMillis();
     }
 
-    public static void observe(Object packet) {
+    public static void connecting(String address) {
+        connection = null;
+        if (transferring) {
+            transferring = false;
+            return;
+        }
+        clear();
+        open(address);
+    }
+
+    public static void observe(Object packet, Connection from) {
+        connection = from;
         if (packet instanceof ClientboundStoreCookiePacket store) {
             record(store.key().toString(), store.payload(), true);
         } else if (packet instanceof ClientboundCookieRequestPacket request) {
             record(request.key().toString(), null, false);
+        } else if (packet instanceof ClientboundTransferPacket) {
+            transferring = true;
         }
     }
 
+    private static void open(String address) {
+        server = address;
+        file = dir().resolve(sanitize(address) + ".txt");
+    }
+
     private static void record(String key, byte[] payload, boolean store) {
+        if (server == null) open("direct");
         Entry e = COOKIES.get(key);
         if (e == null) {
             if (COOKIES.size() >= MAX_COOKIES) return;
@@ -76,28 +101,9 @@ public final class CookieObserver {
     }
 
     public static void tick() {
-        String now = currentServer();
-        if (now == null) {
-            if (server != null) { COOKIES.clear(); server = null; file = null; DIRTY.set(false); }
-            return;
-        }
-        if (!now.equals(server)) {
-            COOKIES.clear();
-            server = now;
-            file = dir().resolve(sanitize(now) + ".txt");
-            DIRTY.set(false);
-            return;
-        }
         if (DIRTY.getAndSet(false) && !COOKIES.isEmpty()) write();
-    }
-
-    private static String currentServer() {
-        try {
-            var data = MCUtil.MC.getCurrentServer();
-            if (data != null && data.ip != null && !data.ip.isBlank()) return data.ip;
-            if (MCUtil.getPlayNetHandler() != null) return "direct";
-        } catch (Throwable ignored) {}
-        return null;
+        Connection c = connection;
+        if (c != null && !c.isConnected() && !transferring) clear();
     }
 
     private static Path dir() {
@@ -129,8 +135,8 @@ public final class CookieObserver {
             String kind = e.stored && e.requested ? "STORE+REQUEST" : e.stored ? "STORE" : "REQUEST";
             sb.append('[').append(kind).append("]  ").append(me.getKey());
             if (e.stored) sb.append("   ").append(e.size).append(" B");
-            sb.append("   first=").append(LocalTime.ofSecondOfDay((e.first / 1000) % 86400).format(TIME));
-            sb.append(" last=").append(LocalTime.ofSecondOfDay((e.last / 1000) % 86400).format(TIME)).append('\n');
+            sb.append("   first=").append(clock(e.first));
+            sb.append(" last=").append(clock(e.last)).append('\n');
             if (e.stored && e.hex != null && !e.hex.isEmpty()) sb.append("  hex: ").append(e.hex.replace("\n", "\n       ")).append('\n');
             sb.append('\n');
         }
@@ -138,6 +144,10 @@ public final class CookieObserver {
             Files.createDirectories(f.getParent());
             Files.writeString(f, sb.toString(), StandardCharsets.UTF_8);
         } catch (IOException ignored) {}
+    }
+
+    private static String clock(long millis) {
+        return Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalTime().format(TIME);
     }
 
     private static boolean hspooferBlocking() {
@@ -167,10 +177,11 @@ public final class CookieObserver {
         return msg;
     }
 
-    public static void reset() {
+    private static void clear() {
         COOKIES.clear();
         server = null;
         file = null;
+        connection = null;
         DIRTY.set(false);
     }
 

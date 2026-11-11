@@ -42,11 +42,12 @@ public class CaptchaSolver extends Module {
 
     private final Setting<Keybind> solveKey = sgGeneral.add(new KeybindSetting.Builder()
         .name("solve-key")
-        .description("Solve the current map on demand, ignoring the confidence gate and cooldown.")
+        .description("Read the last map on demand, ignoring every gate and the cooldown.")
         .defaultValue(Keybind.fromKey(-1))
         .build());
 
-    private volatile byte[] pending;
+    private volatile byte[] lastMap;
+    private volatile boolean dirty;
     private boolean prevPressed;
     private String lastSent;
     private long lastSendAt;
@@ -58,7 +59,8 @@ public class CaptchaSolver extends Module {
 
     @Override
     public void onActivate() {
-        pending = null;
+        lastMap = null;
+        dirty = false;
         lastSent = null;
         prevPressed = false;
         CaptchaModel.get();
@@ -73,7 +75,8 @@ public class CaptchaSolver extends Module {
         if (patch.startX() != 0 || patch.startY() != 0 || patch.width() != 128 || patch.height() != 128) return;
         byte[] colors = patch.mapColors();
         if (colors == null || colors.length != 128 * 128) return;
-        pending = colors.clone();
+        lastMap = colors.clone();
+        dirty = true;
     }
 
     @EventHandler
@@ -82,9 +85,11 @@ public class CaptchaSolver extends Module {
         boolean force = pressed && !prevPressed;
         prevPressed = pressed;
 
-        byte[] colors = pending;
+        boolean hasNew = dirty;
+        dirty = false;
+        byte[] colors = lastMap;
         if (colors == null) return;
-        pending = null;
+        if (!hasNew && !force) return;
 
         CaptchaNet net = CaptchaModel.get();
         if (net == null) {
@@ -94,6 +99,8 @@ public class CaptchaSolver extends Module {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.player.connection == null) return;
 
+        if (!force && !CaptchaMap.plausibleCaptcha(colors)) return;
+
         CaptchaNet.Result r = net.recognizeGray(CaptchaMap.toGray(colors, net));
         if (r.text.isEmpty()) {
             if (force) warning("Could not read a code on the map.");
@@ -101,8 +108,7 @@ public class CaptchaSolver extends Module {
         }
         int pct = Math.round(r.confidence * 100);
 
-        boolean doSend = mode.get() == Mode.Send && (force || r.confidence >= minConfidence.get());
-        if (doSend) {
+        if (mode.get() == Mode.Send && (force || r.confidence >= minConfidence.get())) {
             long now = System.currentTimeMillis();
             if (!force && r.text.equals(lastSent) && now - lastSendAt < 5000) return;
             lastSent = r.text;

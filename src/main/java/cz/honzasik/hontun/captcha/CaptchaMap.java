@@ -43,4 +43,22 @@ public final class CaptchaMap {
         }
         return gray;
     }
+
+    public static boolean plausibleCaptcha(byte[] mapColors) {
+        int n = mapColors.length;
+        if (n == 0) return false;
+        int[] hist = new int[256];
+        for (int i = 0; i < n; i++) hist[mapColors[i] & 0xFF]++;
+        int dominant = 0, distinct = 0;
+        int sig = Math.max(1, n / 300);
+        for (int v = 0; v < 256; v++) {
+            int c = hist[v];
+            if (c > dominant) dominant = c;
+            if (c >= sig) distinct++;
+        }
+        double domFrac = (double) dominant / n;
+        if (domFrac >= 0.999) return false;
+        if (domFrac < 0.12 && distinct > 20) return false;
+        return true;
+    }
 }

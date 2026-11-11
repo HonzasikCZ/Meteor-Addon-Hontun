@@ -46,9 +46,7 @@ import java.util.function.Consumer;
 import static cz.honzasik.hontun.gui.util.WidgetUtils.reset;
 import static meteordevelopment.meteorclient.MeteorClient.mc;
 
-import org.lwjgl.sdl.SDLDialog;
-import org.lwjgl.system.MemoryUtil;
-import java.io.File;
+import meteordevelopment.meteorclient.utils.misc.FileDialogs;
 
 import net.minecraft.client.resources.language.I18n;
 
@@ -615,17 +613,10 @@ public class HontunSettingsWidgetFactory extends SettingsWidgetFactory {
 
         WLabel fileName = list.add(theme.label((setting.get() != null && setting.get().exists()) ? setting.get().getName() : "No file selected.")).widget();
 
-        selectFile.action = () -> SDLDialog.SDL_ShowOpenFileDialog((userdata, files, filter) -> {
-            if (files == 0L) return;
-            long first = MemoryUtil.memGetAddress(files);
-            if (first == 0L) return;
-            String path = MemoryUtil.memUTF8(first);
-
-            mc.execute(() -> {
-                setting.set(new File(path));
-                fileName.set(setting.get().getName());
-            });
-        }, 0L, 0L, setting.filters, (CharSequence) null, false);
+        selectFile.action = () -> FileDialogs.openFile(setting.filter, file -> {
+            setting.set(file);
+            fileName.set(setting.get().getName());
+        });
 
         Runnable action = () -> fileName.set(
                 (setting.get() != null && setting.get().exists())

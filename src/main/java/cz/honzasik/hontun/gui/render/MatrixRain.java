@@ -48,6 +48,7 @@ public final class MatrixRain {
     private static final int MAX_LEN = 28;
     private static final double MIN_ALPHA = 0.015;
     private static final int SCANLINE_ARGB = 0x42000000;
+    private static final int OVERLAY_VEIL = 0x88;
 
     private static final double[] WHITE = {255, 255, 255};
 
@@ -134,7 +135,7 @@ public final class MatrixRain {
         return scanlines;
     }
 
-    public static boolean render(GuiGraphicsExtractor g, int width, int height, HontunTheme.UiMode look) {
+    public static boolean render(GuiGraphicsExtractor g, int width, int height, HontunTheme.UiMode look, boolean opaque) {
         if (g == null || width <= 0 || height <= 0) return false;
 
         Window window = Minecraft.getInstance().getWindow();
@@ -167,7 +168,7 @@ public final class MatrixRain {
         int headRgb = head & 0xFFFFFF;
 
         GlyphBatchState.Builder b = BATCHES[flip ^= 1].reset();
-        b.add(0, 0, pw, ph, solidU, 0.5f, solidU, 0.5f, 0xFF000000 | rainBg);
+        b.add(0, 0, pw, ph, solidU, 0.5f, solidU, 0.5f, ((opaque ? 0xFF : OVERLAY_VEIL) << 24) | rainBg);
 
         for (int c = 0; c < colCount; c++) {
             int ns = colStreams[c];

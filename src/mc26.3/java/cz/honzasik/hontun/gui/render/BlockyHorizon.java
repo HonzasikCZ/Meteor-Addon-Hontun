@@ -71,6 +71,7 @@ public final class BlockyHorizon {
 
     private static long frame;
     private static long drawnFrame = -1L;
+    private static boolean drawnOpaque;
     private static long lastNanos = -1L;
     private static boolean pointerSet;
     private static float pointerX = 0.5f;
@@ -103,7 +104,7 @@ public final class BlockyHorizon {
 
     private BlockyHorizon() {}
 
-    public static boolean render(GuiGraphicsExtractor g, int width, int height, HontunTheme.UiMode look) {
+    public static boolean render(GuiGraphicsExtractor g, int width, int height, HontunTheme.UiMode look, boolean opaque) {
         if (state == 2 || width <= 0 || height <= 0) return false;
         try {
             if (!ready()) return false;
@@ -115,13 +116,14 @@ public final class BlockyHorizon {
             int texH = Math.max(1, Math.round(fbH * RES_SCALE));
             boolean sized = texture != null && !texture.isClosed()
                     && texture.getWidth(0) == texW && texture.getHeight(0) == texH;
-            if (drawnFrame != frame || !sized) {
+            if (drawnFrame != frame || drawnOpaque != opaque || !sized) {
                 GpuDevice device = RenderSystem.getDevice();
                 if (!valid(device)) return false;
                 ensureTarget(device, texW, texH);
-                fill(texW, texH, look);
+                fill(texW, texH, look, opaque);
                 encode(device, view);
                 drawnFrame = frame;
+                drawnOpaque = opaque;
             }
             int scale = Math.max(1, window.getGuiScale());
             float u1 = (float) (width * scale) / fbW;
@@ -142,7 +144,7 @@ public final class BlockyHorizon {
             if (!ready()) return false;
             GpuDevice device = RenderSystem.getDevice();
             if (!valid(device)) return false;
-            fill(width, height, look);
+            fill(width, height, look, true);
             encode(device, target);
             return true;
         } catch (Throwable t) {
@@ -225,7 +227,7 @@ public final class BlockyHorizon {
         }
     }
 
-    private static void fill(int w, int h, HontunTheme.UiMode look) {
+    private static void fill(int w, int h, HontunTheme.UiMode look, boolean opaque) {
         long now = System.nanoTime();
         float dt = lastNanos < 0L ? 0f : Math.min(0.1f, (now - lastNanos) / 1_000_000_000f);
         lastNanos = now;
@@ -237,6 +239,7 @@ public final class BlockyHorizon {
         DATA.time = (float) (((now - START) / 1_000_000_000.0) % TIME_WRAP);
         DATA.pointerX = pointerX;
         DATA.pointerY = pointerY;
+        DATA.overlay = opaque ? 0f : 1f;
         DATA.accent = smog ? HontunTheme.SMOG_ACCENT : HontunTheme.userAccent();
         DATA.accentHi = smog ? HontunTheme.SMOG_ACCENT_HI : HontunTheme.userAccentHi();
         DATA.accentLo = smog ? HontunTheme.SMOG_ACCENT_LO : HontunTheme.userAccentLo();
@@ -312,6 +315,7 @@ public final class BlockyHorizon {
         private float time;
         private float pointerX;
         private float pointerY;
+        private float overlay;
         private int accent;
         private int accentHi;
         private int accentLo;
@@ -321,7 +325,7 @@ public final class BlockyHorizon {
         public void write(@NonNull ByteBuffer buffer) {
             Std140Builder.intoBuffer(buffer)
                     .putVec4(width, height, time, 0f)
-                    .putVec4(pointerX, pointerY, 0f, 0f)
+                    .putVec4(pointerX, pointerY, overlay, 0f)
                     .putVec4(r(accent), g(accent), b(accent), 1f)
                     .putVec4(r(accentHi), g(accentHi), b(accentHi), 1f)
                     .putVec4(r(accentLo), g(accentLo), b(accentLo), 1f)

@@ -275,7 +275,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<Boolean> rain = sgRain.add(new BoolSetting.Builder()
             .name("rain")
-            .description("Digital rain of hex digits and terminal symbols behind the click-gui Terminal ClickGUI and, with ui-mode Terminal, behind the menus shown without a world. It replaces menu-scene there; turn it off to get menu-scene back. Tinted by palette-color.")
+            .description("Digital rain of hex digits and terminal symbols behind the click-gui Terminal ClickGUI and, with ui-mode Terminal, behind the menus, with or without a world. It replaces menu-scene there; turn it off to get menu-scene back. Tinted by palette-color.")
             .defaultValue(true)
             .onChanged(MatrixRain::setEnabled)
             .visible(this::terminalAnyVisible)
@@ -398,7 +398,7 @@ public class HontunGuiTheme extends GuiTheme {
 
     public final Setting<HontunTheme.MenuScene> menuScene = sgColors.add(new EnumSetting.Builder<HontunTheme.MenuScene>()
             .name("menu-scene")
-            .description("Scene behind the title screen and every menu shown without a world (also the ClickGUI opened from the title screen and the Hontun screens). BlockyParticles = animated menu-background gradient with square palette-color particles (default). RoundedParticles = soft round palette-color particles joined by faint lines over a menu-background glow, the SmogClient backdrop in your colors. BlockyHorizon = shader-drawn blocky night landscape with a moon, stars, clouds and fireflies, tinted by palette-color on a menu-background base. Matrix = falling digital rain of hex digits and terminal symbols on black, tinted by palette-color. ui-mode SmogClient keeps its black and white colors in every scene and draws RoundedParticles for both particle scenes. ui-mode Terminal (and the click-gui Terminal ClickGUI) draws Matrix while its rain setting is on. Menus over a world keep a translucent particle backdrop (round with RoundedParticles, square otherwise) and ui-mode Vanilla keeps the panorama. Falls back to the particle backdrop if the shader cannot run.")
+            .description("Scene behind the title screen and every menu shown without a world (also the ClickGUI opened from the title screen and the Hontun screens). The pause screen and the other menus over a world show the same scene as a see-through overlay so the game stays visible. BlockyParticles = animated menu-background gradient with square palette-color particles (default). RoundedParticles = soft round palette-color particles joined by faint lines over a menu-background glow, the SmogClient backdrop in your colors. BlockyHorizon = shader-drawn blocky night landscape with a moon, stars, clouds and fireflies, tinted by palette-color on a menu-background base. Matrix = falling digital rain of hex digits and terminal symbols on black, tinted by palette-color. ui-mode SmogClient keeps its black and white colors in every scene and draws RoundedParticles for both particle scenes. ui-mode Terminal (and the click-gui Terminal ClickGUI) draws Matrix while its rain setting is on. ui-mode Vanilla keeps the panorama. Falls back to the particle backdrop if the shader cannot run.")
             .defaultValue(HontunTheme.MenuScene.BlockyParticles)
             .onChanged(this::onMenuSceneChanged)
             .build()

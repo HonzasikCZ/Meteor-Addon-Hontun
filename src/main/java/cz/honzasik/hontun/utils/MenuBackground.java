@@ -45,10 +45,10 @@ public class MenuBackground {
         boolean rain = HontunTheme.menuScene() == HontunTheme.MenuScene.Matrix
                 || (look == HontunTheme.UiMode.Terminal && MatrixRain.enabled());
 
-        if (opaque && rain && MatrixRain.render(g, width, height, look)) return;
+        if (rain && MatrixRain.render(g, width, height, look, opaque)) return;
 
-        if (opaque && HontunTheme.menuScene() == HontunTheme.MenuScene.BlockyHorizon
-                && BlockyHorizon.render(g, width, height, look)) return;
+        if (HontunTheme.menuScene() == HontunTheme.MenuScene.BlockyHorizon
+                && BlockyHorizon.render(g, width, height, look, opaque)) return;
 
         if (look == HontunTheme.UiMode.SmogClient) {
             SmogBackground.render(g, width, height, opaque, particles, RoundedPalette.SMOG);

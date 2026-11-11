@@ -13,6 +13,14 @@ in vec2 v_uv;
 
 out vec4 fragColor;
 
+const float OVERLAY_LAND = 0.56;
+const vec4 OVERLAY_SOLID = vec4(0.88, 0.72, 0.48, 0.26);
+const float OVERLAY_VEIL_LOW = 0.16;
+const float OVERLAY_VEIL_HIGH = 0.06;
+const float OVERLAY_MOON = 0.90;
+const float OVERLAY_CLOUD = 0.55;
+const float OVERLAY_CENTRE = 0.08;
+
 vec2 iResolution;
 float iTime;
 vec2 iMouse;
@@ -359,6 +367,26 @@ vec3 fireflies(vec2 fc, vec2 p) {
     return mix(gHi, vec3(1.0), 0.25) * (core * 0.85 + glow * 0.32) * pulse * fade;
 }
 
+vec4 overlaySky(vec2 fc, vec2 p) {
+    float a = mix(OVERLAY_VEIL_LOW, OVERLAY_VEIL_HIGH, ss(0.12, 0.85, p.y));
+    float e = max(length(p - gMoon.xy) - gMoon.z, 0.0);
+    a += (1.0 - a) * (0.30 * exp(-e * 11.0) + 0.10 * exp(-e * 3.2));
+    vec3 c = skyColor(p) * a;
+    vec3 st = starField(fc, p);
+    float sa = min(max(st.r, max(st.g, st.b)), 1.0);
+    c = c * (1.0 - sa) + st;
+    a += sa * (1.0 - a);
+    vec4 mo = moonDisc(fc);
+    float ma = mo.a * OVERLAY_MOON;
+    c = c * (1.0 - ma) + mo.rgb * ma;
+    a += ma * (1.0 - a);
+    vec4 cl = cloudLayer(fc, p);
+    float ca = cl.a * OVERLAY_CLOUD;
+    c = c * (1.0 - ca) + cl.rgb * ca;
+    a += ca * (1.0 - a);
+    return vec4(c, a);
+}
+
 void main() {
     iResolution = u_Frame.xy;
     iTime = u_Frame.z;
@@ -383,64 +411,89 @@ void main() {
     gMist = mistColor(p);
     gMf = 0.18 + 0.82 * exp(-abs(p.x - gMoon.x) * 2.2);
 
+    bool overlay = u_Pointer.z > 0.5;
+    float land = overlay ? OVERLAY_LAND : 1.0;
+    vec4 solid = overlay ? OVERLAY_SOLID : vec4(1.0);
+
     vec3 col = vec3(0.0);
     float T = 1.0;
     vec4 L;
 
     L = terrainLayer(fc, p,
-        vec4(1.0 / 52.0, 0.035, 0.075, 4.0),
+        vec4(1.0 / 52.0, 0.035 * land, 0.075 * land, 4.0),
         vec4(129.7, 0.0, 0.015, 0.024),
         vec4(0.30, 0.18, 0.94, 0.55),
-        vec4(0.10, 0.0, 0.0, 0.06), vec2(0.0, 1.0));
+        vec4(0.10 * land, 0.0, 0.0, 0.06), vec2(0.0, 1.0));
+    L.a *= solid.x;
     col += T * L.a * L.rgb;
     T *= 1.0 - L.a;
 
     if (T > 0.002) {
         L = terrainLayer(fc, p,
-            vec4(1.0 / 82.0, 0.12, 0.10, 5.5),
+            vec4(1.0 / 82.0, 0.12 * land, 0.10 * land, 5.5),
             vec4(83.1, 0.0, 0.009, 0.014),
             vec4(0.85, 0.35, 0.80, 0.50),
-            vec4(0.20, 0.08, 0.55, 0.04), vec2(0.0, 0.0));
+            vec4(0.20 * land, 0.08 * land, 0.55, 0.04), vec2(0.0, 0.0));
+        L.a *= solid.y;
         col += T * L.a * L.rgb;
         T *= 1.0 - L.a;
     }
 
     if (T > 0.002) {
         L = terrainLayer(fc, p,
-            vec4(1.0 / 120.0, 0.205, 0.12, 4.8),
+            vec4(1.0 / 120.0, 0.205 * land, 0.12 * land, 4.8),
             vec4(47.9, 0.0, 0.005, 0.008),
             vec4(0.35, 0.2, 0.60, 0.45),
-            vec4(0.30, 0.17, 0.60, 0.025), vec2(0.0, 0.0));
+            vec4(0.30 * land, 0.17 * land, 0.60, 0.025), vec2(0.0, 0.0));
+        L.a *= solid.z;
         col += T * L.a * L.rgb;
         T *= 1.0 - L.a;
     }
 
     if (T > 0.002) {
         L = terrainLayer(fc, p,
-            vec4(1.0 / 170.0, 0.20, 0.29, 3.0),
+            vec4(1.0 / 170.0, 0.20 * land, 0.29 * land, 3.0),
             vec4(11.3, 1.0, 0.0025, 0.004),
             vec4(0.0, 0.0, 0.42, 0.35),
-            vec4(0.32, 0.19, 0.70, 0.0), vec2(1.0, 0.0));
+            vec4(0.32 * land, 0.19 * land, 0.70, 0.0), vec2(1.0, 0.0));
+        L.a *= solid.w;
         col += T * L.a * L.rgb;
         T *= 1.0 - L.a;
     }
 
-    if (T > 0.002) {
-        vec3 sky = skyColor(p);
-        sky += starField(fc, p);
-        vec4 mo = moonDisc(fc);
-        sky = mix(sky, mo.rgb, mo.a);
-        vec4 cl = cloudLayer(fc, p);
-        sky = mix(sky, cl.rgb, cl.a);
-        col += T * sky;
+    if (overlay) {
+        vec4 sky = overlaySky(fc, p);
+        col += T * sky.rgb;
+        T *= 1.0 - sky.a;
+        vec3 ff = fireflies(fc, p);
+        float fa = min(max(ff.r, max(ff.g, ff.b)), 1.0);
+        col = col * (1.0 - fa) + ff;
+        T *= 1.0 - fa;
+    } else {
+        if (T > 0.002) {
+            vec3 sky = skyColor(p);
+            sky += starField(fc, p);
+            vec4 mo = moonDisc(fc);
+            sky = mix(sky, mo.rgb, mo.a);
+            vec4 cl = cloudLayer(fc, p);
+            sky = mix(sky, cl.rgb, cl.a);
+            col += T * sky;
+        }
+        col += fireflies(fc, p);
     }
 
-    col += fireflies(fc, p);
-
-    col *= 1.0 - 0.20 * exp(-p.x * p.x / 0.045) * ss(0.42, 0.78, p.y);
+    float centre = 1.0 - (overlay ? OVERLAY_CENTRE : 0.20) * exp(-p.x * p.x / 0.045) * ss(0.42, 0.78, p.y);
+    col *= centre;
     vec2 vq = vec2(p.x / max(halfW, 0.5), (p.y - 0.55) * 1.6);
-    col *= 1.0 - 0.32 * ss(0.75, 1.6, length(vq));
+    float edge = 1.0 - 0.32 * ss(0.75, 1.6, length(vq));
+    col *= edge;
+    T *= centre * edge;
 
-    col += (hash12(fc) - 0.5) / 255.0;
-    fragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    float grain = (hash12(fc) - 0.5) / 255.0;
+    if (overlay) {
+        float alpha = 1.0 - T;
+        fragColor = vec4(clamp(col / max(alpha, 0.004), 0.0, 1.0), clamp(alpha + grain, 0.0, 1.0));
+    } else {
+        fragColor = vec4(clamp(col + grain, 0.0, 1.0), 1.0);
+    }
 }

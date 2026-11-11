@@ -51,6 +51,9 @@ public class HontunAccountsScreen extends HontunScreen {
     }
 
     @Override
+    protected boolean statusLine() { return true; }
+
+    @Override
     protected void buildContent() {
         int top = contentTop();
         int bottom = contentBottom();

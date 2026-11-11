@@ -11,6 +11,7 @@ import cz.honzasik.hontun.utils.ServerSoftware.Family;
 import cz.honzasik.hontun.utils.ServerSoftware.Note;
 import cz.honzasik.hontun.utils.ServerSoftware.Origin;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
+import meteordevelopment.meteorclient.events.world.ServerConnectBeginEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.orbit.EventHandler;
@@ -37,7 +38,12 @@ public class SoftwareProbe {
     @EventHandler
     private void onPacketReceive(PacketEvent.Receive event) {
         ServerSoftware.observe(event.packet);
-        CookieObserver.observe(event.packet);
+        CookieObserver.observe(event.packet, event.connection);
+    }
+
+    @EventHandler
+    private void onConnect(ServerConnectBeginEvent event) {
+        CookieObserver.connecting(event.info != null ? event.info.ip : event.address.toString());
     }
 
     @EventHandler

@@ -21,6 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class MenuScreenBackgroundMixin {
     @Shadow protected abstract void extractPanorama(GuiGraphicsExtractor g, float delta);
     @Shadow protected abstract void extractMenuBackground(GuiGraphicsExtractor g);
+    @Shadow public abstract boolean isInGameUi();
 
     @Inject(method = "extractBackground", at = @At("HEAD"), cancellable = true)
     private void hontun$menuBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
@@ -46,6 +47,13 @@ public abstract class MenuScreenBackgroundMixin {
             extractMenuBackground(graphics);
             ci.cancel();
         }
+    }
+
+    @Inject(method = "extractBackground", at = @At("TAIL"))
+    private void hontun$worldMenuBackground(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null || isInGameUi()) return;
+        MenuBackground.render(graphics, mc.getWindow().getGuiScaledWidth(), mc.getWindow().getGuiScaledHeight(), false);
     }
 
     @Inject(method = "extractRenderStateWithTooltipAndSubtitles", at = @At("TAIL"))

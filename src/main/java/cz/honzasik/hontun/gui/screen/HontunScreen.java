@@ -16,6 +16,7 @@ public abstract class HontunScreen extends Screen {
     protected static final int FOOTER_H = 33;
 
     protected static final int STATUS_H = 11;
+    private static final int TERM_STATUS_H = 22;
     private static final int SIDE_MARGIN = 20;
     private static final int BLOCK_MAX = 502;
 
@@ -57,12 +58,20 @@ public abstract class HontunScreen extends Screen {
 
     protected int contentTop()    { return HontunTheme.modern() ? py + TITLE_H : HontunTheme.terminal() ? TERM_TOP + 6 : HEADER_H; }
 
-    protected int contentBottom() { return HontunTheme.modern() ? py + ph - 48 : bandBottom() - STATUS_H; }
+    protected boolean statusLine() { return false; }
+
+    protected int contentBottom() {
+        if (HontunTheme.modern()) return py + ph - 48;
+        return HontunTheme.terminal() && statusLine() ? bandBottom() - TERM_STATUS_H : bandBottom() - STATUS_H;
+    }
     protected int contentLeft()   { return HontunTheme.modern() ? px + 14 : blockX(); }
     protected int contentRight()  { return HontunTheme.modern() ? px + pw - 14 : blockX() + blockW(); }
     protected int contentWidth()  { return HontunTheme.modern() ? pw - 28 : blockW(); }
 
-    protected int statusY() { return HontunTheme.modern() ? py + ph - 40 : bandBottom() - STATUS_H + 1; }
+    protected int statusY() {
+        if (HontunTheme.modern()) return py + ph - 40;
+        return HontunTheme.terminal() ? bandBottom() - TERM_STATUS_H + 7 : bandBottom() - STATUS_H + 1;
+    }
 
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {

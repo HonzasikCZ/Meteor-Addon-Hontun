@@ -38,6 +38,9 @@ public class HontunProxiesScreen extends HontunScreen {
     private ProxyType type() { return typeIdx == 0 ? ProxyType.Socks5 : ProxyType.Socks4; }
 
     @Override
+    protected boolean statusLine() { return true; }
+
+    @Override
     protected void buildContent() {
         int top = contentTop();
         int bottom = contentBottom();
