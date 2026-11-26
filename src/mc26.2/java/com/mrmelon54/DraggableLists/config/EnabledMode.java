@@ -18,10 +18,6 @@ public enum EnabledMode {
         };
     }
 
-    /**
-     * 26.2 carries modifiers on the input event rather than on {@code Screen}, and the grip is
-     * drawn on frames where there is no event to ask, so the keyboard is polled directly.
-     */
     private static boolean shiftDown() {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null) return false;

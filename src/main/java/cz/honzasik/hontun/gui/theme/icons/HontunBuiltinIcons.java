@@ -2,6 +2,7 @@ package cz.honzasik.hontun.gui.theme.icons;
 
 import cz.honzasik.hontun.gui.HontunGui;
 import cz.honzasik.hontun.gui.api.icons.HontunIcons;
+import cz.honzasik.hontun.gui.tabs.HontunTab;
 import meteordevelopment.meteorclient.gui.renderer.GuiRenderer;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.tabs.Tab;
@@ -27,6 +28,7 @@ public enum HontunBuiltinIcons {
     EDIT,
     EYE,
     GRID,
+    HONTUN,
     IMPORT,
     MINUS,
     MOUSE,
@@ -61,6 +63,7 @@ public enum HontunBuiltinIcons {
         HontunIcons.registerTabIcon(ModulesTab.class, CUBE.texture());
         HontunIcons.registerTabIcon(ConfigTab.class, SETTING.texture());
         HontunIcons.registerTabIcon(GuiTab.class, BRUSH.texture());
+        HontunIcons.registerTabIcon(HontunTab.class, HONTUN.texture());
         HontunIcons.registerTabIcon(HudTab.class, GRID.texture());
         HontunIcons.registerTabIcon(FriendsTab.class, PEOPLE.texture());
         HontunIcons.registerTabIcon(MacrosTab.class, MOUSE.texture());

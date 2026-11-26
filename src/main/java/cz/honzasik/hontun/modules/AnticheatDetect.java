@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.CommandNode;
 import cz.honzasik.hontun.Hontun;
 import cz.honzasik.hontun.commands.AnticheatProbe;
+import cz.honzasik.hontun.utils.Oversize;
 import meteordevelopment.meteorclient.events.game.GameJoinedEvent;
 import meteordevelopment.meteorclient.events.game.GameLeftEvent;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
@@ -49,6 +50,8 @@ public class AnticheatDetect extends Module {
     private static final int GUESS_PINGS = 5;
     private static final int MAX_PINGS = 8;
     private static final int MAX_SETBACKS = 64;
+    private static final int MAX_CHANNEL_HITS = 256;
+    public static final String OVERSIZE_CHANNELS = "anticheat channel not counted (over " + MAX_CHANNEL_HITS + ")";
     private static final int INTAVE_MASK = 0xF5550000;
     private static final int VULCAN_COUNTER = -32347;
     private static final int KARHU_TRANSACTION = -32767;
@@ -348,6 +351,7 @@ public class AnticheatDetect extends Module {
         private final Object lock = new Object();
         private final List<Integer> pings = new ArrayList<>();
         private final Set<String> channelHits = new TreeSet<>();
+        private int channelSkipped;
         private final Set<String> pluginHits = new TreeSet<>(String.CASE_INSENSITIVE_ORDER);
         private final Set<String> commandHits = new TreeSet<>();
         private final List<Setback> setbacks = new ArrayList<>();
@@ -500,6 +504,7 @@ public class AnticheatDetect extends Module {
             reported = false;
             pings.clear();
             channelHits.clear();
+            channelSkipped = 0;
             pluginHits.clear();
             commandHits.clear();
             clearSetbacks();
@@ -530,8 +535,23 @@ public class AnticheatDetect extends Module {
 
         private void hit(String channel) {
             if (anticheatOf(channel) == null) return;
+            boolean over;
             synchronized (lock) {
-                if (channelHits.add(channel)) changes++;
+                if (channelHits.contains(channel)) return;
+                over = channelHits.size() >= MAX_CHANNEL_HITS;
+                if (over) {
+                    channelSkipped++;
+                } else {
+                    channelHits.add(channel);
+                    changes++;
+                }
+            }
+            if (over) Oversize.item(OVERSIZE_CHANNELS, channel);
+        }
+
+        public int skippedChannels() {
+            synchronized (lock) {
+                return channelSkipped;
             }
         }
 

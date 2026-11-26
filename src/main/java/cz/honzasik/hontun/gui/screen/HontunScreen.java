@@ -88,14 +88,14 @@ public abstract class HontunScreen extends Screen {
         }
 
         if (HontunTheme.modern2()) {
-            MenuBackground.render(g, width, height, true);
+            MenuBackground.render(g, width, height, opaqueBackdrop());
             HontunShapes.panel(g, px, py, pw, ph, 12);
             HontunShapes.titleChip(g, font, px + pw / 2, py, getTitle());
             return;
         }
 
         if (HontunTheme.smog()) {
-            MenuBackground.render(g, width, height, true);
+            MenuBackground.render(g, width, height, opaqueBackdrop());
             HontunRound.card(g, px, py, pw, ph, 5,
                     HontunTheme.argb(0xF2, HontunTheme.surface0()),
                     HontunTheme.argb(0xFF, HontunTheme.overlay2()));
@@ -109,7 +109,7 @@ public abstract class HontunScreen extends Screen {
         }
 
         if (HontunTheme.modern()) {
-            MenuBackground.render(g, width, height, true);
+            MenuBackground.render(g, width, height, opaqueBackdrop());
             g.fill(px, py, px + pw, py + ph, HontunTheme.argb(0xF2, HontunTheme.surface0()));
             g.fillGradient(px, py, px + pw, py + 2,
                     HontunTheme.argb(0xFF, HontunTheme.accentLo()),
@@ -139,6 +139,10 @@ public abstract class HontunScreen extends Screen {
         int tx = width / 2 - tw / 2;
         g.text(font, getTitle(), tx, 12, HontunTheme.argb(0xFF, HontunTheme.textLight()), true);
         g.fill(tx, 23, tx + tw, 24, HontunTheme.argb(0xFF, HontunTheme.accentHi()));
+    }
+
+    protected boolean opaqueBackdrop() {
+        return true;
     }
 
     @Override

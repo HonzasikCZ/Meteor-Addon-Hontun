@@ -5,28 +5,15 @@ import com.mrmelon54.DraggableLists.theme.HontunBridge;
 import cz.honzasik.hontun.gui.render.RoundedGui;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/**
- * Filled and outlined rectangles with shaped corners, built only out of axis-aligned
- * {@code fill} calls so nothing here needs a shader, a texture or a render pipeline of its
- * own.
- *
- * <p>Each shape is described by a per-scanline left and right inset. That is what lets one
- * implementation cover both corner styles: {@link CornerStyle#ROUND} insets both ends of a
- * row along a circle, while {@link CornerStyle#CHAMFER} follows Hontun's asymmetric cut -
- * top-left and bottom-right only - so a card drawn here sits next to Hontun's own cards
- * without looking like it came from somewhere else.
- */
 public final class Shapes {
     private Shapes() {
     }
 
-    /** Per-scanline horizontal insets for a shape; index 0 is the top row. */
     public static final class Profile {
         final int width;
         final int height;
         final int[] left;
         final int[] right;
-        /** First and last row that are inset on neither side, or -1 when there is no such row. */
         final int straightFrom;
         final int straightTo;
 
@@ -64,12 +51,9 @@ public final class Shapes {
                 }
             }
             case SQUARE -> {
-                // No corner insets - sharp rectangle.
             }
             case ROUND -> {
                 for (int i = 0; i < size; i++) {
-                    // Sample the circle at the middle of the scanline so the curve stays
-                    // symmetric between the top and the bottom edge.
                     double dy = size - i - 0.5;
                     int inset = (int) Math.round(size - Math.sqrt((double) size * size - dy * dy));
                     left[i] = inset;
@@ -101,7 +85,6 @@ public final class Shapes {
     public static void fill(GuiGraphicsExtractor g, int x, int y, Profile p, int argb) {
         if (p.width <= 0 || p.height <= 0) return;
 
-        // One call for the straight middle, then a call per shaped scanline.
         if (p.straightFrom >= 0) {
             g.fill(x, y + p.straightFrom, x + p.width, y + p.straightTo + 1, argb);
         }
@@ -129,15 +112,11 @@ public final class Shapes {
             int l = p.left[i];
             int r = p.right[i];
 
-            // Treat the rows just outside the shape as fully inset, so the first and last
-            // scanline close the shape instead of leaving two dots.
             int lPrev = i == 0 ? half : p.left[i - 1];
             int lNext = i == p.height - 1 ? half : p.left[i + 1];
             int rPrev = i == 0 ? half : p.right[i - 1];
             int rNext = i == p.height - 1 ? half : p.right[i + 1];
 
-            // A row's horizontal run has to be long enough to meet whichever neighbour is
-            // further in, otherwise a diagonal edge comes out as disconnected pixels.
             int leftRun = Math.max(1, Math.max(lPrev - l, lNext - l));
             int rightRun = Math.max(1, Math.max(rPrev - r, rNext - r));
 
@@ -151,11 +130,6 @@ public final class Shapes {
         }
     }
 
-    /**
-     * A soft drop shadow: concentric outlines of the same shape, growing outwards and
-     * fading as they go. Offsetting them downwards puts the light source above the screen,
-     * which is what every other lifted surface in a UI assumes.
-     */
     public static void shadow(GuiGraphicsExtractor g, int x, int y, int width, int height,
                               CornerStyle style, int cornerSize, int layers, int baseAlpha, int dropY) {
         if (smooth()) {
@@ -170,7 +144,6 @@ public final class Shapes {
         }
     }
 
-    /** Coloured version of {@link #shadow}, used to make the accent bleed into the background. */
     public static void glow(GuiGraphicsExtractor g, int x, int y, int width, int height,
                             CornerStyle style, int cornerSize, int layers, int baseAlpha, int rgb) {
         if (smooth()) return;

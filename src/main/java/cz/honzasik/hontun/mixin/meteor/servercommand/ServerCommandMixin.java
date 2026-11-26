@@ -2,6 +2,7 @@ package cz.honzasik.hontun.mixin.meteor.servercommand;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import cz.honzasik.hontun.commands.AnticheatProbe;
+import cz.honzasik.hontun.gui.screen.server.ServerInfoScreen;
 import cz.honzasik.hontun.commands.PluginScanner;
 import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.commands.SoftwareProbe;
@@ -59,138 +60,20 @@ public abstract class ServerCommandMixin {
         if (server == null) return;
 
         ci.cancel();
-        Command self = (Command) (Object) this;
+        hontun$open(ServerInfoScreen.Page.OVERVIEW);
+    }
 
-        String ipv4 = "";
-        try {
-            ipv4 = InetAddress.getByName(server.ip).getHostAddress();
-        } catch (Throwable ignored) {
-        }
-        self.info("IP: %s%s", server.ip, ipv4.isEmpty() ? "" : " (" + ipv4 + ")");
-        try {
-            self.info("Port: %d", ServerAddress.parseString(server.ip).getPort());
-        } catch (Throwable ignored) {
-        }
-        try {
-            Connection c = mc.getConnection() != null
-                    ? ((ClientListenerConnectionAccessor) (Object) mc.getConnection()).hontun$getConnection() : null;
-            SocketAddress addr = c != null ? c.getRemoteAddress() : null;
-            if (addr instanceof InetSocketAddress isa) {
-                String host = isa.getAddress() != null ? isa.getAddress().getHostAddress() : isa.getHostString();
-                self.info("Connected to: %s:%d", host, isa.getPort());
-            }
-        } catch (Throwable ignored) {
-        }
-
-        String brand = mc.getConnection() != null ? mc.getConnection().serverBrand() : null;
-        self.info("Brand: %s", brand != null ? brand : "unknown");
-        try {
-            self.info("Software: %s", SoftwareProbe.summary(ServerSoftware.detect()));
-        } catch (Throwable ignored) {
-        }
-        try {
-            self.info("Anticheat: %s", AnticheatProbe.summary(AnticheatDetect.COLLECTOR.evaluate(AnticheatDetect.address())));
-        } catch (Throwable ignored) {
-        }
-        self.info("Motd: %s", server.motd != null ? server.motd.getString() : "unknown");
-        self.info("Version: %s", server.version != null ? server.version.getString() : "unknown");
-        String realVersion = null;
-        try {
-            RealVersion.Result resolved = RealVersion.resolve(ServerSoftware.realVersionSnapshot());
-            if (resolved != null) realVersion = resolved.text();
-        } catch (Throwable ignored) {
-        }
-        if (realVersion == null && !"unknown".equals(VersionKeeper.version)) realVersion = VersionKeeper.version + " (core pack)";
-        if (realVersion != null) self.info("Real version: %s", realVersion);
-        self.info("Protocol version: %d", server.protocol);
-
-        List<String> packs = new ArrayList<>();
-        synchronized (VersionKeeper.knownPacks) {
-            packs.addAll(VersionKeeper.knownPacks);
-        }
-        if (!packs.isEmpty()) {
-            self.info("Data packs (%d):", packs.size());
-            for (String pack : packs) {
-                self.info(" - %s", pack);
-            }
-        }
-
-        if (mc.level != null) {
-            self.info("Difficulty: %s", mc.level.getDifficulty().getDisplayName().getString());
-            self.info("Day: %d", mc.level.getGameTime() / 24000L);
-        }
-
+    private boolean hontun$open(ServerInfoScreen.Page page) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.hasSingleplayerServer() || mc.getCurrentServer() == null) return false;
         String perms;
         try {
             perms = formatPerms();
         } catch (Throwable t) {
             perms = "unknown";
         }
-        self.info("Permission level: %s", perms);
-
-        if (WorldInfo.captured) {
-            self.info("Dimension: %s", WorldInfo.dimension);
-            self.info("Hashed seed: %s", String.valueOf(WorldInfo.hashedSeed));
-            self.info("Secure chat: %s", WorldInfo.secureChat ? "enabled" : "disabled");
-            self.info("Hardcore: %s", WorldInfo.hardcore ? "enabled" : "disabled");
-            self.info("Max players: %d", WorldInfo.maxPlayers);
-            self.info("Render distance: %d", WorldInfo.chunkRadius);
-            self.info("Simulation distance: %d", WorldInfo.simulationDistance);
-
-            List<String> lv = new ArrayList<>();
-            synchronized (WorldInfo.levels) {
-                lv.addAll(WorldInfo.levels);
-            }
-            if (!lv.isEmpty()) {
-                self.info("Server dimensions (%d):", lv.size());
-                for (String d : lv) {
-                    self.info(" - %s", d);
-                }
-            }
-        }
-
-        Set<String> all = new LinkedHashSet<>();
-        synchronized (ChannelFetcher.REGISTERED) {
-            all.addAll(ChannelFetcher.REGISTERED);
-        }
-        synchronized (ChannelFetcher.SEEN) {
-            all.addAll(ChannelFetcher.SEEN);
-        }
-        if (all.isEmpty()) {
-            self.info("Plugin channels: none detected.");
-        } else {
-            self.info("Plugin channels (%d):", all.size());
-            for (String ch : all) {
-                self.info(" - %s", ch);
-            }
-        }
-
-        if (ResourcePackInfo.present) {
-            self.info("Resource pack: %s", ResourcePackInfo.required ? "required" : "optional");
-            if (ResourcePackInfo.url.isEmpty()) {
-                self.info(" - URL: unknown");
-            } else {
-                self.info(HontunChat.light(" - URL: ").append(hontun$link(ResourcePackInfo.url)));
-            }
-            if (!ResourcePackInfo.hash.isEmpty()) self.info(" - SHA-1: %s", ResourcePackInfo.hash);
-            if (!ResourcePackInfo.prompt.isEmpty()) self.info(" - Prompt: %s", ResourcePackInfo.prompt);
-        } else {
-            self.info("Resource pack: none pushed.");
-        }
-    }
-
-    private MutableComponent hontun$link(String url) {
-        MutableComponent text = Component.literal(url);
-        try {
-            URI uri = URI.create(url);
-            return text.withStyle(style -> style
-                .withColor(HontunTheme.argb(0xFF, HontunTheme.chatValue()))
-                .withUnderlined(true)
-                .withClickEvent(new ClickEvent.OpenUrl(uri))
-                .withHoverEvent(new HoverEvent.ShowText(Component.literal("Open in browser"))));
-        } catch (Throwable t) {
-            return text;
-        }
+        ServerInfoScreen.open(page, perms);
+        return true;
     }
 
     @Inject(method = "printPlugins", at = @At("HEAD"), cancellable = true)
@@ -209,26 +92,26 @@ public abstract class ServerCommandMixin {
     @Inject(method = "build", at = @At("TAIL"))
     private void hontun$addPluginMethods(LiteralArgumentBuilder<ClientSuggestionProvider> builder, CallbackInfo ci) {
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("plugins")
-            .executes(c -> { PluginScanner.INSTANCE.run(true, true, false, true); return 1; })
+            .executes(c -> { PluginScanner.INSTANCE.run(true, true, false, true); hontun$open(ServerInfoScreen.Page.PLUGINS); return 1; })
             .then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("default")
-                .executes(c -> { PluginScanner.INSTANCE.run(true, true, false, false); return 1; }))
+                .executes(c -> { PluginScanner.INSTANCE.run(true, true, false, false); hontun$open(ServerInfoScreen.Page.PLUGINS); return 1; }))
             .then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("bypass")
-                .executes(c -> { PluginScanner.INSTANCE.run(false, false, true, false); return 1; })));
+                .executes(c -> { PluginScanner.INSTANCE.run(false, false, true, false); hontun$open(ServerInfoScreen.Page.PLUGINS); return 1; })));
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("channels")
-            .executes(c -> { hontun$printChannels(); return 1; }));
+            .executes(c -> { if (!hontun$open(ServerInfoScreen.Page.CHANNELS)) hontun$printChannels(); return 1; }));
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("players")
-            .executes(c -> { PlayerRoster.INSTANCE.run(); return 1; }));
+            .executes(c -> { PlayerRoster.INSTANCE.run(); hontun$open(ServerInfoScreen.Page.PLAYERS); return 1; }));
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("software")
-            .executes(c -> { SoftwareProbe.INSTANCE.run(); return 1; }));
+            .executes(c -> { if (!hontun$open(ServerInfoScreen.Page.SOFTWARE)) SoftwareProbe.INSTANCE.run(); return 1; }));
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("anticheat")
-            .executes(c -> { AnticheatProbe.run(); return 1; }));
+            .executes(c -> { if (!hontun$open(ServerInfoScreen.Page.ANTICHEAT)) AnticheatProbe.run(); return 1; }));
 
         builder.then(LiteralArgumentBuilder.<ClientSuggestionProvider>literal("version")
-            .executes(c -> { VersionProbe.run(); return 1; }));
+            .executes(c -> { if (!hontun$open(ServerInfoScreen.Page.VERSION)) VersionProbe.run(); return 1; }));
     }
 
     private void hontun$printChannels() {

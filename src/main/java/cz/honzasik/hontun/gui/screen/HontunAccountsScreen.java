@@ -8,6 +8,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import cz.honzasik.hontun.utils.HontunTheme;
 import meteordevelopment.meteorclient.systems.accounts.Account;
 import meteordevelopment.meteorclient.systems.accounts.AccountCache;
+import meteordevelopment.meteorclient.systems.accounts.AccountType;
 import meteordevelopment.meteorclient.systems.accounts.Accounts;
 import meteordevelopment.meteorclient.systems.accounts.MicrosoftLogin;
 import meteordevelopment.meteorclient.systems.accounts.types.CrackedAccount;
@@ -383,10 +384,13 @@ public class HontunAccountsScreen extends HontunScreen {
     private static String currentTypeLabel() {
         User u = Minecraft.getInstance().getUser();
         if (u == null) return "-";
-        for (Account<?> acc : Accounts.get()) {
-            if (isActive(acc)) return acc.getType().name();
-        }
         UUID offline = UUID.nameUUIDFromBytes(("OfflinePlayer:" + u.getName()).getBytes(StandardCharsets.UTF_8));
-        return offline.equals(u.getProfileId()) ? "Offline" : "Premium";
+        boolean cracked = offline.equals(u.getProfileId());
+        for (Account<?> acc : Accounts.get()) {
+            if (isActive(acc) && (acc instanceof CrackedAccount) == cracked) {
+                return acc.getType().name();
+            }
+        }
+        return (cracked ? AccountType.Cracked : AccountType.Microsoft).name();
     }
 }

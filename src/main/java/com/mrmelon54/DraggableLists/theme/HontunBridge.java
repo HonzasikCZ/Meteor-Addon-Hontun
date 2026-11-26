@@ -9,19 +9,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 
-/**
- * Reads the live palette out of Hontun's {@code HontunTheme} without compiling against it.
- *
- * <p>Hontun is a Meteor Client addon, so linking against it would drag Meteor (and a
- * matching Meteor snapshot) into this mod's build for what is, in the end, a handful of
- * ints. {@code HontunTheme} is a static, plain-int holder that already exists purely so
- * other code can ask it for colours, so a small bundle of {@link MethodHandle}s over it is
- * both cheap and stable. Everything is resolved once; if any single accessor is missing the
- * whole bridge switches itself off and the built-in palette is used instead.
- *
- * <p>Hontun bumps {@code version()} whenever the user changes the flavour, accent or UI
- * mode, so the palette is only rebuilt when that number actually moves.
- */
 public final class HontunBridge {
     private static final String MOD_ID = "hontun";
     private static final String THEME_CLASS = "cz.honzasik.hontun.utils.HontunTheme";
@@ -40,13 +27,11 @@ public final class HontunBridge {
     private HontunBridge() {
     }
 
-    /** True when Hontun is installed and every colour accessor was found. */
     public static boolean available() {
         resolve();
         return available;
     }
 
-    /** True when Hontun is installed and the user has not put it back into Vanilla mode. */
     public static boolean restyling() {
         if (!available()) return false;
         try {
@@ -77,17 +62,12 @@ public final class HontunBridge {
         }
     }
 
-    /** The current Hontun palette, or {@code null} if Hontun is unavailable. */
     public static Palette palette() {
         if (!available()) return null;
         try {
             int v = (int) version.invokeExact();
             if (cached != null && v == cachedVersion) return cached;
 
-            // Each Hontun UI mode gets the corner treatment that matches how it draws its own
-            // panels and server cards: Modern2 cuts its corners (chamfer), Modern1 is softly
-            // rounded, and HVanilla keeps Minecraft's sharp squares. Vanilla never reaches here
-            // (restyling() is false, so Themes falls back to the built-in palette).
             if ((boolean) terminal.invokeExact()) {
                 cached = new Palette(
                     TerminalWidgets.acc() & 0xFFFFFF,

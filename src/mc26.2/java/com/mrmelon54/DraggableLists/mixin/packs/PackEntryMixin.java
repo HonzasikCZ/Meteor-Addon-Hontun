@@ -49,17 +49,9 @@ public abstract class PackEntryMixin extends ObjectSelectionList.Entry<Transfera
         return !(dl$arrowsHidden() && DL$ARROW_SPRITES.contains(sprite.getPath()));
     }
 
-    /**
-     * Swallows clicks on the half of the icon the arrows used to occupy. Left as a no-op
-     * rather than repurposed: that half is a hair away from the unselect button, and losing a
-     * pack from the selected list because a drag started a pixel too far left is a worse
-     * outcome than a click that does nothing.
-     */
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void dl$swallowArrowClicks(MouseButtonEvent event, boolean doubleClick, CallbackInfoReturnable<Boolean> cir) {
         if (!dl$arrowsHidden()) return;
-        // On an available pack the whole icon still selects it; only the selected side had
-        // the arrows.
         if (pack.canSelect()) return;
 
         int relX = (int) event.x() - getContentX();

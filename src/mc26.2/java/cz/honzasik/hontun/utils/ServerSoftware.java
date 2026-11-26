@@ -263,7 +263,7 @@ public final class ServerSoftware {
 
     private enum JoinMessage { NONE, LITERAL, TRANSLATED, CUSTOM }
 
-    public static final List<String> PAPER_FORKS = List.of("Paper", "Purpur", "Folia", "Canvas", "Leaf", "DivineMC",
+    public static final List<String> PAPER_FORKS = List.of("Paper", "Purpur", "Folia", "Canvas", "FlameMC", "Leaf", "DivineMC",
             "Pufferfish", "UniverseSpigot", "Leaves", "Pluto", "AdvancedSlimePaper", "Gale", "SparklyPaper",
             "ShreddedPaper", "Plazma", "GolemPaper");
 
@@ -294,6 +294,7 @@ public final class ServerSoftware {
             "Plazma", "Purpur",
             "DivineMC", "Purpur",
             "Canvas", "Folia",
+            "FlameMC", "Canvas",
             "Pluto", "Pufferfish",
             "ShreddedPaper", "Purpur");
     private static final Map<String, Integer> LATE_REGISTRY_PROTOCOL = Map.of(
@@ -358,6 +359,7 @@ public final class ServerSoftware {
     private static final Map<ServerData, Boolean> sampleV7 = Collections.synchronizedMap(new WeakHashMap<>());
     private static final Map<ServerData, Integer> statusFlags = Collections.synchronizedMap(new WeakHashMap<>());
     private static final int STATUS_CAP = 1024;
+    private static final int TEXT_CAP = 512;
     private static final ThreadLocal<Integer> statusJsonFlags = new ThreadLocal<>();
     private static int positionsSeen;
     private static int positionsApplied;
@@ -2271,7 +2273,7 @@ public final class ServerSoftware {
         }
         ServerData data = MCUtil.MC.getCurrentServer();
         if (data != null && data.version != null && data.state() == ServerData.State.SUCCESSFUL) {
-            s.pingSeen = strip(data.version.getString());
+            s.pingSeen = strip(data.version.getString(), "ping version name");
             s.pingProtocol = data.protocol;
             if (firstBackend) s.pingName = s.pingSeen;
         }
@@ -2348,8 +2350,11 @@ public final class ServerSoftware {
         return backendProtocol() != nativeProtocol();
     }
 
-    private static String strip(String s) {
-        return s == null ? null : s.replaceAll("§.", "").trim();
+    private static String strip(String s, String what) {
+        if (s == null) return null;
+        String out = (s.length() > TEXT_CAP * 4 ? s.substring(0, TEXT_CAP * 4) : s).replaceAll("§.", "").trim();
+        if (out.length() <= TEXT_CAP && s.length() <= TEXT_CAP * 4) return out;
+        return Oversize.cut(what, s) + out.substring(0, Math.min(out.length(), TEXT_CAP));
     }
 
     private static String appendProxy(String proxy, String add) {
@@ -2578,7 +2583,7 @@ public final class ServerSoftware {
         }
 
         String rawBrand = brandFirst == null ? (conn == null ? null : conn.serverBrand()) : brandFirst;
-        String brand = strip(rawBrand);
+        String brand = strip(rawBrand, "server brand");
         String backendBrand = brand;
         String proxy = null;
         String arclightLoader = null;
@@ -2829,7 +2834,7 @@ public final class ServerSoftware {
             ev.add(new Evidence("join", "default Velocity-CTD server links (GemstoneGG/Velocity-CTD on GitHub)", Family.UNKNOWN, 0)
                     .cfg("velocity.toml [server-links] (Velocity-CTD's default links to its GitHub, shows it)"));
         }
-        String motd = motdFirst == null ? null : strip(motdFirst.getString());
+        String motd = motdFirst == null ? null : strip(motdFirst.getString(), "in-game MOTD");
         if ("A VeloFlame Server".equals(motd)) {
             if ((linksEarly || tabEarly) && ("Velocity-CTD".equals(proxy) || "Velocity".equals(proxy))) proxy = "VeloFlame";
             ev.add(new Evidence("join", "default VeloFlame MOTD in the server-data packet", Family.UNKNOWN, 0)
@@ -2874,7 +2879,7 @@ public final class ServerSoftware {
             ev.add(new Evidence("join", "no server data packet at all (BungeeCord swallows it)", Family.UNKNOWN, 0));
         }
         if (brandFirst != null && brandLast != null && !brandFirst.equals(brandLast)) {
-            ev.add(new Evidence("brand", "brand changed after login to \"" + strip(brandLast) + "\" (proxy)", Family.UNKNOWN, 0));
+            ev.add(new Evidence("brand", "brand changed after login to \"" + strip(brandLast, "server brand after login") + "\" (proxy)", Family.UNKNOWN, 0));
         }
 
         if (!configPhase) {
@@ -3731,7 +3736,7 @@ public final class ServerSoftware {
                 software = fork != null && !"GolemPaper".equals(fork) ? fork : "Paper-based";
                 if (fork != null && !"GolemPaper".equals(fork)) notes.named(whyCfg, false);
                 else notes.structural();
-            } else if (fork != null && known != null && fork.equals(LINEAGE.get(known))) {
+            } else if (fork != null && known != null && builtOn(known, fork)) {
                 notes.tag("Packets match " + fork + ", which " + known + " is built on.", whyCfg);
                 notes.named(brandConfig(known) == null ? null : whyCfg, true);
                 fork = known;
@@ -3750,7 +3755,7 @@ public final class ServerSoftware {
                 }
                 software = fork;
             } else if (purpurFamily) {
-                if (known != null && (known.equals("Purpur") || "Purpur".equals(LINEAGE.get(known)))) {
+                if (known != null && (known.equals("Purpur") || builtOn(known, "Purpur"))) {
                     notes.tag(mojangHash ? "Purpur-family mobs, and block entities use Mojang's BlockPos hash, so this is not Leaf."
                             : "Purpur-family mobs. Telling Purpur from Leaf needs more attribute kinds in view (horses, other players, or a death and respawn).", purpurCfg);
                 } else {
@@ -3874,7 +3879,7 @@ public final class ServerSoftware {
             notes.add("Only config-dependent signals name " + software + " (see the config tags), so the name is less certain than the structure.");
         }
 
-        return new Result(software, family, rawBrand == null ? null : strip(rawBrand), proxy, confidence, ev, notes.list, notes.nameOrigin, notes.nameConfig);
+        return new Result(software, family, rawBrand == null ? null : strip(rawBrand, "server brand"), proxy, confidence, ev, notes.list, notes.nameOrigin, notes.nameConfig);
     }
 
     private static void resolveRain(long now) {
@@ -3995,6 +4000,11 @@ public final class ServerSoftware {
         return null;
     }
 
+    private static boolean builtOn(String known, String fork) {
+        for (String p = LINEAGE.get(known); p != null; p = LINEAGE.get(p)) if (p.equals(fork)) return true;
+        return false;
+    }
+
     private static String brandConfig(String known) {
         if (known == null) return null;
         return switch (known) {
@@ -4003,6 +4013,7 @@ public final class ServerSoftware {
             case "Leaf" -> "leaf-global.yml misc.rebrand.server-mod-name (default \"Leaf\", shows it)";
             case "Leaves" -> "leaves.yml settings.misc.server-mod-name (default \"Leaves\", shows it)";
             case "Canvas" -> "canvas-server.yml server-mod-name (default \"Canvas\", shows it)";
+            case "FlameMC" -> "canvas-server.yml server-mod-name (default \"FlameMC\", shows it)";
             default -> null;
         };
     }
@@ -4032,6 +4043,7 @@ public final class ServerSoftware {
             case "leaf" -> brandConfig("Leaf");
             case "leaves" -> brandConfig("Leaves");
             case "canvas" -> brandConfig("Canvas");
+            case "flamemc" -> brandConfig("FlameMC");
             default -> null;
         };
     }

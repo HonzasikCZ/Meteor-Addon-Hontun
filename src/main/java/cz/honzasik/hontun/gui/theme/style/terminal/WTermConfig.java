@@ -3,6 +3,7 @@ package cz.honzasik.hontun.gui.theme.style.terminal;
 import com.mojang.blaze3d.platform.InputConstants;
 import cz.honzasik.hontun.gui.mixin.meteorclient.WViewScrollAccessor;
 import cz.honzasik.hontun.gui.screen.settings.HontunEntityTypeListSettingScreen;
+import cz.honzasik.hontun.gui.tabs.HontunTab;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.HontunWidget;
 import cz.honzasik.hontun.gui.theme.widgets.container.WHontunWindow;
@@ -94,7 +95,7 @@ public class WTermConfig extends WWidget implements HontunWidget {
 
     enum Kind { COMMENT, BLANK, HEADER, SECTION, FOLD, SETTING }
 
-    enum Header { BIND, BIND_MODE, CHAT, RUN, THEME, RESET_LAYOUT, RESET_COLORS }
+    enum Header { BIND, BIND_MODE, CHAT, RUN, THEME, RESET_LAYOUT, RESET_COLORS, RESET }
 
     public enum Mode { NORMAL, INSERT, BIND }
 
@@ -287,11 +288,15 @@ public class WTermConfig extends WWidget implements HontunWidget {
             if (hasRunWidget()) header(Header.RUN, "run", kw);
             blank();
         }
-        else if (settings == t().settings) {
+        else if (settings == t().settings || settings == t().guiSettings) {
             int kw = "reset-layout".length();
             header(Header.THEME, "theme", kw);
             header(Header.RESET_LAYOUT, "reset-layout", kw);
             header(Header.RESET_COLORS, "reset-colors", kw);
+            blank();
+        }
+        else if (settings == t().hontunSettings) {
+            header(Header.RESET, "reset", "reset".length());
             blank();
         }
 
@@ -365,7 +370,7 @@ public class WTermConfig extends WWidget implements HontunWidget {
             int saved = TerminalState.cursor(settings)[0];
             if (saved >= 0 && saved < lines.size() && lines.get(saved).keyable()) found = saved;
         }
-        if (found < 0) found = firstKeyable();
+        if (found < 0) found = defaultCursor();
         setCursor(found, false);
 
         if (lines.size() != oldSize) invalidate();
@@ -410,6 +415,13 @@ public class WTermConfig extends WWidget implements HontunWidget {
     static String trunc(String s, int n) {
         if (n <= 1) return "~";
         return s.length() > n ? s.substring(0, n - 1) + "~" : s;
+    }
+
+    private int defaultCursor() {
+        int first = firstKeyable();
+        if (first < 0 || lines.get(first).header != Header.RESET) return first;
+        for (int i = first + 1; i < lines.size(); i++) if (lines.get(i).keyable()) return i;
+        return first;
     }
 
     private int firstKeyable() {
@@ -457,6 +469,7 @@ public class WTermConfig extends WWidget implements HontunWidget {
                 case THEME -> "# The Meteor GUI theme in use. Click to pick another one.";
                 case RESET_LAYOUT -> "# Moves every ClickGUI window back to its default position.";
                 case RESET_COLORS -> "# Resets every gui.conf key to its default value.";
+                case RESET -> "# Resets every hontun.conf key to its default value.";
             };
             default -> "";
         };
@@ -691,7 +704,7 @@ public class WTermConfig extends WWidget implements HontunWidget {
                     out.add(new Seg(" ]", dim, TEXT));
                 }
                 case THEME -> out.add(new Seg(trunc(GuiThemes.get().name, Math.max(4, avail)), acc, TEXT));
-                case RESET_LAYOUT, RESET_COLORS -> {
+                case RESET_LAYOUT, RESET_COLORS, RESET -> {
                     out.add(new Seg("[ ", dim, TEXT));
                     out.add(new Seg("run", acc, TEXT));
                     out.add(new Seg(" ]", dim, TEXT));
@@ -1208,6 +1221,10 @@ public class WTermConfig extends WWidget implements HontunWidget {
             case RESET_COLORS -> {
                 t().settings.reset();
                 reopenGuiTab();
+            }
+            case RESET -> {
+                t().hontunSettings.reset();
+                HontunTab.reopen();
             }
         }
     }

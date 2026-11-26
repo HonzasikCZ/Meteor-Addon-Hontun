@@ -24,12 +24,21 @@ picker is simply hidden and everything else works unchanged.
   or text packets are skipped instead of kicking you. An endless flood of registry data or queued
   packets disconnects you instead of hanging the game. Optional per-type debug log of exactly what
   was blocked.
+- `BypassESP` Keeps players and entities drawn when a server anti-ESP plugin tries to hide them. It
+  draws what your client receives, keeps the last known spot for `persist-seconds` after the server
+  stops sending it, and with `sound-marks` marks the sounds and projectiles of hidden players and
+  moves their box there. Boxes and tracers work like Meteor's ESP, in Hontun blue by default.
 - `Captcha Solver` Reads a map captcha (Sonar, LimboFilter, nAntiBot, AquaAntiBot, ProstoCaptcha and
   similar) and types the code for you, or only suggests it if you prefer to type it yourself. Blank
   maps and busy map art are left alone instead of guessed.
-- `Channel Fetcher` Records the plugin channels a server uses.
+- `Channel Fetcher` Records the plugin channels a server uses. The full payload data always goes to
+  the client log, the chat shows a short version.
 - `Channel Sender` Sends a custom payload on any channel, even unregistered ones. The data can be
   plain text, hex bytes or a 4-byte number.
+- `DeathFreecam` Adds a `Freecam` button to the death screen so you can fly around after dying, with
+  a level view and no inventory. A box and beam mark where you died and stay after you respawn until
+  you get close. `R` takes you back to the death screen. Options: `auto-freecam`, `sprint-speed` and
+  `bypass-insta-respawn`, which shows the death screen even on servers that respawn you at once.
 - `Free Interact` Lets you attack while using an item, and attack or use items in a boat while you
   paddle.
 - `Gamemode Notify` Alerts you when someone changes their gamemode.
@@ -40,6 +49,13 @@ picker is simply hidden and everything else works unchanged.
   &emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`list` Lists the top-level commands in the command tree the server sent.<br>
   &emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`args <command>` Prints the server's tab completions for that command's arguments.<br>
   &emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`raw <buffer>` Sends the text exactly as typed (include the `/`) as a tab-completion request and prints the reply.
+- `.copy` `tab`, `scoreboard` or `holograms on/off` Copies the server's tab list, sidebar or the
+  holograms you click into configs for TAB, DecentHolograms, FancyHolograms and CMI. Add a plugin
+  name to copy for that plugin only. Animated lines are recorded and saved as animations. Copies land
+  in `hontun/copy/<server>/`, a new folder for every connection.
+- `.inspect` `scoreboard` Shows how the sidebar is built: the plugin that most likely made it, the
+  title and every line, and how each line is made. Hover for details, click to copy as MiniMessage.<br>
+  &emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;`tab` Shows the tab list header and footer, real, fake and hidden players, TAB layouts and the plugins behind them.
 - `.center` `position` Snaps you to the middle of your block. Plain `.center` does the same.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`look` Snaps your view to the nearest of the 8 directions and levels your pitch.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`both` Does `position` and `look` at once.
@@ -48,22 +64,22 @@ picker is simply hidden and everything else works unchanged.
 - `.reconnect` Rejoins the current server (alias `.rejoin`). Add a name to rejoin as that offline
   account.
 - `.toggletab` Locks the player list (tab) visible so you do not have to hold the key.
-- `.server` `info` Meteor's server info plus software, anticheat, backend version, world, channels and resource pack.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`anticheat` Shows the detected anticheat and what it is based on, without sending anything.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`channels` Lists the plugin channels captured while `Channel Fetcher` is on.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins` Scans the server's plugins, falls back to `bypass` when nothing shows up.<br>
+- `.server` `info` Opens the server info window on its Overview page. Plain `.server` does the same. Every option below opens its own page.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`anticheat` The detected anticheat and what it is based on, without sending anything.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`channels` The plugin channels captured while `Channel Fetcher` is on.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins` Scans the server's plugins and sorts them into anticheat, anti-exploit, plugin hider and other. Falls back to `bypass` when nothing shows up.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins default` The same scan without the `bypass` fallback.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`plugins bypass` Only the tab-completion tricks that get past plugin hiders.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`players` Finds the real online roster and flags players hidden from the tab list.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`players` Finds the real online roster, flags players hidden from the tab list and lets you search them and copy their UUID.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`software` Guesses the server software and any proxy in front, without sending anything.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, DivineMC, Pufferfish, Pluto, Plazma, UniverseSpigot, Leaves, ShreddedPaper, GolemPaper,<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Paper, Purpur, Folia, Leaf, Canvas, FlameMC, DivineMC, Pufferfish, Pluto, Plazma, UniverseSpigot, Leaves, ShreddedPaper, GolemPaper,<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;CraftBukkit, Spigot, Vanilla, Fabric, Quilt, Forge, NeoForge, Sponge, Youer, Arclight, Mohist, Magma, Ketting, Banner,<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Minestom, Pumpkin, SteelMC, FerrumC, QuasarMC, PicoLimbo, NanoLimbo, LOOHP Limbo.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxies: Velocity, Velocity-CTD, VeloFlame, BungeeCord, Waterfall, Gate, ViaProxy.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Proxy limbos: LimboAPI, Sonar and VeloFlame verification worlds.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Behind server-side ViaVersion it reads the real backend version.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;Each signal ends in (built-in) or (config), and hovering (config) shows the server setting it depends on.<br>
-  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;A Cookies line lists the cookies the server stored or asked for, also saved to `hontun/cookies/`.<br>
+  &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;&emsp;&emsp;&emsp;&emsp;&ensp;&thinsp;The Cookies page lists the cookies the server stored or asked for, also saved to `hontun/cookies/`.<br>
   &emsp;&emsp;&emsp;&ensp;&thinsp;&thinsp;&thinsp;&hairsp;`version` Works out the real backend version and shows every signal it rests on, without sending anything.
 
 ## 🎨 THEMES
@@ -71,7 +87,8 @@ picker is simply hidden and everything else works unchanged.
 ✨ One color picker drives everything. Set `palette-color` and every accent, gradient and highlight
 follows it live - no restart, no rebuilding the GUI.
 
-Six looks, switchable in `ClickGUI -> GUI -> ui-mode`:
+Hontun's own settings have their own `Hontun` tab in the ClickGUI, right after `GUI`. Six looks,
+switchable in `ClickGUI -> Hontun -> ui-mode`:
 
 | Mode | Look |
 |---|---|
@@ -94,7 +111,7 @@ choices with `h`/`l` and fold a section with `z`. The status line toggles the mo
 pastes the whole file with `:w copy` and `:r paste`. Typing on the modules screen finds modules and
 settings, `Ctrl+F` finds from every tab, and `Esc` on any other tab goes back to the modules.
 
-The `Terminal` group in the GUI tab sets the `prompt`, how enabled modules are marked (`marker`),
+The `Terminal` group in the Hontun tab sets the `prompt`, how enabled modules are marked (`marker`),
 `module-names`, `cursor-blink`, `line-numbers`, `print-animation` and optional `scanlines`. The
 `Rain` group tunes the digital rain, also for the `Matrix` menu scene: `charset`, `mirror-glyphs`,
 `speed`, `density` and `brightness`.
@@ -112,6 +129,16 @@ light mode.
   proxy is active. In `Modern2` and `SmogClient` the server list is drawn as cards, and in
   `Terminal` as console rows, each with the server icon, up to two MOTD lines, and the country
   flag, player count and ping along the top right.
+- `Server list info` Select a server and the space right of the list shows what Hontun knows about
+  it: the address and DNS route, DDoS protection (TCPShield, NeoProtect, Infinity-Filter), country,
+  ping history and your visits. Every visit is logged per server in `hontun/server-log/`, with the
+  servers a proxy moved you between (Server 1, Server 2 and so on) and the last software, plugins and
+  resource packs Hontun saw there. The panel hides itself when the window is too narrow.
+- `Server info window` `.server` opens a window with everything Hontun found about the server you
+  are on, split into pages: Overview, Software, Anticheat, Version, Plugins, Players, World,
+  Connection, Channels and Cookies. The Overview shows the MOTD exactly as the server list does, the
+  server icon (click to view or save it) and the address to copy. Connection lists every resource
+  pack with when it loaded and, when it can be told, whether the proxy or the server sent it.
 - `Country flags` The hosting country of each server, resolved lazily in the background. Lookups
   only start once that server has finished pinging, so the flag never delays its ping result.
   Turn it off with `server-country-flags` if you would rather not send server addresses to a
@@ -150,7 +177,7 @@ light mode.
 
 Every screen follows the palette colour live, except in `SmogClient`, which keeps its own black and
 white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
-`ClickGUI -> GUI -> ui-mode`, then click a theme below to expand its screenshots.
+`ClickGUI -> Hontun -> ui-mode`, then click a theme below to expand its screenshots.
 
 <details open>
 <summary><b>Modern2</b> - chamfered corners, accent glow, corner brackets (default)</summary>
@@ -170,6 +197,10 @@ white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
 <tr>
 <td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui.png" alt="Modern2 ClickGUI"></td>
 <td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern2_clickgui_module.png" alt="Modern2 module settings"></td>
+</tr>
+<tr>
+<td width="50%"><b>Server list info</b><br><img width="100%" src="docs/screenshots/HModern2_server_panel.png" alt="Modern2 server list info"></td>
+<td width="50%"><b>Server info window</b><br><img width="100%" src="docs/screenshots/HModern2_server_menu.png" alt="Modern2 server info window"></td>
 </tr>
 </table>
 </details>
@@ -193,6 +224,10 @@ white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
 <td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui.png" alt="Modern1 ClickGUI"></td>
 <td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HModern1_clickgui_module.png" alt="Modern1 module settings"></td>
 </tr>
+<tr>
+<td width="50%"><b>Server list info</b><br><img width="100%" src="docs/screenshots/HModern1_server_panel.png" alt="Modern1 server list info"></td>
+<td width="50%"><b>Server info window</b><br><img width="100%" src="docs/screenshots/HModern1_server_menu.png" alt="Modern1 server info window"></td>
+</tr>
 </table>
 </details>
 
@@ -214,6 +249,10 @@ white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
 <tr>
 <td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/SmogClient_clickgui.png" alt="SmogClient ClickGUI"></td>
 <td><b>Module settings</b><br><img width="100%" src="docs/screenshots/SmogClient_clickgui_module.png" alt="SmogClient module settings"></td>
+</tr>
+<tr>
+<td width="50%"><b>Server list info</b><br><img width="100%" src="docs/screenshots/SmogClient_server_panel.png" alt="SmogClient server list info"></td>
+<td width="50%"><b>Server info window</b><br><img width="100%" src="docs/screenshots/SmogClient_server_menu.png" alt="SmogClient server info window"></td>
 </tr>
 </table>
 </details>
@@ -237,6 +276,10 @@ white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
 <td><b>Module settings</b><br><img width="100%" src="docs/screenshots/Terminal_clickgui_module.png" alt="Terminal module settings as esp.conf"></td>
 <td><b>Find</b><br><img width="100%" src="docs/screenshots/Terminal_find.png" alt="Terminal find window"></td>
 </tr>
+<tr>
+<td width="50%"><b>Server list info</b><br><img width="100%" src="docs/screenshots/Terminal_server_panel.png" alt="Terminal server list info"></td>
+<td width="50%"><b>Server info window</b><br><img width="100%" src="docs/screenshots/Terminal_server_menu.png" alt="Terminal server info window"></td>
+</tr>
 </table>
 </details>
 
@@ -259,6 +302,10 @@ white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
 <td><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/HVanilla_clickgui.png" alt="HVanilla ClickGUI"></td>
 <td><b>Module settings</b><br><img width="100%" src="docs/screenshots/HVanilla_clickgui_module.png" alt="HVanilla module settings"></td>
 </tr>
+<tr>
+<td width="50%"><b>Server list info</b><br><img width="100%" src="docs/screenshots/HVanilla_server_panel.png" alt="HVanilla server list info"></td>
+<td width="50%"><b>Server info window</b><br><img width="100%" src="docs/screenshots/HVanilla_server_menu.png" alt="HVanilla server info window"></td>
+</tr>
 </table>
 </details>
 
@@ -268,6 +315,10 @@ white, and `Vanilla`, which keeps Minecraft's own look. Pick the mode in
 <tr>
 <td width="50%"><b>ClickGUI</b><br><img width="100%" src="docs/screenshots/Vanilla_clickgui.png" alt="Vanilla ClickGUI"></td>
 <td width="50%"><b>Module settings</b><br><img width="100%" src="docs/screenshots/Vanilla_clickgui_module.png" alt="Vanilla module settings"></td>
+</tr>
+<tr>
+<td><b>Server list info</b><br><img width="100%" src="docs/screenshots/Vanilla_server_panel.png" alt="Vanilla server list info"></td>
+<td><b>Server info window</b><br><img width="100%" src="docs/screenshots/Vanilla_server_menu.png" alt="Vanilla server info window"></td>
 </tr>
 </table>
 </details>

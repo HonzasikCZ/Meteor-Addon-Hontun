@@ -19,11 +19,6 @@ public abstract class PackEntryBaseMixin implements PackEntryDuck {
     @Shadow
     protected abstract List<Pack> getSelfList();
 
-    /**
-     * Vanilla's own relative move. It already removes, re-inserts and fires the model's
-     * change callback, so an arbitrary-distance move is just this with a bigger step - which
-     * saves reaching for the model instance and duplicating the notification.
-     */
     @Shadow
     protected abstract void move(int direction);
 
@@ -42,12 +37,8 @@ public abstract class PackEntryBaseMixin implements PackEntryDuck {
         if (current < 0 || anchorIndex < 0) return;
 
         int target = anchorIndex + (after ? 1 : 0);
-        // The insert happens after this pack has been pulled out, so anything below it has
-        // already shifted up by one.
         if (target > current) target--;
 
-        // Packs with a fixed position are pinned to their end of the list and vanilla's own
-        // move buttons refuse to cross them; a drag should not be able to either.
         int first = 0;
         while (first < list.size() && list.get(first).isFixedPosition()) first++;
         int last = list.size() - 1;

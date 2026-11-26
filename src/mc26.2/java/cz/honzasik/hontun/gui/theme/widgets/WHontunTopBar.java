@@ -10,6 +10,7 @@ import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.tabs.Tab;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
 import meteordevelopment.meteorclient.gui.tabs.Tabs;
+import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.WTopBar;
 import meteordevelopment.meteorclient.gui.widgets.WWidget;
 import meteordevelopment.meteorclient.gui.widgets.pressable.WPressable;
@@ -22,6 +23,7 @@ import static org.lwjgl.glfw.GLFW.glfwSetCursorPos;
 
 public class WHontunTopBar extends WTopBar implements HontunWidget {
     private final double[] size = new double[2];
+    private boolean compact;
 
     @Override
     public void init() {
@@ -33,6 +35,23 @@ public class WHontunTopBar extends WTopBar implements HontunWidget {
 
         WWidget trail = style().topBarTrail(theme());
         if (trail != null) add(trail).expandCellX().right();
+    }
+
+    @Override
+    public void calculateSize() {
+        compact = false;
+        super.calculateSize();
+        if (calculatedWidth <= Utils.getWindowWidth() || !anyIcon()) return;
+
+        compact = true;
+        super.calculateSize();
+    }
+
+    private boolean anyIcon() {
+        for (Cell<?> cell : cells) {
+            if (cell.widget() instanceof WTopBarButton button && button.hasIcon()) return true;
+        }
+        return false;
     }
 
     @Override
@@ -92,7 +111,7 @@ public class WHontunTopBar extends WTopBar implements HontunWidget {
         }
 
         public boolean hasIcon() {
-            return icon != null && theme().tabIcons.get();
+            return icon != null && theme().tabIcons.get() && !compact;
         }
 
         public double iconSize() {

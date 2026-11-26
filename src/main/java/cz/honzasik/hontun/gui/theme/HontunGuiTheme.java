@@ -47,6 +47,7 @@ import meteordevelopment.meteorclient.renderer.text.FontFamily;
 import meteordevelopment.meteorclient.renderer.text.FontInfo;
 import meteordevelopment.meteorclient.renderer.text.SystemFontFace;
 import meteordevelopment.meteorclient.gui.GuiTheme;
+import meteordevelopment.meteorclient.gui.GuiThemes;
 import meteordevelopment.meteorclient.gui.WidgetScreen;
 import meteordevelopment.meteorclient.gui.renderer.packer.GuiTexture;
 import meteordevelopment.meteorclient.gui.tabs.TabScreen;
@@ -513,6 +514,12 @@ public class HontunGuiTheme extends GuiTheme {
     private final Setting<SettingColor> starscriptKeywords = color(sgStarscript, "starscript-keywords", "Color of keywords in Starscript code.", new SettingColor(204, 120, 50));
     private final Setting<SettingColor> starscriptAccessedObjects = color(sgStarscript, "starscript-accessed-objects", "Color of accessed objects (before a dot) in Starscript code.", new SettingColor(152, 118, 170));
 
+    private static final Set<String> HONTUN_GROUPS = Set.of("Terminal", "Rain", "Screens");
+    private static final Set<String> HONTUN_KEYS = Set.of("ui-mode", "click-gui", "light-mode", "server-country-flags", "palette-color", "container-background", "menu-background", "menu-scene");
+
+    public final Settings hontunSettings = new Settings();
+    public final Settings guiSettings = new Settings();
+
     public HontunGuiTheme() {
         super("Hontun");
 
@@ -531,6 +538,27 @@ public class HontunGuiTheme extends GuiTheme {
         updateCache();
 
         HontunTheme.addListener(this::updateCache);
+        splitSettings();
+    }
+
+    private void splitSettings() {
+        for (SettingGroup group : settings.groups) {
+            if (HONTUN_GROUPS.contains(group.name)) {
+                hontunSettings.groups.add(group);
+                continue;
+            }
+
+            SettingGroup hontun = null, gui = null;
+            for (Setting<?> setting : group) {
+                if (HONTUN_KEYS.contains(setting.name)) {
+                    if (hontun == null) hontun = hontunSettings.createGroup(group.name, group.sectionExpanded);
+                    hontun.add(setting);
+                } else {
+                    if (gui == null) gui = guiSettings.createGroup(group.name, group.sectionExpanded);
+                    gui.add(setting);
+                }
+            }
+        }
     }
 
     @Override
@@ -1388,7 +1416,7 @@ public class HontunGuiTheme extends GuiTheme {
 
         mc.schedule(() -> {
             Screen current = mc.gui.screen();
-            if (current instanceof TabScreen ts) ts.tab.openScreen(this);
+            if (current instanceof TabScreen ts) ts.tab.openScreen(GuiThemes.get());
             else if (current instanceof WidgetScreen ws) {
                 if (ws instanceof WindowScreenAccessor accessor && accessor.hontun$window() instanceof WHontunWindow window) window.rebuildChrome();
                 ws.reload();

@@ -50,8 +50,6 @@ public abstract class ServerSelectionListMixin extends ObjectSelectionList<Serve
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        // Only remembers where the press landed; whether it becomes a drag is decided later,
-        // once the pointer has actually moved.
         dl$drag.mousePressed(event);
         return super.mouseClicked(event, doubleClick);
     }
@@ -65,12 +63,8 @@ public abstract class ServerSelectionListMixin extends ObjectSelectionList<Serve
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
         boolean dropped = dl$drag.mouseReleased(event);
-        // Vanilla still gets the event either way: it is what clears the scrollbar's own
-        // drag state, and it costs nothing when the release was ours.
         return super.mouseReleased(event) || dropped;
     }
-
-    // ------------------------------------------------------------------ DragList
 
     @Override
     public DragManager dl$drag() {
@@ -138,17 +132,12 @@ public abstract class ServerSelectionListMixin extends ObjectSelectionList<Serve
     @Override
     public boolean dl$canGrabAt(ObjectSelectionList.Entry<?> entry, double x) {
         int contentX = entry.getContentX();
-        // The row body, plus the left half of the icon once the arrows there are hidden -
-        // the grip is drawn in that column, so it has to be grabbable. The right half stays
-        // the join button.
         if (x >= contentX + 32) return true;
         return DraggableLists.config().hideServerArrows && x >= contentX && x < contentX + 16;
     }
 
     @Override
     public int dl$handleX(ObjectSelectionList.Entry<?> entry) {
-        // The left half of the icon is where the move up / move down buttons used to be, so
-        // it is free for the grip exactly when those are hidden.
         return DraggableLists.config().hideServerArrows ? entry.getContentX() : -1;
     }
 }

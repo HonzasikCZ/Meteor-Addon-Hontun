@@ -18,6 +18,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.Identifier;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -25,6 +28,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class ChannelFetcher extends Module {
     public static final Set<String> REGISTERED = Collections.synchronizedSet(new LinkedHashSet<>());
@@ -38,6 +42,11 @@ public class ChannelFetcher extends Module {
     private static final int MAX_CHANNELS = 1024;
     private static final AtomicInteger PENDING_COUNT = new AtomicInteger();
     private static final AtomicInteger UNPRINTED = new AtomicInteger();
+    private static final int CHAT_TEXT = 160;
+    private static final int CHAT_BYTES = 24;
+    private static final long LOG_BUDGET = 4L << 20;
+    private static final AtomicLong LOGGED = new AtomicLong();
+    private static final AtomicInteger UNDUMPED = new AtomicInteger();
 
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
 
@@ -62,7 +71,6 @@ public class ChannelFetcher extends Module {
         .name("ignore-channels")
         .description("Channels to stop printing AFTER their first sighting. Each channel still prints once (so you see it exists) - only the repeat spam is muted. Use 'namespace:path' for one channel or just 'namespace' for all of it. Recording for .server is unaffected.")
         .defaultValue(List.of("voicechat:state", "voicechat:remove_group", "voicechat:add_group", "voicechat:remove_state"))
-        .visible(printToChat::get)
         .build()
     );
 
@@ -125,11 +133,26 @@ public class ChannelFetcher extends Module {
         boolean firstSight = SEEN.size() < MAX_CHANNELS ? SEEN.add(channel) : !SEEN.contains(channel);
         if (!firstSight && isIgnored(channel)) return;
 
-        enqueue(HontunChat.light("Channel").append(HontunChat.punct(":")).append(Component.literal(" "))
+        int length = data == null ? 0 : data.length;
+        if (LOGGED.get() < LOG_BUDGET) {
+            String full = fullData(data);
+            if (LOGGED.addAndGet(full.length()) >= LOG_BUDGET) {
+                Hontun.LOG.info("[Channel Fetcher] client log budget of 4 MB reached for this server, later payloads are counted but not dumped until you leave");
+                enqueue(HontunChat.light("Channel Fetcher dumped 4 MB of payloads to the client log and stopped dumping for this server. The last payload of every channel is still in .server channels."));
+            }
+            Hontun.LOG.info("[Channel Fetcher] {} ({} B):\n{}", channel, length, full);
+        } else {
+            UNDUMPED.incrementAndGet();
+        }
+        if (!self.printToChat.get()) return;
+
+        MutableComponent msg = HontunChat.light("Channel").append(HontunChat.punct(":")).append(Component.literal(" "))
             .append(HontunChat.value(channel)).append(Component.literal(" "))
             .append(HontunChat.dim("|")).append(Component.literal(" "))
             .append(HontunChat.light("Data")).append(HontunChat.punct(":")).append(Component.literal(" "))
-            .append(HontunChat.light(readableData(data))));
+            .append(HontunChat.light(shortData(data)));
+        if (truncated(data)) msg.append(HontunChat.dim(" (" + length + " B, full data in the client log)"));
+        enqueue(msg);
     }
 
     private static boolean isIgnored(String channel) {
@@ -156,26 +179,48 @@ public class ChannelFetcher extends Module {
         PENDING_COUNT.incrementAndGet();
     }
 
-    private static String readableData(byte[] data) {
-        if (data == null || data.length == 0) return "(empty)";
-
-        int printable = 0;
-        for (byte b : data) {
-            int u = b & 0xFF;
-            if (u == 0x09 || u == 0x0A || u == 0x0D || (u >= 0x20 && u <= 0x7E)) printable++;
+    private static String text(byte[] data) {
+        String s;
+        try {
+            s = StandardCharsets.UTF_8.newDecoder()
+                .onMalformedInput(CodingErrorAction.REPORT)
+                .onUnmappableCharacter(CodingErrorAction.REPORT)
+                .decode(ByteBuffer.wrap(data)).toString();
+        } catch (CharacterCodingException e) {
+            return null;
         }
-        if (printable >= data.length * 0.9) {
-            StringBuilder sb = new StringBuilder(data.length);
-            for (byte b : data) {
-                int u = b & 0xFF;
-                if (u == 0x09 || u == 0x0A || u == 0x0D) sb.append(' ');
-                else if (u < 0x20 || u > 0x7E) sb.append('·');
-                else sb.append((char) u);
+        int printable = 0;
+        int total = 0;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            total++;
+            if (c == '\t' || c == '\n' || c == '\r' || (c >= 0x20 && c != 0x7F && !(c >= 0x80 && c < 0xA0))) printable++;
+        }
+        return total > 0 && printable >= total * 0.9 ? s : null;
+    }
+
+    private static boolean truncated(byte[] data) {
+        if (data == null || data.length == 0) return false;
+        String s = text(data);
+        return s != null ? s.length() > CHAT_TEXT : data.length > CHAT_BYTES;
+    }
+
+    private static String shortData(byte[] data) {
+        if (data == null || data.length == 0) return "(empty)";
+        String s = text(data);
+        if (s != null) {
+            StringBuilder sb = new StringBuilder(Math.min(s.length(), CHAT_TEXT) + 1);
+            int end = Math.min(s.length(), CHAT_TEXT);
+            for (int i = 0; i < end; i++) {
+                char c = s.charAt(i);
+                if (c == '\t' || c == '\n' || c == '\r') sb.append(' ');
+                else if (c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0)) sb.append('·');
+                else sb.append(c);
             }
+            if (s.length() > CHAT_TEXT) sb.append('…');
             return sb.toString();
         }
-
-        int max = Math.min(data.length, 64);
+        int max = Math.min(data.length, CHAT_BYTES);
         StringBuilder hex = new StringBuilder("(" + data.length + " B) ");
         for (int i = 0; i < max; i++) {
             if (i > 0) hex.append(' ');
@@ -183,6 +228,40 @@ public class ChannelFetcher extends Module {
         }
         if (data.length > max) hex.append(" …");
         return hex.toString();
+    }
+
+    private static String fullData(byte[] data) {
+        if (data == null || data.length == 0) return "(empty)";
+        String s = text(data);
+        if (s != null) {
+            StringBuilder sb = new StringBuilder(s.length() + 16);
+            for (int i = 0; i < s.length(); i++) {
+                char c = s.charAt(i);
+                if (c == '\n' || c == '\t') sb.append(c);
+                else if (c == '\r') continue;
+                else if (c < 0x20 || c == 0x7F || (c >= 0x80 && c < 0xA0)) sb.append(String.format("\\x%02X", (int) c));
+                else sb.append(c);
+            }
+            return sb.toString();
+        }
+        StringBuilder sb = new StringBuilder(data.length * 4 + 64);
+        for (int off = 0; off < data.length; off += 16) {
+            if (off > 0) sb.append('\n');
+            sb.append(String.format("%08X  ", off));
+            int end = Math.min(off + 16, data.length);
+            for (int i = off; i < off + 16; i++) {
+                if (i < end) sb.append(String.format("%02X ", data[i] & 0xFF));
+                else sb.append("   ");
+                if (i == off + 7) sb.append(' ');
+            }
+            sb.append(" |");
+            for (int i = off; i < end; i++) {
+                int u = data[i] & 0xFF;
+                sb.append(u >= 0x20 && u <= 0x7E ? (char) u : '.');
+            }
+            sb.append('|');
+        }
+        return sb.toString();
     }
 
     public static final class Cleaner {
@@ -193,9 +272,12 @@ public class ChannelFetcher extends Module {
             PENDING.clear();
             PENDING_COUNT.set(0);
             UNPRINTED.set(0);
+            LOGGED.set(0);
+            int undumped = UNDUMPED.getAndSet(0);
+            if (undumped > 0) Hontun.LOG.info("[Channel Fetcher] {} payloads were not dumped after the client log budget was used up", undumped);
             cz.honzasik.hontun.utils.VersionKeeper.clear();
             cz.honzasik.hontun.utils.WorldInfo.clear();
-            cz.honzasik.hontun.utils.ResourcePackInfo.clear();
+            cz.honzasik.hontun.utils.ResourcePackInfo.left();
         }
     }
 }

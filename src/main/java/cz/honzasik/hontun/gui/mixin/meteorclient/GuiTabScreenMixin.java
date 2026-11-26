@@ -9,7 +9,9 @@ import meteordevelopment.meteorclient.gui.utils.Cell;
 import meteordevelopment.meteorclient.gui.widgets.containers.WHorizontalList;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import meteordevelopment.meteorclient.settings.Settings;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyArg;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.List;
@@ -18,6 +20,11 @@ import java.util.List;
 public abstract class GuiTabScreenMixin extends WindowTabScreen {
     protected GuiTabScreenMixin(GuiTheme theme, Tab tab) {
         super(theme, tab);
+    }
+
+    @ModifyArg(method = "initWidgets", at = @At(value = "INVOKE", target = "Lmeteordevelopment/meteorclient/gui/GuiTheme;settings(Lmeteordevelopment/meteorclient/settings/Settings;)Lmeteordevelopment/meteorclient/gui/widgets/WWidget;"), index = 0)
+    private Settings hontun$guiOnly(Settings settings) {
+        return theme instanceof HontunGuiTheme hontun && settings == hontun.settings ? hontun.guiSettings : settings;
     }
 
     @Inject(method = "initWidgets", at = @At("TAIL"))

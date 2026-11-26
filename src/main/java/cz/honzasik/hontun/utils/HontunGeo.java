@@ -21,7 +21,10 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public final class HontunGeo {
+    public record Info(String country, String org, long asn) {}
+
     private static final Map<String, String> CACHE = new ConcurrentHashMap<>();
+    private static final Map<String, Info> INFO = new ConcurrentHashMap<>();
 
     private static final Map<String, Long> FAILED = new ConcurrentHashMap<>();
     private static final long RETRY_AFTER_MS = 60_000L;
@@ -56,6 +59,10 @@ public final class HontunGeo {
 
         if (INFLIGHT.add(address)) POOL.execute(() -> lookup(address));
         return null;
+    }
+
+    public static Info info(String address) {
+        return address == null ? null : INFO.get(address);
     }
 
     private static String host(String address) {
@@ -93,7 +100,7 @@ public final class HontunGeo {
         String ip = resolve(key);
         if (ip != null) try {
             HttpRequest req = HttpRequest.newBuilder(
-                    URI.create("https://ipwho.is/" + ip + "?fields=country_code,success"))
+                    URI.create("https://ipwho.is/" + ip + "?fields=country_code,success,connection"))
                     .timeout(Duration.ofSeconds(8))
                     .header("User-Agent", "Hontun-Addon")
                     .GET().build();
@@ -104,10 +111,26 @@ public final class HontunGeo {
                     String cc = o.get("country_code").getAsString();
                     if (cc != null && cc.length() == 2) result = cc.toLowerCase(Locale.ROOT);
                 }
+                INFO.put(key, info(result, o));
             }
         } catch (Throwable ignored) {
         }
         finish(key, result);
+    }
+
+    private static Info info(String country, JsonObject o) {
+        String org = "";
+        long asn = 0L;
+        try {
+            if (o.has("connection") && o.get("connection").isJsonObject()) {
+                JsonObject c = o.getAsJsonObject("connection");
+                if (c.has("org") && c.get("org").isJsonPrimitive()) org = c.get("org").getAsString().strip();
+                if (org.isEmpty() && c.has("isp") && c.get("isp").isJsonPrimitive()) org = c.get("isp").getAsString().strip();
+                if (c.has("asn") && c.get("asn").isJsonPrimitive()) asn = c.get("asn").getAsLong();
+            }
+        } catch (RuntimeException ignored) {
+        }
+        return new Info(country, org, asn);
     }
 
     private static void finish(String key, String result) {

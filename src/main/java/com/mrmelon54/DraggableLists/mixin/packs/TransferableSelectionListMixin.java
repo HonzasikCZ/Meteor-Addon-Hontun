@@ -39,8 +39,6 @@ public abstract class TransferableSelectionListMixin extends ObjectSelectionList
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        // Only remembers where the press landed; whether it becomes a drag is decided later,
-        // once the pointer has actually moved.
         dl$drag.mousePressed(event);
         return super.mouseClicked(event, doubleClick);
     }
@@ -56,8 +54,6 @@ public abstract class TransferableSelectionListMixin extends ObjectSelectionList
         boolean dropped = dl$drag.mouseReleased(event);
         return super.mouseReleased(event) || dropped;
     }
-
-    // ------------------------------------------------------------------ DragList
 
     @Override
     public DragManager dl$drag() {
@@ -91,8 +87,6 @@ public abstract class TransferableSelectionListMixin extends ObjectSelectionList
         if (!(movedRow.dl$model() instanceof PackEntryDuck movedPack)) return;
         if (!(anchorRow.dl$model() instanceof PackEntryDuck anchorPack)) return;
 
-        // The model rebuilds both lists and the screen re-renders from the new order; nothing
-        // else needs poking.
         movedPack.dl$moveNextTo(anchorPack.dl$pack(), after);
     }
 
@@ -125,8 +119,6 @@ public abstract class TransferableSelectionListMixin extends ObjectSelectionList
     public boolean dl$canGrabAt(ObjectSelectionList.Entry<?> entry, double x) {
         int contentX = entry.getContentX();
         if (x >= contentX + 32) return true;
-        // The right half of a selected pack's icon held the arrows and now holds the grip;
-        // the left half is still unselect, and an available pack's whole icon is still select.
         return x >= contentX + 16 && x < contentX + 32 && dl$handleX(entry) >= 0;
     }
 
@@ -135,8 +127,6 @@ public abstract class TransferableSelectionListMixin extends ObjectSelectionList
         if (!DraggableLists.config().hideResourcePackArrows) return -1;
         if (!(entry instanceof PackRowDuck row)) return -1;
 
-        // On an available pack the whole icon is the select button, so there is no free
-        // column to put a grip in; on a selected one the right half held the two arrows.
         return row.dl$model().canSelect() ? -1 : entry.getContentX() + 16;
     }
 }

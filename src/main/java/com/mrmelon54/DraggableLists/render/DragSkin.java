@@ -6,16 +6,7 @@ import cz.honzasik.hontun.gui.render.RoundedGui;
 import cz.honzasik.hontun.gui.widget.TerminalWidgets;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/**
- * The individual pieces of the drag: the grip, the hole a row leaves behind, the lifted
- * card's shadow and edge, and the flash that confirms where it landed.
- *
- * <p>Nothing here decides when to draw - that is {@link com.mrmelon54.DraggableLists.drag.DragManager}'s
- * job - and nothing here touches list state, so each piece can be toggled off on its own from
- * the config without the rest noticing.
- */
 public final class DragSkin {
-    /** Width of the column the grip lives in; the same 16 pixels vanilla gave each arrow. */
     public static final int HANDLE_WIDTH = 16;
 
     private static final int DOT = 2;
@@ -26,13 +17,6 @@ public final class DragSkin {
     private DragSkin() {
     }
 
-    /**
-     * The six-dot grip. This is the affordance that replaces the two arrow buttons: arrows
-     * say "click me once per position", a grip says "pick this up", which is what the row now
-     * actually does.
-     *
-     * @param hot true when the pointer is over the grip itself
-     */
     public static void handle(GuiGraphicsExtractor g, int x, int contentY, int contentHeight,
                               boolean hot, float fade, Palette p) {
         if (fade <= 0.01f) return;
@@ -100,12 +84,6 @@ public final class DragSkin {
         }
     }
 
-    /**
-     * The slot the carried row will drop into. The rows around it have already moved apart to
-     * make the space, so this fills that space with a solid placeholder in the deepest
-     * background colour. It used to be a translucent hole, but on the busy menu/server-list
-     * background that see-through middle read as a gap in the drop target, so it is opaque now.
-     */
     public static void gap(GuiGraphicsExtractor g, int x, int y, int width, int height, Palette p) {
         if (width <= 0 || height <= 4) return;
 
@@ -122,25 +100,18 @@ public final class DragSkin {
             return;
         }
 
-        // Fully opaque, and in the row's own surface colour rather than the near-black crust:
-        // crust blended into the dark menu background so only the outline showed, which read as a
-        // hollow hole / pane of glass. Surface is a visible mid-tone, so the slot looks like a
-        // solid "the row lands here" placeholder.
         Shapes.fill(g, gx, gy, gw, gh, p.corners(), p.cornerSize(), Palette.argb(0xFF, p.surface()));
         Shapes.outline(g, gx, gy, gw, gh, p.corners(), p.cornerSize(), Palette.argb(0xFF, p.accent()));
     }
 
-    /** Soft shadow under the lifted row. Drawn before the row's own content. */
     public static void cardShadow(GuiGraphicsExtractor g, int x, int y, int width, int height, Palette p) {
         Shapes.shadow(g, x, y, width, height, p.corners(), p.cornerSize(), 4, 0x78, 2);
     }
 
-    /** Backing fill for the lifted row, so the content is not sitting on the rows below it. */
     public static void cardFill(GuiGraphicsExtractor g, int x, int y, int width, int height, Palette p) {
         Shapes.fill(g, x, y, width, height, p.corners(), p.cornerSize(), Palette.argb(0xFF, p.surfaceHi()));
     }
 
-    /** Accent edge and outward glow for the lifted row. Drawn after the row's own content. */
     public static void cardEdge(GuiGraphicsExtractor g, int x, int y, int width, int height, Palette p) {
         if (HontunBridge.terminal()) {
             new TerminalWidgets.Px().frame(x, y, width, height, TerminalWidgets.lineF()).submit(g);
@@ -150,13 +121,6 @@ public final class DragSkin {
         Shapes.outline(g, x, y, width, height, p.corners(), p.cornerSize(), Palette.argb(0xFF, p.accentHi()));
     }
 
-    /**
-     * Fading outline on the row that just moved. A reorder replaces every entry object in the
-     * list, so without this the only feedback that the drop worked is the rows silently being
-     * in a different order.
-     *
-     * @param progress 0 at the moment of the drop, 1 when the flash is over
-     */
     public static void flash(GuiGraphicsExtractor g, int x, int y, int width, int height,
                              float progress, Palette p) {
         float strength = 1f - progress;

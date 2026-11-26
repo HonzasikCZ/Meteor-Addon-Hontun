@@ -2,6 +2,8 @@ package cz.honzasik.hontun;
 
 import cz.honzasik.hontun.commands.CenterCommand;
 import cz.honzasik.hontun.commands.CmdProbe;
+import cz.honzasik.hontun.commands.CopyCommand;
+import cz.honzasik.hontun.commands.InspectCommand;
 import cz.honzasik.hontun.commands.ForEach;
 import cz.honzasik.hontun.commands.PlayerRoster;
 import cz.honzasik.hontun.commands.PluginScanner;
@@ -11,12 +13,16 @@ import cz.honzasik.hontun.commands.ToggleTab;
 import cz.honzasik.hontun.modules.AnticheatDetect;
 import cz.honzasik.hontun.modules.CaptchaSolver;
 import cz.honzasik.hontun.modules.AntiExploit;
+import cz.honzasik.hontun.modules.BypassESP;
+import cz.honzasik.hontun.modules.DeathFreecam;
 import cz.honzasik.hontun.modules.ChannelFetcher;
 import cz.honzasik.hontun.modules.ChannelSender;
 import cz.honzasik.hontun.modules.FreeInteract;
 import cz.honzasik.hontun.modules.GamemodeNotify;
 import cz.honzasik.hontun.gui.api.render.RoundedRect;
+import cz.honzasik.hontun.gui.tabs.HontunTab;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
+import cz.honzasik.hontun.serverlog.SnapshotCollector;
 import cz.honzasik.hontun.gui.render.HontunRenderer;
 import com.mojang.logging.LogUtils;
 import meteordevelopment.meteorclient.MeteorClient;
@@ -49,10 +55,12 @@ public class Hontun extends MeteorAddon {
         MeteorClient.EVENT_BUS.subscribe(PluginScanner.INSTANCE);
         MeteorClient.EVENT_BUS.subscribe(PlayerRoster.INSTANCE);
         MeteorClient.EVENT_BUS.subscribe(SoftwareProbe.INSTANCE);
+        SnapshotCollector.init();
 
         THEME = new HontunGuiTheme();
         GuiThemes.add(THEME);
         selectThemeByDefault();
+        HontunTab.register();
         RoundedRect.get().registerRenderer(HontunRenderer.get());
     }
 
@@ -80,6 +88,8 @@ public class Hontun extends MeteorAddon {
         Commands.add(new CmdProbe());
         Commands.add(new CenterCommand());
         Commands.add(new ToggleTab());
+        Commands.add(new CopyCommand());
+        Commands.add(new InspectCommand());
     }
 
     private void addModules() {
@@ -92,6 +102,8 @@ public class Hontun extends MeteorAddon {
         modules.add(new FreeInteract());
         modules.add(new GamemodeNotify());
         modules.add(new CaptchaSolver());
+        modules.add(new BypassESP());
+        modules.add(new DeathFreecam());
     }
 
     @Override

@@ -8,14 +8,6 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
-/**
- * Redraws the join button that Hontun paints over a server row's icon.
- *
- * <p>Hontun draws the join, move-up and move-down buttons in one call, so hiding its arrows
- * means taking over that call - and then putting the join button back, because it is the
- * only way to start a server from the row without double-clicking it. The geometry matches
- * Hontun's: a 16x32 zone on the right half of the icon with a filled triangle in it.
- */
 public final class HontunJoinZone {
     private HontunJoinZone() {
     }

@@ -4,6 +4,7 @@ import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.tree.CommandNode;
 import cz.honzasik.hontun.utils.HontunChat;
 import cz.honzasik.hontun.utils.MCUtil;
+import cz.honzasik.hontun.utils.Oversize;
 import net.fabricmc.loader.api.FabricLoader;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
@@ -25,6 +26,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 public class PluginScanner {
@@ -54,10 +56,14 @@ public class PluginScanner {
     private static final int SENDS_PER_TICK = 3;
     private static final int TIMEOUT_TICKS = 120;
     private static final int IDLE_TIMEOUT_TICKS = 40;
+    private static final int MAX_FOUND = 512;
+    private static final int MAX_NAME = 64;
+    public static final String OVERSIZE = "plugin scan, not listed";
 
     private static int nextId = 41000;
 
     private final Set<String> found = Collections.synchronizedSet(new TreeSet<>(String.CASE_INSENSITIVE_ORDER));
+    private final AtomicInteger skipped = new AtomicInteger();
     private final Set<Integer> versionPending = ConcurrentHashMap.newKeySet();
     private final Set<Integer> enumPending = ConcurrentHashMap.newKeySet();
     private final Deque<String> enumQueue = new ArrayDeque<>();
@@ -71,7 +77,24 @@ public class PluginScanner {
     private volatile long deadlineTick = 0;
     private volatile long lastActivityTick = 0;
 
+    private volatile boolean scanned = false;
+
     private PluginScanner() {}
+
+    public boolean running() { return active; }
+
+    public boolean scanned() { return scanned; }
+
+    public List<String> results() {
+        List<String> list = new ArrayList<>(found);
+        list.sort(String.CASE_INSENSITIVE_ORDER);
+        return list;
+    }
+
+    public static boolean flagged(String name) {
+        String low = name.toLowerCase();
+        return ANTICHEAT.contains(low) || low.contains("anticheat") || low.contains("exploit");
+    }
 
     public void onFinish(Consumer<List<String>> listener) {
         finishListeners.add(listener);
@@ -100,6 +123,7 @@ public class PluginScanner {
         if (active) { ChatUtils.warning("A plugin scan is already running."); return; }
 
         found.clear();
+        skipped.set(0);
         versionPending.clear();
         enumPending.clear();
         enumQueue.clear();
@@ -161,9 +185,20 @@ public class PluginScanner {
         int i = name.indexOf(':');
         if (i > 0) {
             String ns = name.substring(0, i).toLowerCase();
-            if (!excludedNs(ns)) found.add(ns);
+            if (!excludedNs(ns)) keep(ns);
         }
     }
+
+    private void keep(String name) {
+        if (name.length() <= MAX_NAME && (found.size() < MAX_FOUND || found.contains(name))) {
+            found.add(name);
+            return;
+        }
+        skipped.incrementAndGet();
+        Oversize.item(OVERSIZE, name);
+    }
+
+    public int skipped() { return skipped.get(); }
 
     private void addPluginCandidate(String t) {
         if (t == null) return;
@@ -174,12 +209,12 @@ public class PluginScanner {
         int c = t.indexOf(':');
         if (c > 0) {
             String ns = t.substring(0, c).toLowerCase();
-            if (!excludedNs(ns)) found.add(ns);
+            if (!excludedNs(ns)) keep(ns);
             return;
         }
         if (!t.contains(" ") && Character.isLetter(t.charAt(0)) && Character.isUpperCase(t.charAt(0))
             && !excludedNs(t.toLowerCase())) {
-            found.add(t);
+            keep(t);
         }
     }
 
@@ -243,10 +278,8 @@ public class PluginScanner {
                 if (onlinePlayers.contains(name.toLowerCase())) { playerCompletion = true; break; }
                 sugg.add(name);
             }
-            if (playerCompletion) {
-                versionPending.clear();
-            } else {
-                found.addAll(sugg);
+            if (!playerCompletion) {
+                for (String n : sugg) keep(n);
             }
             lastActivityTick = MCUtil.MC.clientTickCount;
             return;
@@ -261,9 +294,13 @@ public class PluginScanner {
     }
 
     private void print() {
+        scanned = true;
         List<String> list = new ArrayList<>(found);
         list.sort(String.CASE_INSENSITIVE_ORDER);
+        int cut = skipped.get();
+        String where = Oversize.where(OVERSIZE);
         MCUtil.forceMainThread(() -> {
+            if (cut > 0) ChatUtils.sendMsg(HontunChat.light(cut + " suggested names were not listed (over " + MAX_FOUND + " names or longer than " + MAX_NAME + " chars), see " + where));
             if (list.isEmpty()) {
                 ChatUtils.warning("No plugins found.");
                 return;

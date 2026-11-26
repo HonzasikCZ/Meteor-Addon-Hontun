@@ -34,8 +34,10 @@ public final class HontunServerCard {
 
     public static void background(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e,
                                   boolean hovered, boolean selected) {
-        int x = e.getX(), y = e.getY() + 1, w = e.getWidth(), h = e.getHeight() - 2;
+        background(g, e.getX(), e.getY() + 1, e.getWidth(), e.getHeight() - 2, hovered, selected);
+    }
 
+    public static void background(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean hovered, boolean selected) {
         if (HontunTheme.terminal()) {
             TerminalWidgets.row(g, x, y, w, h, selected, hovered);
             return;
@@ -74,17 +76,22 @@ public final class HontunServerCard {
                                   ServerData data, FaviconTexture icon, Identifier statusIcon,
                                   int index, int serverCount, boolean hovered, boolean selected,
                                   int mouseX, int mouseY) {
-        if (HontunTheme.terminal()) {
-            terminalForeground(g, e, data, icon, statusIcon, index, serverCount, hovered, selected, mouseX, mouseY);
-            return;
+        int contentX = e.getContentX(), contentY = e.getContentY();
+        if (HontunTheme.terminal()) terminalContent(g, data, icon.textureLocation(), statusIcon, contentX, contentY, e.getContentRight(), selected);
+        else content(g, data, icon.textureLocation(), statusIcon, contentX, contentY, e.getContentRight());
+        if (hovered) {
+            arrows(g, contentX, contentY, index, serverCount, mouseX, mouseY);
         }
+    }
+
+    public static void content(GuiGraphicsExtractor g, ServerData data, Identifier icon, Identifier statusIcon,
+                               int contentX, int contentY, int contentRight) {
         Font f = Minecraft.getInstance().font;
-        int contentX = e.getContentX(), contentY = e.getContentY(), contentRight = e.getContentRight();
 
         g.fill(contentX + 33, contentY, contentX + 34, contentY + 32,
                 HontunTheme.argb(0x90, HontunTheme.overlay0()));
 
-        g.blit(RenderPipelines.GUI_TEXTURED, icon.textureLocation(), contentX, contentY, 0.0f, 0.0f,
+        g.blit(RenderPipelines.GUI_TEXTURED, icon, contentX, contentY, 0.0f, 0.0f,
                 32, 32, 64, 64, 64, 64);
 
         int statusIconX = contentRight - 15;
@@ -115,7 +122,7 @@ public final class HontunServerCard {
 
         if (data.motd != null) {
             int motdW = Math.max(40, contentRight - 12 - tx);
-            List<FormattedCharSequence> lines = f.split(data.motd, motdW);
+            List<FormattedCharSequence> lines = f.split(f.substrByWidth(data.motd, motdW * 3), motdW);
             int motdColor = HontunTheme.argb(0xFF, HontunTheme.textDim());
             for (int i = 0; i < Math.min(lines.size(), 2); i++) {
                 g.text(f, lines.get(i), tx, contentY + 12 + f.lineHeight * i, motdColor, false);
@@ -123,20 +130,13 @@ public final class HontunServerCard {
         }
 
         drawFlag(g, f, data, contentX, contentY, statusX, contentX + 35 + f.width(data.name));
-
-        if (hovered) {
-            arrows(g, contentX, contentY, index, serverCount, mouseX, mouseY);
-        }
     }
 
-    private static void terminalForeground(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e,
-                                           ServerData data, FaviconTexture icon, Identifier statusIcon,
-                                           int index, int serverCount, boolean hovered, boolean selected,
-                                           int mouseX, int mouseY) {
+    public static void terminalContent(GuiGraphicsExtractor g, ServerData data, Identifier icon, Identifier statusIcon,
+                                       int contentX, int contentY, int contentRight, boolean selected) {
         Font f = Minecraft.getInstance().font;
-        int contentX = e.getContentX(), contentY = e.getContentY(), contentRight = e.getContentRight();
 
-        g.blit(RenderPipelines.GUI_TEXTURED, icon.textureLocation(), contentX, contentY, 0.0f, 0.0f,
+        g.blit(RenderPipelines.GUI_TEXTURED, icon, contentX, contentY, 0.0f, 0.0f,
                 32, 32, 64, 64, 64, 64);
 
         int statusIconX = contentRight - 15;
@@ -163,7 +163,7 @@ public final class HontunServerCard {
 
         if (data.motd != null) {
             int motdW = Math.max(40, contentRight - 12 - tx);
-            List<FormattedCharSequence> lines = f.split(data.motd, motdW);
+            List<FormattedCharSequence> lines = f.split(f.substrByWidth(data.motd, motdW * 3), motdW);
             int motdColor = TerminalWidgets.dim();
             for (int i = 0; i < Math.min(lines.size(), 2); i++) {
                 g.text(f, lines.get(i), tx, contentY + 12 + f.lineHeight * i, motdColor, false);
@@ -171,10 +171,6 @@ public final class HontunServerCard {
         }
 
         drawFlag(g, f, data, contentX, contentY, statusX, tx + TerminalWidgets.width(f, name));
-
-        if (hovered) {
-            arrows(g, contentX, contentY, index, serverCount, mouseX, mouseY);
-        }
     }
 
     public static void selection(GuiGraphicsExtractor g, ServerSelectionList.OnlineServerEntry e, boolean selected) {

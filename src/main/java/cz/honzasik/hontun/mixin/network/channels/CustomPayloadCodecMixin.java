@@ -36,5 +36,6 @@ public abstract class CustomPayloadCodecMixin {
         input.readerIndex(start);
 
         ChannelFetcher.onRawPayload(id, data);
+        cz.honzasik.hontun.utils.ChannelPayloads.record(id.toString(), data, len);
     }
 }

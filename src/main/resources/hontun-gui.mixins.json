@@ -17,6 +17,8 @@
     "meteorclient.GuiRendererAccessor",
     "meteorclient.GuiRendererMixin",
     "meteorclient.GuiTabScreenMixin",
+    "meteorclient.GuiThemesAccessor",
+    "meteorclient.GuiThemesMixin",
     "meteorclient.MeteorWidgetMixin",
     "meteorclient.ProxiesImportScreenMixin",
     "meteorclient.SettingAccessor",

@@ -20,7 +20,6 @@ public class ServerListMixin implements ServerListDuck {
         if (moved == anchor) return;
         if (!serverList.remove(moved)) return;
 
-        // Look the anchor up after the removal, so the index is already in post-removal terms.
         int index = serverList.indexOf(anchor);
         if (index < 0) {
             serverList.add(moved);

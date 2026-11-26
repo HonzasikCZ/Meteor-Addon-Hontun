@@ -1,6 +1,7 @@
 package cz.honzasik.hontun.mixin.client.connect;
 
 import cz.honzasik.hontun.gui.join.JoinView;
+import cz.honzasik.hontun.serverlog.HopTracker;
 import cz.honzasik.hontun.utils.ConnectTracker;
 import cz.honzasik.hontun.utils.HontunTheme;
 import net.minecraft.client.Minecraft;
@@ -29,6 +30,7 @@ public abstract class ConnectScreenInfoMixin {
     private static void hontun$seedTracker(Screen parent, Minecraft minecraft, ServerAddress hostAndPort,
                                            ServerData data, boolean isQuickPlay, TransferState transferState,
                                            CallbackInfo ci) {
+        if (transferState == null) HopTracker.connecting();
         if (minecraft.gui.screen() instanceof ConnectScreen) return;
 
         String addr = transferState == null && data != null && data.ip != null && !data.ip.isEmpty()

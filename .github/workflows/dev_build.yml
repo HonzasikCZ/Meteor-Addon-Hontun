@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 permissions:
-  contents: write   # only used to delete the leftover 'snapshot' release/tag below
+  contents: write
 
 jobs:
   build:
@@ -15,7 +15,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # One-off: remove the old auto-created 'snapshot' release + tag. Creates nothing.
       - name: Remove stale snapshot release
         env:
           GH_TOKEN: ${{ github.token }}

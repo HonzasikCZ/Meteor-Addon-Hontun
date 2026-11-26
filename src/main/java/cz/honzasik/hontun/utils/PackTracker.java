@@ -126,6 +126,7 @@ public final class PackTracker {
             @Override
             public void reportFinalResult(UUID id, PackLoadFeedback.FinalResult result) {
                 PackTracker.result(id, result);
+                ResourcePackInfo.result(id, result);
                 inner.reportFinalResult(id, result);
             }
         };

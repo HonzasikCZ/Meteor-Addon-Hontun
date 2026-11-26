@@ -1,21 +1,5 @@
 package com.mrmelon54.DraggableLists.theme;
 
-/**
- * Every colour the drag visuals need, as 0xRRGGBB (no alpha - alpha is chosen per element
- * by {@link com.mrmelon54.DraggableLists.render.DragSkin}).
- *
- * @param accent      primary accent, used for the drop indicator and the lifted card's border
- * @param accentHi    brighter accent, used for highlights and the indicator core
- * @param accentLo    darker accent, used for glow falloff and gradients
- * @param surface     resting row / card fill
- * @param surfaceHi   raised card fill (the row while it is being carried)
- * @param crust       deepest background, used for the gap left behind and for shadows
- * @param border      neutral border
- * @param text        primary text
- * @param textDim     secondary text
- * @param corners     corner treatment
- * @param cornerSize  corner radius (ROUND) or cut length (CHAMFER), in GUI pixels
- */
 public record Palette(
     int accent,
     int accentHi,
@@ -29,11 +13,6 @@ public record Palette(
     CornerStyle corners,
     int cornerSize
 ) {
-    /**
-     * The look used when Hontun is not driving the theme: a neutral dark card with a cool
-     * blue accent, tuned to sit on top of vanilla's list background in both the menu and
-     * the in-world variants.
-     */
     public static final Palette BUILTIN = new Palette(
         0x58A6FF,
         0x8CC8FF,
@@ -48,12 +27,6 @@ public record Palette(
         4
     );
 
-    /**
-     * The look used when Hontun is installed but the user has put it back into its plain
-     * "Vanilla" UI mode: neutral greys, a white accent and sharp square corners, so the drag
-     * matches Minecraft's own list instead of carrying the built-in accent that would make
-     * Vanilla mode look like one of the styled Hontun modes.
-     */
     public static final Palette VANILLA = new Palette(
         0xFFFFFF,
         0xFFFFFF,

@@ -26,6 +26,7 @@ public final class HVanillaGlyphs {
     public static final PixelGlyph SWORD = of("......##", ".....###", "....###.", "#..###..", ".####...", "..##....", ".#.##...", "#...#...");
     public static final PixelGlyph QUESTION = of(".###.", "#...#", "....#", "...#.", "..#..", "..#..", ".....", "..#..");
     public static final PixelGlyph GRID = of("###.###", "###.###", "###.###", ".......", "###.###", "###.###", "###.###");
+    public static final PixelGlyph HONTUN = of(".#####.", "#.###.#", "#.###.#", "#.....#", "#.###.#", "#.###.#", ".#####.");
     public static final PixelGlyph PLUS = of("...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#...");
     public static final PixelGlyph SEARCH = of(".####...", "#....#..", "#....#..", "#....#..", "#....#..", ".######.", ".....##.");
     public static final PixelGlyph REFRESH = of("..#####.", ".##...#.", "###.....", "........", "........", ".....###", ".#...##.", ".#####..");
@@ -69,6 +70,7 @@ public final class HVanillaGlyphs {
         ok &= put(HontunBuiltinIcons.EDIT, PENCIL);
         ok &= put(HontunBuiltinIcons.EYE, EYE);
         ok &= put(HontunBuiltinIcons.GRID, GRID);
+        ok &= put(HontunBuiltinIcons.HONTUN, HONTUN);
         ok &= put(HontunBuiltinIcons.IMPORT, PASTE);
         ok &= put(HontunBuiltinIcons.MINUS, MINUS);
         ok &= put(HontunBuiltinIcons.MOUSE, MOUSE);

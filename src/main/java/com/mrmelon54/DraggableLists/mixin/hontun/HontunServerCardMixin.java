@@ -10,16 +10,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Hontun restyles the multiplayer list and draws its own move-up/move-down buttons on each
- * server row. Hiding vanilla's arrow sprites does nothing about those, so they get the same
- * treatment here: the row keeps its join button, the arrows go, and the freed column is
- * where the grip is drawn.
- *
- * <p>{@link Pseudo} with a string target is what makes this optional - without Hontun
- * installed the class is simply never patched, and this mod never needs Hontun (or Meteor)
- * on its classpath to build.
- */
 @Pseudo
 @Mixin(targets = "cz.honzasik.hontun.utils.HontunServerCard", remap = false)
 public class HontunServerCardMixin {

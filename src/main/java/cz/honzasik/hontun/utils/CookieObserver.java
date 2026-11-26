@@ -25,6 +25,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public final class CookieObserver {
     private static final int MAX_COOKIES = 64;
     private static final int MAX_HEX_BYTES = 2048;
+    private static final int MAX_KEY = 256;
+    private static final long WRITE_EVERY_MS = 1000;
+    private static long lastWrite;
     private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm:ss");
 
     private static final Map<String, Entry> COOKIES = new ConcurrentHashMap<>();
@@ -36,6 +39,22 @@ public final class CookieObserver {
 
     private CookieObserver() {}
 
+    public record View(String key, boolean stored, boolean requested, int size, String hex) {}
+
+    public static java.util.List<View> list() {
+        java.util.List<View> out = new java.util.ArrayList<>();
+        for (Map.Entry<String, Entry> me : COOKIES.entrySet()) {
+            Entry e = me.getValue();
+            out.add(new View(me.getKey(), e.stored, e.requested, e.size, e.hex));
+        }
+        out.sort(java.util.Comparator.comparing(View::key));
+        return out;
+    }
+
+    public static Path file() { return file; }
+
+    public static boolean blocking() { return hspooferBlocking(); }
+
     private static final class Entry {
         volatile boolean stored;
         volatile boolean requested;
@@ -46,6 +65,7 @@ public final class CookieObserver {
     }
 
     public static void connecting(String address) {
+        ChannelPayloads.clear();
         connection = null;
         if (transferring) {
             transferring = false;
@@ -73,6 +93,7 @@ public final class CookieObserver {
 
     private static void record(String key, byte[] payload, boolean store) {
         if (server == null) open("direct");
+        if (key.length() > MAX_KEY) key = Oversize.cut("cookie key", key) + key.substring(0, MAX_KEY);
         Entry e = COOKIES.get(key);
         if (e == null) {
             if (COOKIES.size() >= MAX_COOKIES) return;
@@ -101,9 +122,16 @@ public final class CookieObserver {
     }
 
     public static void tick() {
-        if (DIRTY.getAndSet(false) && !COOKIES.isEmpty()) write();
+        long now = System.currentTimeMillis();
+        if (now - lastWrite >= WRITE_EVERY_MS && DIRTY.getAndSet(false) && !COOKIES.isEmpty()) {
+            lastWrite = now;
+            write();
+        }
         Connection c = connection;
-        if (c != null && !c.isConnected() && !transferring) clear();
+        if (c != null && !c.isConnected() && !transferring) {
+            if (DIRTY.getAndSet(false) && !COOKIES.isEmpty()) write();
+            clear();
+        }
     }
 
     private static Path dir() {

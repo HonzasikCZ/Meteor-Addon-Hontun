@@ -3,6 +3,7 @@ package cz.honzasik.hontun.commands;
 import com.mojang.brigadier.suggestion.Suggestion;
 import cz.honzasik.hontun.utils.HontunChat;
 import cz.honzasik.hontun.utils.MCUtil;
+import cz.honzasik.hontun.utils.Oversize;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
@@ -23,6 +24,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 public class PlayerRoster {
@@ -42,6 +44,8 @@ public class PlayerRoster {
     private static final int SENDS_PER_TICK = 3;
     private static final int TIMEOUT_TICKS = 100;
     private static final int IDLE_TIMEOUT_TICKS = 30;
+    private static final int MAX_ROSTER = 1000;
+    public static final String OVERSIZE = "player roster, not listed";
 
     private static int nextId = 52000;
 
@@ -57,7 +61,22 @@ public class PlayerRoster {
     private volatile long deadlineTick = 0;
     private volatile long lastActivityTick = 0;
 
+    private volatile List<String> lastFound = List.of();
+    private volatile List<String> lastHidden = List.of();
+    private final AtomicInteger skipped = new AtomicInteger();
+    private volatile boolean finished = false;
+
     private PlayerRoster() {}
+
+    public boolean running() { return active; }
+
+    public boolean finished() { return finished; }
+
+    public int skipped() { return skipped.get(); }
+
+    public List<String> found() { return lastFound; }
+
+    public List<String> hidden() { return lastHidden; }
 
     public void run() {
         ClientPacketListener conn = MCUtil.getPlayNetHandler();
@@ -65,6 +84,7 @@ public class PlayerRoster {
         if (active) { ChatUtils.warning("A player scan is already running."); return; }
 
         roster.clear();
+        skipped.set(0);
         pending.clear();
         queue.clear();
         tabLower.clear();
@@ -128,7 +148,12 @@ public class PlayerRoster {
             t = t.trim();
             if (!NAME.matcher(t).matches()) continue;
             if (NOT_A_PLAYER.contains(t.toLowerCase(Locale.ROOT))) continue;
-            roster.add(t);
+            if (roster.size() < MAX_ROSTER || roster.contains(t)) {
+                roster.add(t);
+            } else {
+                skipped.incrementAndGet();
+                Oversize.item(OVERSIZE, t);
+            }
         }
         lastActivityTick = MCUtil.MC.clientTickCount;
     }
@@ -150,12 +175,19 @@ public class PlayerRoster {
 
         List<String> tab = new ArrayList<>(tabNames);
         tab.sort(String.CASE_INSENSITIVE_ORDER);
+        lastFound = List.copyOf(found);
+        lastHidden = List.copyOf(hidden);
+        finished = true;
 
+        int cut = skipped.get();
+        String where = Oversize.where(OVERSIZE);
         MCUtil.forceMainThread(() -> {
             ChatUtils.sendMsg(HontunChat.light("Tab list ")
                 .append(HontunChat.punct("(")).append(HontunChat.value(String.valueOf(tab.size()))).append(HontunChat.punct("), "))
                 .append(HontunChat.light("suggestion roster "))
                 .append(HontunChat.punct("(")).append(HontunChat.value(String.valueOf(found.size()))).append(HontunChat.punct(")")));
+
+            if (cut > 0) ChatUtils.sendMsg(HontunChat.light(cut + " more suggested names were not checked (over " + MAX_ROSTER + "), see " + where));
 
             if (found.isEmpty()) {
                 ChatUtils.warning("Server exposed no player-name suggestions (message commands may be disabled).");

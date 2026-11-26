@@ -2,6 +2,7 @@ package cz.honzasik.hontun.gui.mixin.meteorclient;
 
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import cz.honzasik.hontun.gui.tabs.HontunTab;
 import cz.honzasik.hontun.gui.theme.HontunGuiTheme;
 import cz.honzasik.hontun.gui.theme.style.FooterKind;
 import meteordevelopment.meteorclient.gui.GuiThemes;
@@ -32,7 +33,7 @@ public abstract class TabMixin {
 
             if (screen instanceof WindowTabScreen) {
                 Object self = this;
-                FooterKind kind = self instanceof GuiTab || self instanceof ConfigTab ? FooterKind.MODULE : FooterKind.TAB;
+                FooterKind kind = self instanceof GuiTab || self instanceof ConfigTab || self instanceof HontunTab ? FooterKind.MODULE : FooterKind.TAB;
                 WWidget footer = hontun.style().footer(hontun, kind);
                 if (footer != null) original.call(screen, footer).bottom().expandX();
             }
