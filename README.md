@@ -7,6 +7,7 @@
 A Meteor Client addon for Minecraft 26.2 and 26.3 - fully recolorable interface that restyles Meteor's ClickGUI and Minecraft's own menus.
 
 🌐 **Website:** [hontun.xyz](https://hontun.xyz) · [Try the ClickGUI in your browser](https://hontun.xyz/demo/)
+
 🗨️ **Discord:** [discord.gg/KvfJnpnBjT](https://discord.gg/invite/KvfJnpnBjT)
 
 Built heavily with AI.
